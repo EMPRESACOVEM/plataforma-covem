@@ -19,10 +19,7 @@ st.set_page_config(
 BASE_DIR = Path(__file__).parent if "__file__" in locals() else Path.cwd()
 
 # Proteção contra tradução automática (Zero-Width Space)
-COVEM_NAME = "C\u200Bo\u200Be\u200Bm"
-
-# Lista de Clientes do Grupo COVEM
-CARTEIRAS_COVEM = ["BraClean", "QV Energia Solar", "Elleven"]
+COVEM_NAME = "C\u200Bo\u200Bv\u200Be\u200Bm"
 
 # ---------------------------------------------------------
 # PALETA COVEM & ESTILIZAÇÃO CSS
@@ -98,7 +95,7 @@ MOTIVOS_PERDA_PADRAO = list(CORES_PERDAS.keys())
 if 'df_crm' not in st.session_state:
     st.session_state.df_crm = pd.DataFrame([
         {
-            "id": 1, "Empresa": "Grupo Delta", "Cliente": "BraClean", "Etapa": "1. Contatado", 
+            "id": 1, "Empresa": "Grupo Delta", "Cliente": COVEM_NAME, "Etapa": "1. Contatado", 
             "Contato": "Roberto Alves", "Cargo": "Diretor Comercial", "Telefone": "(16) 99876-5432", 
             "Email": "roberto@grupodelta.com.br", "Cidade": "Sertãozinho / SP", "Valor": 50000.0, 
             "Prob": 0.20, "Vendedor": "Lucas Mendes", "Perda": "",
@@ -107,7 +104,7 @@ if 'df_crm' not in st.session_state:
             "Historico": "01/09: Primeiro contato realizado."
         },
         {
-            "id": 2, "Empresa": "Sistemas Sigma", "Cliente": "QV Energia Solar", "Etapa": "1. Contatado", 
+            "id": 2, "Empresa": "Sistemas Sigma", "Cliente": COVEM_NAME, "Etapa": "1. Contatado", 
             "Contato": "Patricia Lima", "Cargo": "Gerente de Compras", "Telefone": "(16) 99765-4321", 
             "Email": "patricia@sigmasistemas.com.br", "Cidade": "Ribeirão Preto / SP", "Valor": 35000.0, 
             "Prob": 0.20, "Vendedor": "Lucas Mendes", "Perda": "",
@@ -116,7 +113,7 @@ if 'df_crm' not in st.session_state:
             "Historico": "02/09: E-mail enviado."
         },
         {
-            "id": 3, "Empresa": "Indústria Omega", "Cliente": "Elleven", "Etapa": "2. Conversando", 
+            "id": 3, "Empresa": "Indústria Omega", "Cliente": COVEM_NAME, "Etapa": "2. Conversando", 
             "Contato": "Fernando Souza", "Cargo": "Sócio-Proprietário", "Telefone": "(11) 98123-4567", 
             "Email": "fernando@omegaind.com.br", "Cidade": "São Paulo / SP", "Valor": 80000.0, 
             "Prob": 0.40, "Vendedor": "Gabriel Silva", "Perda": "",
@@ -125,7 +122,7 @@ if 'df_crm' not in st.session_state:
             "Historico": "30/08: Reunião inicial."
         },
         {
-            "id": 4, "Empresa": "Tecnologia Beta", "Cliente": "BraClean", "Etapa": "6. Perdido", 
+            "id": 4, "Empresa": "Tecnologia Beta", "Cliente": COVEM_NAME, "Etapa": "6. Perdido", 
             "Contato": "Carlos Eduardo", "Cargo": "Comprador", "Telefone": "(16) 98888-7777", 
             "Email": "carlos@betatech.com", "Cidade": "Sertãozinho / SP", "Valor": 25000.0, 
             "Prob": 0.00, "Vendedor": "Lucas Mendes", "Perda": "Preço / Orçamento",
@@ -237,7 +234,8 @@ def exibir_alertas_tarefas(df_tarefas):
 # ---------------------------------------------------------
 st.sidebar.title("🎯 Filtros & Configurações")
 
-opcoes_filtro = ["TODOS"] + CARTEIRAS_COVEM
+carteiras_unicas = [c for c in df["Cliente"].unique() if c]
+opcoes_filtro = ["TODOS"] + carteiras_unicas
 
 cliente_sel = st.sidebar.selectbox("Filtrar por Carteira:", opcoes_filtro)
 
@@ -246,7 +244,7 @@ if cliente_sel != "TODOS":
     titulo_dinamico = f"CRM {cliente_sel}"
 else:
     df_filtered = df
-    titulo_dinamico = f"Grupo {COVEM_NAME}"
+    titulo_dinamico = f"CRM - Grupo {COVEM_NAME}"
 
 st.sidebar.divider()
 
@@ -284,10 +282,11 @@ st.markdown(f'<div class="notranslate"><h1 style="margin:0; padding:0;">{titulo_
 st.divider()
 
 # ---------------------------------------------------------
-# NAVEGAÇÃO POR ABAS REDUZIDAS
+# NAVEGAÇÃO POR ABAS
 # ---------------------------------------------------------
-aba_crm, aba_dash, aba_relatorio, aba_novo = st.tabs([
-    "📌 CRM (Funil & Tarefas)", 
+aba_crm, aba_tarefas_tab, aba_dash, aba_relatorio, aba_novo = st.tabs([
+    "📌 CRM (Funil)", 
+    "📅 GERENCIADOR DE TAREFAS",
     "📊 DASHBOARD", 
     "📄 RELATÓRIO EXECUTIVO", 
     "➕ NOVO CADASTRO"
@@ -310,69 +309,9 @@ def criar_link_google_agenda(empresa, contato, nota_followup, data_str):
         return "#"
 
 # =========================================================
-# ABA 1: GERENCIADOR DE TAREFAS NO TOPO + CRM ABAIXO
+# ABA 1: CRM (MINIMALISTA + FICHA COMPLETA COM TABS)
 # =========================================================
 with aba_crm:
-    # ---------------------------------------------------------
-    # 1. GERENCIADOR DE TAREFAS INTEGRADO (ABAIXO DA CENTRAL DE ALERTAS)
-    # ---------------------------------------------------------
-    st.subheader("📌 Gerenciador de Tarefas Integrado")
-
-    lista_clientes = (
-        ["Nenhum / Tarefa Geral"] + st.session_state.df_crm["Empresa"].dropna().tolist()
-        if not st.session_state.df_crm.empty
-        else ["Nenhum / Tarefa Geral"]
-    )
-
-    with st.expander("➕ Criar Nova Tarefa", expanded=False):
-        with st.form(key="form_nova_tarefa_crm", clear_on_submit=True):
-            col1, col2 = st.columns([2, 1])
-
-            with col1:
-                titulo_tarefa = st.text_input("Título da Tarefa / Ação")
-                descricao = st.text_area("Descrição / Detalhes")
-
-            with col2:
-                cliente_vinculado = st.selectbox(
-                    "Vincular ao Cliente / Oportunidade", options=lista_clientes
-                )
-                data_vencimento = st.date_input(
-                    "Data de Vencimento", min_value=datetime.date.today()
-                )
-                prioridade = st.selectbox(
-                    "Prioridade", options=["Baixa", "Média", "Alta", "Urgente"]
-                )
-
-            submit_tarefa = st.form_submit_button("Salvar Tarefa")
-
-            if submit_tarefa and titulo_tarefa:
-                nova_linha_tarefa = {
-                    "Titulo": titulo_tarefa,
-                    "Descricao": descricao,
-                    "Cliente": cliente_vinculado,
-                    "Data_Vencimento": str(data_vencimento),
-                    "Prioridade": prioridade,
-                    "Status": "Pendente",
-                    "Data_Criacao": str(datetime.date.today()),
-                }
-                st.session_state.df_tarefas = pd.concat(
-                    [st.session_state.df_tarefas, pd.DataFrame([nova_linha_tarefa])],
-                    ignore_index=True
-                )
-                st.success(f"Tarefa '{titulo_tarefa}' vinculada a '{cliente_vinculado}' com sucesso!")
-                st.rerun()
-
-    st.markdown("#### 📋 Lista Geral de Tarefas Pendentes")
-    if not st.session_state.df_tarefas.empty:
-        st.dataframe(st.session_state.df_tarefas, use_container_width=True)
-    else:
-        st.info("Nenhuma tarefa pendente.")
-
-    st.write("---")
-
-    # ---------------------------------------------------------
-    # 2. GESTÃO VISUAL DO FUNIL DE VENDAS (CRM)
-    # ---------------------------------------------------------
     st.subheader("Gestão Visual do Funil de Vendas")
     
     if st.session_state.cliente_selecionado_id is not None:
@@ -526,8 +465,9 @@ with aba_crm:
                             edit_cidade = st.text_input("Cidade / Estado", value=c.get('Cidade', ''))
 
                         with e_col3:
-                            idx_cart = CARTEIRAS_COVEM.index(c['Cliente']) if c['Cliente'] in CARTEIRAS_COVEM else 0
-                            edit_carteira = st.selectbox("Carteira", CARTEIRAS_COVEM, index=idx_cart)
+                            carteiras = [COVEM_NAME, "BraClean", "QV Energia Solar", "Elleven"]
+                            idx_cart = carteiras.index(c['Cliente']) if c['Cliente'] in carteiras else 0
+                            edit_carteira = st.selectbox("Carteira", carteiras, index=idx_cart)
                             edit_valor = st.number_input("Valor (R$)", value=float(c['Valor']), step=1000.0, format="%.2f")
                             edit_vendedor = st.text_input("Vendedor / Responsável", value=c.get('Vendedor', ''))
 
@@ -581,7 +521,64 @@ with aba_crm:
                     st.rerun()
 
 # =========================================================
-# ABA 2: DASHBOARD
+# ABA 2: GERENCIADOR DE TAREFAS INTEGRADO
+# =========================================================
+with aba_tarefas_tab:
+    st.title("📌 Gerenciador de Tarefas COVEM")
+
+    lista_clientes = (
+        ["Nenhum / Tarefa Geral"] + st.session_state.df_crm["Empresa"].dropna().tolist()
+        if not st.session_state.df_crm.empty
+        else ["Nenhum / Tarefa Geral"]
+    )
+
+    with st.form(key="form_nova_tarefa", clear_on_submit=True):
+        st.subheader("➕ Criar Nova Tarefa")
+        col1, col2 = st.columns([2, 1])
+
+        with col1:
+            titulo_tarefa = st.text_input("Título da Tarefa / Ação")
+            descricao = st.text_area("Descrição / Detalhes")
+
+        with col2:
+            cliente_vinculado = st.selectbox(
+                "Vincular ao Cliente / Oportunidade", options=lista_clientes
+            )
+            data_vencimento = st.date_input(
+                "Data de Vencimento", min_value=datetime.date.today()
+            )
+            prioridade = st.selectbox(
+                "Prioridade", options=["Baixa", "Média", "Alta", "Urgente"]
+            )
+
+        submit_tarefa = st.form_submit_button("Salvar Tarefa")
+
+        if submit_tarefa and titulo_tarefa:
+            nova_linha_tarefa = {
+                "Titulo": titulo_tarefa,
+                "Descricao": descricao,
+                "Cliente": cliente_vinculado,
+                "Data_Vencimento": str(data_vencimento),
+                "Prioridade": prioridade,
+                "Status": "Pendente",
+                "Data_Criacao": str(datetime.date.today()),
+            }
+            st.session_state.df_tarefas = pd.concat(
+                [st.session_state.df_tarefas, pd.DataFrame([nova_linha_tarefa])],
+                ignore_index=True
+            )
+            st.success(f"Tarefa '{titulo_tarefa}' vinculada a '{cliente_vinculado}' com sucesso!")
+            st.rerun()
+
+    st.divider()
+    st.subheader("📋 Lista Geral de Tarefas")
+    if not st.session_state.df_tarefas.empty:
+        st.dataframe(st.session_state.df_tarefas, use_container_width=True)
+    else:
+        st.info("Nenhuma tarefa pendente.")
+
+# =========================================================
+# ABA 3: DASHBOARD
 # =========================================================
 with aba_dash:
     st.markdown(f'<div class="notranslate"><h3>1. DISTRIBUIÇÃO DO FUNIL DE VENDAS ({COVEM_NAME})</h3></div>', unsafe_allow_html=True)
@@ -760,7 +757,7 @@ with aba_dash:
         st.info("Nenhuma perda registrada no momento.")
 
 # =========================================================
-# ABA 3: RELATÓRIO EXECUTIVO
+# ABA 4: RELATÓRIO EXECUTIVO
 # =========================================================
 with aba_relatorio:
     st.title("📄 Relatório Executivo")
@@ -946,80 +943,17 @@ with aba_relatorio:
         st.plotly_chart(fig_linha_fin, use_container_width=True)
 
 # =========================================================
-# ABA 4: NOVO CADASTRO
+# ABA 5: NOVO CADASTRO
 # =========================================================
 with aba_novo:
-    # ---------------------------------------------------------
-    # CADASTRO RÁPIDO (CAMPOS ESSENCIAIS)
-    # ---------------------------------------------------------
-    st.subheader("⚡ Cadastro Rápido")
-    st.caption("Cadastre rapidamente uma nova empresa informando apenas os dados fundamentais.")
-
-    with st.form("form_cadastro_rapido", clear_on_submit=True):
-        col_r1, col_r2 = st.columns(2)
-
-        with col_r1:
-            rapido_empresa = st.text_input("Nome da Empresa *")
-            rapido_telefone = st.text_input("Telefone *")
-
-        with col_r2:
-            rapido_carteira = st.selectbox(
-                "Carteira *", 
-                CARTEIRAS_COVEM, 
-                key="rapido_carteira"
-            )
-            rapido_etapa = st.selectbox(
-                "Etapa da Venda *", 
-                list(PROB_MAP.keys()), 
-                key="rapido_etapa"
-            )
-
-        btn_salvar_rapido = st.form_submit_button("⚡ Cadastrar Rapidamente", use_container_width=True)
-
-        if btn_salvar_rapido:
-            if not rapido_empresa or not rapido_telefone:
-                st.error("Por favor, preencha o Nome da Empresa e o Telefone.")
-            else:
-                novo_id = df["id"].max() + 1 if not df.empty else 1
-                nova_linha_rapida = {
-                    "id": novo_id,
-                    "Empresa": rapido_empresa,
-                    "Cliente": rapido_carteira,
-                    "Etapa": rapido_etapa,
-                    "Contato": "Não informado",
-                    "Cargo": "Não informado",
-                    "Telefone": rapido_telefone,
-                    "Email": "Não informado",
-                    "Cidade": "Não informado",
-                    "Valor": 0.0,
-                    "Prob": PROB_MAP[rapido_etapa],
-                    "Vendedor": "Não informado",
-                    "Perda": "",
-                    "Data_Cadastro": str(date.today()),
-                    "Followup_Data": "",
-                    "Followup_Nota": "",
-                    "Historico": f"Cadastro rápido realizado em {dt.now().strftime('%d/%m/%Y')}"
-                }
-                st.session_state.df_crm = pd.concat(
-                    [st.session_state.df_crm, pd.DataFrame([nova_linha_rapida])], 
-                    ignore_index=True
-                )
-                st.success(f"✅ Empresa '{rapido_empresa}' cadastrada com sucesso via Cadastro Rápido!")
-                st.rerun()
-
-    st.write("---")
-
-    # ---------------------------------------------------------
-    # CADASTRO COMPLETO DE OPORTUNIDADE
-    # ---------------------------------------------------------
-    st.subheader("➕ Cadastrar Oportunidade Completa")
+    st.subheader("➕ Cadastrar Nova Oportunidade")
     
     with st.form("form_oportunidade", clear_on_submit=True):
         col_f1, col_f2 = st.columns(2)
         
         with col_f1:
             nova_empresa = st.text_input("Nome da Empresa / Cliente *")
-            novo_cliente = st.selectbox("Marca / Carteira *", CARTEIRAS_COVEM)
+            novo_cliente = st.selectbox("Marca / Carteira *", [COVEM_NAME, "BraClean", "QV Energia Solar", "Elleven"])
             novo_contato = st.text_input("Contato / Nome")
             novo_cargo = st.text_input("Cargo")
             novo_telefone = st.text_input("Telefone de Contato *")
@@ -1037,7 +971,7 @@ with aba_novo:
         f_data_ini = st.date_input("Data do Primeiro Follow-up", value=date.today())
         f_nota_ini = st.text_input("Lembrete / Ação de Follow-up")
 
-        btn_salvar = st.form_submit_button("💾 Salvar Oportunidade Completa")
+        btn_salvar = st.form_submit_button("💾 Salvar Oportunidade")
         
         if btn_salvar:
             if not nova_empresa:
