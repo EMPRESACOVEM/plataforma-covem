@@ -4,7 +4,8 @@ import plotly.express as px
 import io
 import os
 import urllib.parse
-from datetime import datetime, date, timedelta
+import datetime
+from datetime import datetime as dt, date, timedelta
 from pathlib import Path
 
 # Configuração da página
@@ -45,7 +46,6 @@ if 'funnel_colors' not in st.session_state:
 
 st.markdown("""
     <style>
-        /* Desativa estritamente a tradução automática */
         .notranslate, [data-testid="stSidebar"], [data-baseweb="select"] {
             translate: no !important;
         }
@@ -90,7 +90,7 @@ PROB_MAP = {
 MOTIVOS_PERDA_PADRAO = list(CORES_PERDAS.keys())
 
 # ---------------------------------------------------------
-# ESTADO DA SESSÃO (CRM, PERDAS, HISTÓRICO ATIVIDADES E FINANCEIRO)
+# ESTADO DA SESSÃO (CRM, TAREFAS, HISTÓRICO E FINANCEIRO)
 # ---------------------------------------------------------
 if 'df_crm' not in st.session_state:
     st.session_state.df_crm = pd.DataFrame([
@@ -132,6 +132,28 @@ if 'df_crm' not in st.session_state:
         }
     ])
 
+if 'df_tarefas' not in st.session_state:
+    st.session_state.df_tarefas = pd.DataFrame([
+        {
+            "Titulo": "Enviar proposta comercial",
+            "Descricao": "Elaborar minuta contratual e enviar em PDF",
+            "Cliente": "Grupo Delta",
+            "Data_Vencimento": str(date.today() - timedelta(days=1)),
+            "Prioridade": "Alta",
+            "Status": "Pendente",
+            "Data_Criacao": str(date.today() - timedelta(days=3))
+        },
+        {
+            "Titulo": "Reunião de Alinhamento",
+            "Descricao": "Validar requisitos técnicos",
+            "Cliente": "Indústria Omega",
+            "Data_Vencimento": str(date.today()),
+            "Prioridade": "Urgente",
+            "Status": "Pendente",
+            "Data_Criacao": str(date.today() - timedelta(days=1))
+        }
+    ])
+
 if 'df_historico_executivo' not in st.session_state:
     st.session_state.df_historico_executivo = pd.DataFrame([
         {"Mês/Ano": "Out/25", "Leads Qualificados": 12, "Reuniões Agendadas": 4, "Propostas Enviadas": 2, "Projetos Fechados": 1},
@@ -163,6 +185,49 @@ if 'manual_perdas' not in st.session_state:
     st.session_state.manual_perdas = None
 
 df = st.session_state.df_crm
+
+# ---------------------------------------------------------
+# FUNÇÕES DE ALERTAS E TAREFAS
+# ---------------------------------------------------------
+def exibir_alertas_tarefas(df_tarefas):
+    """Exibe um resumo proativo no topo da página sobre pendências do usuário."""
+    if df_tarefas.empty or "Data_Vencimento" not in df_tarefas.columns:
+        return
+
+    hoje = datetime.date.today()
+    df_temp = df_tarefas.copy()
+    df_temp["Data_Vencimento"] = pd.to_datetime(
+        df_temp["Data_Vencimento"], errors="coerce"
+    ).dt.date
+
+    pendentes = df_temp[df_temp["Status"] != "Concluído"]
+    atrasadas = pendentes[pendentes["Data_Vencimento"] < hoje]
+    hoje_tarefas = pendentes[pendentes["Data_Vencimento"] == hoje]
+
+    if not atrasadas.empty or not hoje_tarefas.empty:
+        st.markdown("### 🔔 Central de Alertas do Dia")
+        col_atraso, col_hoje = st.columns(2)
+
+        with col_atraso:
+            if not atrasadas.empty:
+                st.error(f"⚠️ **{len(atrasadas)} Tarefas Atrasadas!** Necessitam de atenção imediata.")
+                with st.expander("Ver tarefas atrasadas"):
+                    for _, row in atrasadas.iterrows():
+                        st.write(
+                            f"• **{row['Titulo']}** | Cliente: `{row.get('Cliente', 'N/A')}` | Venceu em: {row['Data_Vencimento'].strftime('%d/%m/%Y')}"
+                        )
+            else:
+                st.success("✅ Nenhuma tarefa atrasada!")
+
+        with col_hoje:
+            if not hoje_tarefas.empty:
+                st.info(f"📅 **{len(hoje_tarefas)} Tarefas para Hoje!** Organize seu dia.")
+                with st.expander("Ver tarefas de hoje"):
+                    for _, row in hoje_tarefas.iterrows():
+                        st.write(f"• **{row['Titulo']}** | Cliente: `{row.get('Cliente', 'N/A')}`")
+            else:
+                st.write("👍 Nenhuma tarefa agendada para hoje.")
+        st.divider()
 
 # ---------------------------------------------------------
 # BARRA LATERAL (FILTROS E CONFIGURAÇÕES)
@@ -206,6 +271,11 @@ st.sidebar.download_button(
 )
 
 # ---------------------------------------------------------
+# CENTRAL DE ALERTAS NO TOPO
+# ---------------------------------------------------------
+exibir_alertas_tarefas(st.session_state.df_tarefas)
+
+# ---------------------------------------------------------
 # CABEÇALHO SIMPLIFICADO
 # ---------------------------------------------------------
 st.markdown(f'<div class="notranslate"><h1 style="margin:0; padding:0;">{titulo_dinamico}</h1></div>', unsafe_allow_html=True)
@@ -214,8 +284,9 @@ st.divider()
 # ---------------------------------------------------------
 # NAVEGAÇÃO POR ABAS
 # ---------------------------------------------------------
-aba_crm, aba_dash, aba_relatorio, aba_novo = st.tabs([
+aba_crm, aba_tarefas_tab, aba_dash, aba_relatorio, aba_novo = st.tabs([
     "📌 CRM (Funil)", 
+    "📅 GERENCIADOR DE TAREFAS",
     "📊 DASHBOARD", 
     "📄 RELATÓRIO EXECUTIVO", 
     "➕ NOVO CADASTRO"
@@ -225,8 +296,8 @@ def criar_link_google_agenda(empresa, contato, nota_followup, data_str):
     if not data_str:
         return "#"
     try:
-        dt = datetime.strptime(data_str, "%Y-%m-%d")
-        dt_formatada = dt.strftime("%Y%m%dT090000Z/%Y%m%dT100000Z")
+        dt_obj = dt.strptime(data_str, "%Y-%m-%d")
+        dt_formatada = dt_obj.strftime("%Y%m%dT090000Z/%Y%m%dT100000Z")
         params = {
             "action": "TEMPLATE",
             "text": f"Follow-up CRM: {empresa}",
@@ -238,7 +309,7 @@ def criar_link_google_agenda(empresa, contato, nota_followup, data_str):
         return "#"
 
 # =========================================================
-# ABA 1: CRM (MINIMALISTA)
+# ABA 1: CRM (MINIMALISTA + FICHA COMPLETA COM TABS)
 # =========================================================
 with aba_crm:
     st.subheader("Gestão Visual do Funil de Vendas")
@@ -249,10 +320,11 @@ with aba_crm:
         if not cliente_dado.empty:
             c = cliente_dado.iloc[0]
             idx_cliente = st.session_state.df_crm.index[st.session_state.df_crm["id"] == c["id"]].tolist()[0]
+            cliente_nome_atual = c['Empresa']
             
             col_titulo, col_acoes_top = st.columns([3, 2])
             with col_titulo:
-                st.markdown(f"### 📋 Ficha do Cliente: **{c['Empresa']}**")
+                st.markdown(f"### 📄 Ficha do Cliente: **{cliente_nome_atual}**")
             with col_acoes_top:
                 c_btn_ed, c_btn_cx = st.columns([2, 1])
                 with c_btn_ed:
@@ -274,57 +346,108 @@ with aba_crm:
                 st.markdown('<div class="bloco-detalhes-retangular">', unsafe_allow_html=True)
                 
                 if not st.session_state.modo_edicao:
-                    col1, col2, col3, col4 = st.columns([1.5, 1.5, 1.2, 1.8])
-                    
-                    with col1:
-                        st.markdown(f"🏢 **Empresa:** {c['Empresa']}")
-                        st.markdown(f"👤 **Contato:** {c['Contato']} ({c.get('Cargo', 'Não informado')})")
-                    
-                    with col2:
-                        st.markdown(f"📞 **Telefone:** <span class='phone-highlight'>{c.get('Telefone', 'Não informado')}</span>", unsafe_allow_html=True)
-                        st.markdown(f"✉️ **E-mail:** {c.get('Email', 'Não informado')}")
-                    
-                    with col3:
-                        st.markdown(f'<div class="notranslate">💼 <b>Carteira:</b> {c["Cliente"]}</div>', unsafe_allow_html=True)
-                        st.markdown(f"💰 **Valor:** R$ {c['Valor']:,.2f}")
-                    
-                    with col4:
-                        etapas_list = list(PROB_MAP.keys())
-                        idx_etapa = etapas_list.index(c['Etapa']) if c['Etapa'] in etapas_list else 0
-                        nova_etapa = st.selectbox("Etapa Atual:", options=etapas_list, index=idx_etapa, key=f"etapa_vis_{c['id']}")
-                        
-                        if nova_etapa != c['Etapa']:
-                            st.session_state.df_crm.loc[idx_cliente, "Etapa"] = nova_etapa
-                            st.session_state.df_crm.loc[idx_cliente, "Prob"] = PROB_MAP[nova_etapa]
-                            st.rerun()
+                    aba_historico_f, aba_tarefas_f, aba_perda_f = st.tabs(
+                        ["📜 Histórico Geral", "📅 Tarefas Associadas", "❌ Registrar Perda"]
+                    )
 
-                    st.divider()
-
-                    col_nota, col_dt_f = st.columns([2.5, 1.5])
-                    with col_nota:
-                        nova_nota = st.text_area("📝 Lembrete / Nota de Follow-up:", value=str(c.get("Followup_Nota", "")), height=70, key=f"nota_vis_{c['id']}")
-                    
-                    with col_dt_f:
-                        dt_val = date.today()
-                        if c["Followup_Data"]:
-                            try:
-                                dt_val = datetime.strptime(str(c["Followup_Data"]), "%Y-%m-%d").date()
-                            except:
-                                pass
-                        
-                        nova_dt = st.date_input("Data do Follow-up:", value=dt_val, key=f"dt_vis_{c['id']}")
-                        
-                        b1, b2 = st.columns(2)
-                        with b1:
-                            if st.button("💾 Salvar Nota", key=f"salvar_nota_{c['id']}", use_container_width=True):
-                                st.session_state.df_crm.loc[idx_cliente, "Followup_Data"] = str(nova_dt)
-                                st.session_state.df_crm.loc[idx_cliente, "Followup_Nota"] = nova_nota
-                                st.success("Salvo!")
+                    with aba_historico_f:
+                        col1, col2, col3, col4 = st.columns([1.5, 1.5, 1.2, 1.8])
+                        with col1:
+                            st.markdown(f"🏢 **Empresa:** {c['Empresa']}")
+                            st.markdown(f"👤 **Contato:** {c['Contato']} ({c.get('Cargo', 'Não informado')})")
+                        with col2:
+                            st.markdown(f"📞 **Telefone:** <span class='phone-highlight'>{c.get('Telefone', 'Não informado')}</span>", unsafe_allow_html=True)
+                            st.markdown(f"✉️ **E-mail:** {c.get('Email', 'Não informado')}")
+                        with col3:
+                            st.markdown(f'<div class="notranslate">💼 <b>Carteira:</b> {c["Cliente"]}</div>', unsafe_allow_html=True)
+                            st.markdown(f"💰 **Valor:** R$ {c['Valor']:,.2f}")
+                        with col4:
+                            etapas_list = list(PROB_MAP.keys())
+                            idx_etapa = etapas_list.index(c['Etapa']) if c['Etapa'] in etapas_list else 0
+                            nova_etapa = st.selectbox("Etapa Atual:", options=etapas_list, index=idx_etapa, key=f"etapa_vis_{c['id']}")
+                            if nova_etapa != c['Etapa']:
+                                st.session_state.df_crm.loc[idx_cliente, "Etapa"] = nova_etapa
+                                st.session_state.df_crm.loc[idx_cliente, "Prob"] = PROB_MAP[nova_etapa]
                                 st.rerun()
-                        with b2:
-                            if nova_nota.strip():
-                                link_gcal = criar_link_google_agenda(c["Empresa"], c["Contato"], nova_nota, str(nova_dt))
-                                st.markdown(f"[📅 Agenda]({link_gcal})")
+
+                        st.divider()
+                        st.write("**Histórico de Interações:**")
+                        st.info(c.get("Historico", "Nenhum histórico registrado."))
+
+                        col_nota, col_dt_f = st.columns([2.5, 1.5])
+                        with col_nota:
+                            nova_nota = st.text_area("📝 Lembrete / Nota de Follow-up:", value=str(c.get("Followup_Nota", "")), height=70, key=f"nota_vis_{c['id']}")
+                        with col_dt_f:
+                            dt_val = date.today()
+                            if c["Followup_Data"]:
+                                try:
+                                    dt_val = dt.strptime(str(c["Followup_Data"]), "%Y-%m-%d").date()
+                                except:
+                                    pass
+                            nova_dt = st.date_input("Data do Follow-up:", value=dt_val, key=f"dt_vis_{c['id']}")
+                            b1, b2 = st.columns(2)
+                            with b1:
+                                if st.button("💾 Salvar Nota", key=f"salvar_nota_{c['id']}", use_container_width=True):
+                                    st.session_state.df_crm.loc[idx_cliente, "Followup_Data"] = str(nova_dt)
+                                    st.session_state.df_crm.loc[idx_cliente, "Followup_Nota"] = nova_nota
+                                    st.success("Salvo!")
+                                    st.rerun()
+                            with b2:
+                                if nova_nota.strip():
+                                    link_gcal = criar_link_google_agenda(c["Empresa"], c["Contato"], nova_nota, str(nova_dt))
+                                    st.markdown(f"[📅 Agenda]({link_gcal})")
+
+                    with aba_tarefas_f:
+                        st.subheader(f"Tarefas Agendadas para {cliente_nome_atual}")
+                        if not st.session_state.df_tarefas.empty:
+                            tarefas_cliente = st.session_state.df_tarefas[
+                                st.session_state.df_tarefas["Cliente"] == cliente_nome_atual
+                            ]
+                            if not tarefas_cliente.empty:
+                                st.dataframe(
+                                    tarefas_cliente[["Titulo", "Data_Vencimento", "Prioridade", "Status"]],
+                                    use_container_width=True,
+                                )
+                            else:
+                                st.info("Não há tarefas específicas associadas a este cliente.")
+                        else:
+                            st.info("Nenhuma tarefa cadastrada na plataforma.")
+
+                    with aba_perda_f:
+                        st.subheader("Registrar Oportunidade Perdida")
+                        st.warning("Preencha as informações abaixo para salvar a justificativa de perda no histórico.")
+
+                        with st.form(key=f"form_perda_{cliente_nome_atual}"):
+                            motivo_perda = st.selectbox(
+                                "Motivo Principal da Perda",
+                                options=[
+                                    "Preço / Orçamento fora do esperado",
+                                    "Prazo de entrega incompatibility",
+                                    "Fechou com Concorrente",
+                                    "Falta de escopo técnico / Solução não atende",
+                                    "Projeto Cancelado pelo Cliente",
+                                    "Sem retorno / Lead esfriou",
+                                    "Outros",
+                                ],
+                            )
+                            obs_tecnica = st.text_area(
+                                "Observação Técnica do Vendedor / Feedback do Cliente",
+                                placeholder="Ex: O cliente optou pelo concorrente X por conta do prazo de entrega ser de 15 dias.",
+                            )
+
+                            btn_salvar_perda = st.form_submit_button("Confirmar Perda do Negócio")
+
+                            if btn_salvar_perda:
+                                st.session_state.df_crm.loc[idx_cliente, "Etapa"] = "6. Perdido"
+                                st.session_state.df_crm.loc[idx_cliente, "Prob"] = 0.00
+                                st.session_state.df_crm.loc[idx_cliente, "Perda"] = motivo_perda
+                                
+                                historico_antigo = str(c.get("Historico", ""))
+                                novo_hist = f"{historico_antigo}\n[{date.today().strftime('%d/%m/%Y')}] Perda registrada ({motivo_perda}): {obs_tecnica}".strip()
+                                st.session_state.df_crm.loc[idx_cliente, "Historico"] = novo_hist
+                                
+                                st.error(f"Oportunidade de '{cliente_nome_atual}' marcada como PERDIDA. Histórico atualizado.")
+                                st.rerun()
 
                 else:
                     st.markdown("#### ✏️ **Editar Informações do Cliente**")
@@ -398,7 +521,64 @@ with aba_crm:
                     st.rerun()
 
 # =========================================================
-# ABA 2: DASHBOARD
+# ABA 2: GERENCIADOR DE TAREFAS INTEGRADO
+# =========================================================
+with aba_tarefas_tab:
+    st.title("📌 Gerenciador de Tarefas COVEM")
+
+    lista_clientes = (
+        ["Nenhum / Tarefa Geral"] + st.session_state.df_crm["Empresa"].dropna().tolist()
+        if not st.session_state.df_crm.empty
+        else ["Nenhum / Tarefa Geral"]
+    )
+
+    with st.form(key="form_nova_tarefa", clear_on_submit=True):
+        st.subheader("➕ Criar Nova Tarefa")
+        col1, col2 = st.columns([2, 1])
+
+        with col1:
+            titulo_tarefa = st.text_input("Título da Tarefa / Ação")
+            descricao = st.text_area("Descrição / Detalhes")
+
+        with col2:
+            cliente_vinculado = st.selectbox(
+                "Vincular ao Cliente / Oportunidade", options=lista_clientes
+            )
+            data_vencimento = st.date_input(
+                "Data de Vencimento", min_value=datetime.date.today()
+            )
+            prioridade = st.selectbox(
+                "Prioridade", options=["Baixa", "Média", "Alta", "Urgente"]
+            )
+
+        submit_tarefa = st.form_submit_button("Salvar Tarefa")
+
+        if submit_tarefa and titulo_tarefa:
+            nova_linha_tarefa = {
+                "Titulo": titulo_tarefa,
+                "Descricao": descricao,
+                "Cliente": cliente_vinculado,
+                "Data_Vencimento": str(data_vencimento),
+                "Prioridade": prioridade,
+                "Status": "Pendente",
+                "Data_Criacao": str(datetime.date.today()),
+            }
+            st.session_state.df_tarefas = pd.concat(
+                [st.session_state.df_tarefas, pd.DataFrame([nova_linha_tarefa])],
+                ignore_index=True
+            )
+            st.success(f"Tarefa '{titulo_tarefa}' vinculada a '{cliente_vinculado}' com sucesso!")
+            st.rerun()
+
+    st.divider()
+    st.subheader("📋 Lista Geral de Tarefas")
+    if not st.session_state.df_tarefas.empty:
+        st.dataframe(st.session_state.df_tarefas, use_container_width=True)
+    else:
+        st.info("Nenhuma tarefa pendente.")
+
+# =========================================================
+# ABA 3: DASHBOARD
 # =========================================================
 with aba_dash:
     st.markdown(f'<div class="notranslate"><h3>1. DISTRIBUIÇÃO DO FUNIL DE VENDAS ({COVEM_NAME})</h3></div>', unsafe_allow_html=True)
@@ -577,7 +757,7 @@ with aba_dash:
         st.info("Nenhuma perda registrada no momento.")
 
 # =========================================================
-# ABA 3: RELATÓRIO EXECUTIVO
+# ABA 4: RELATÓRIO EXECUTIVO
 # =========================================================
 with aba_relatorio:
     st.title("📄 Relatório Executivo")
@@ -763,7 +943,7 @@ with aba_relatorio:
         st.plotly_chart(fig_linha_fin, use_container_width=True)
 
 # =========================================================
-# ABA 4: NOVO CADASTRO
+# ABA 5: NOVO CADASTRO
 # =========================================================
 with aba_novo:
     st.subheader("➕ Cadastrar Nova Oportunidade")
@@ -815,7 +995,7 @@ with aba_novo:
                     "Data_Cadastro": str(date.today()),
                     "Followup_Data": str(f_data_ini) if f_nota_ini else "",
                     "Followup_Nota": f_nota_ini,
-                    "Historico": f"Cadastrado em {datetime.now().strftime('%d/%m/%Y')}"
+                    "Historico": f"Cadastrado em {dt.now().strftime('%d/%m/%Y')}"
                 }
                 st.session_state.df_crm = pd.concat([st.session_state.df_crm, pd.DataFrame([nova_linha])], ignore_index=True)
                 
