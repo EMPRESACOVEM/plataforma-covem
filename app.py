@@ -1,4 +1,3 @@
-import plotly.express as px
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -7,6 +6,7 @@ import os
 import urllib.parse
 from datetime import datetime, date, timedelta
 from pathlib import Path
+
 # Configuração da página
 st.set_page_config(
     page_title="Plataforma Executiva COVEM",
@@ -166,6 +166,228 @@ if 'manual_perdas' not in st.session_state:
     st.session_state.manual_perdas = None
 
 df = st.session_state.df_crm
+# ---------------------------------------------------------
+# ESTADO DA SESSÃO - NOVO GERENCIADOR DE TAREFAS
+# ---------------------------------------------------------
+if "df_tarefas" not in st.session_state:
+    st.session_state.df_tarefas = pd.DataFrame(
+        [
+            {
+                "id": 1,
+                "Titulo": "Enviar proposta revisada",
+                "Descricao": "Revisar valores conforme reunião",
+                "Cliente": "BraClean",
+                "Data_Vencimento": str(date.today() - timedelta(days=1)),  # Atrasada
+                "Prioridade": "Alta",
+                "Status": "Pendente",
+            },
+            {
+                "id": 2,
+                "Titulo": "Ligar para confirmar recebimento",
+                "Descricao": "Confirmar e-mail com Patrícia",
+                "Cliente": "QV Energia Solar",
+                "Data_Vencimento": str(date.today()),  # Hoje
+                "Prioridade": "Média",
+                "Status": "Pendente",
+            },
+        ]
+    )
+
+
+# ==============================================================================
+# FUNÇÕES OPERACIONAIS & ROTINA DA EQUIPE
+# ==============================================================================
+
+
+def exibir_alertas_tarefas():
+    """1. Painel Alerta do Dia (Exibido no topo da Home / Dashboard)"""
+    df_tarefas = st.session_state.df_tarefas
+    if df_tarefas.empty:
+        return
+
+    hoje = date.today()
+    df_temp = df_tarefas.copy()
+    df_temp["Data_Vencimento"] = pd.to_datetime(
+        df_temp["Data_Vencimento"], errors="coerce"
+    ).dt.date
+
+    # Filtra apenas tarefas não concluídas
+    pendentes = df_temp[df_temp["Status"] != "Concluído"]
+    atrasadas = pendentes[pendentes["Data_Vencimento"] < hoje]
+    tarefas_hoje = pendentes[pendentes["Data_Vencimento"] == hoje]
+
+    if not atrasadas.empty or not tarefas_hoje.empty:
+        st.markdown("### 🔔 Central de Alertas do Dia")
+        col_atraso, col_hoje = st.columns(2)
+
+        with col_atraso:
+            if not atrasadas.empty:
+                st.error(f"⚠️ **{len(atrasadas)} Tarefa(s) Atrasada(s)!**")
+                with st.expander("Ver tarefas atrasadas"):
+                    for _, row in atrasadas.iterrows():
+                        st.write(
+                            f"• **{row['Titulo']}** | Cliente: `{row.get('Cliente', 'Geral')}` | Venceu: {row['Data_Vencimento'].strftime('%d/%m/%Y')}"
+                        )
+            else:
+                st.success("✅ Nenhuma tarefa atrasada!")
+
+        with col_hoje:
+            if not tarefas_hoje.empty:
+                st.info(f"📅 **{len(tarefas_hoje)} Tarefa(s) para Hoje!**")
+                with st.expander("Ver tarefas de hoje"):
+                    for _, row in tarefas_hoje.iterrows():
+                        st.write(
+                            f"• **{row['Titulo']}** | Cliente: `{row.get('Cliente', 'Geral')}`"
+                        )
+            else:
+                st.write("👍 Nenhuma tarefa agendada para hoje.")
+        st.divider()
+
+
+def renderizar_gerenciador_tarefas():
+    """2. Gerenciador de Tarefas vinculado aos Clientes/Oportunidades do CRM"""
+    st.title("📌 Gerenciador de Tarefas")
+
+    df_crm = st.session_state.df_crm
+    lista_clientes = (
+        ["Nenhum / Tarefa Geral"] + df_crm["Empresa"].dropna().unique().tolist()
+        if not df_crm.empty
+        else ["Nenhum / Tarefa Geral"]
+    )
+
+    with st.form(key="form_nova_tarefa_colem", clear_on_submit=True):
+        st.subheader("➕ Criar Nova Tarefa")
+        col1, col2 = st.columns([2, 1])
+
+        with col1:
+            titulo = st.text_input("Título da Tarefa / Ação")
+            descricao = st.text_area("Descrição / Detalhes")
+
+        with col2:
+            cliente = st.selectbox(
+                "Vincular ao Cliente / Oportunidade", options=lista_clientes
+            )
+            vencimento = st.date_input("Data de Vencimento", min_value=date.today())
+            prioridade = st.selectbox(
+                "Prioridade", options=["Baixa", "Média", "Alta", "Urgente"]
+            )
+
+        submit = st.form_submit_button("Salvar Tarefa")
+
+        if submit and titulo:
+            nova_tarefa = {
+                "id": len(st.session_state.df_tarefas) + 1,
+                "Titulo": titulo,
+                "Descricao": descricao,
+                "Cliente": cliente,
+                "Data_Vencimento": str(vencimento),
+                "Prioridade": prioridade,
+                "Status": "Pendente",
+            }
+            st.session_state.df_tarefas = pd.concat(
+                [st.session_state.df_tarefas, pd.DataFrame([nova_tarefa])],
+                ignore_index=True,
+            )
+            st.success(f"Tarefa '{titulo}' salva com sucesso!")
+            st.rerun()
+
+    st.subheader("📋 Tabela de Tarefas")
+    st.dataframe(st.session_state.df_tarefas, use_container_width=True)
+
+
+def renderizar_historico_e_perda(empresa_selecionada):
+    """3. Ficha do Cliente: Histórico, Tarefas Associadas e Registro de Motivo de Perda"""
+    st.markdown(f"## 📄 Ficha do Cliente: **{empresa_selecionada}**")
+
+    aba_historico, aba_tarefas, aba_perda = st.tabs(
+        ["📜 Histórico Geral", "📅 Tarefas Associadas", "❌ Registrar Perda"]
+    )
+
+    # ABA 1: Histórico
+    with aba_historico:
+        df_crm = st.session_state.df_crm
+        cliente_row = df_crm[df_crm["Empresa"] == empresa_selecionada]
+        if not cliente_row.empty:
+            st.write(
+                f"**Contato:** {cliente_row.iloc[0].get('Contato', 'N/A')} | **Telefone:** {cliente_row.iloc[0].get('Telefone', 'N/A')}"
+            )
+            st.info(
+                f"**Histórico registrado:** {cliente_row.iloc[0].get('Historico', 'Sem histórico.')}"
+            )
+
+    # ABA 2: Tarefas vinculadas a esta Empresa
+    with aba_tarefas:
+        df_tarefas = st.session_state.df_tarefas
+        tarefas_cliente = df_tarefas[df_tarefas["Cliente"] == empresa_selecionada]
+        if not tarefas_cliente.empty:
+            st.dataframe(
+                tarefas_cliente[
+                    ["Titulo", "Data_Vencimento", "Prioridade", "Status"]
+                ],
+                use_container_width=True,
+            )
+        else:
+            st.info("Nenhuma tarefa associada a este cliente.")
+
+    # ABA 3: Registro de Motivo de Perda + Observação Técnica
+    with aba_perda:
+        st.subheader("Registrar Perda da Oportunidade")
+        with st.form(key=f"form_perda_{empresa_selecionada}"):
+            motivo = st.selectbox(
+                "Motivo da Perda", options=MOTIVOS_PERDA_PADRAO
+            )
+            obs_tecnica = st.text_area(
+                "Observação Técnica do Vendedor",
+                placeholder="Descreva o motivo detalhado do cancelamento ou recusa...",
+            )
+
+            if st.form_submit_button("Confirmar e Marcar como Perdido"):
+                # Atualiza no DataFrame do CRM
+                idx = st.session_state.df_crm[
+                    st.session_state.df_crm["Empresa"] == empresa_selecionada
+                ].index
+                if not idx.empty:
+                    st.session_state.df_crm.loc[idx, "Etapa"] = "6. Perdido"
+                    st.session_state.df_crm.loc[idx, "Perda"] = motivo
+                    st.session_state.df_crm.loc[idx, "Prob"] = 0.0
+                    hist_atual = st.session_state.df_crm.loc[idx[0], "Historico"]
+                    st.session_state.df_crm.loc[
+                        idx[0], "Historico"
+                    ] = f"{hist_atual} | PERDIDO ({motivo}): {obs_tecnica}"
+
+                st.error("Oportunidade atualizada como PERDIDA.")
+                st.rerun()
+
+
+# ==============================================================================
+# NAVEGAÇÃO DA PLATAFORMA (SIDEBAR)
+# ==============================================================================
+st.sidebar.title(f"Plataforma {COVEM_NAME}")
+pagina = st.sidebar.radio(
+    "Navegação", ["Página Inicial / Dashboard", "CRM / Funil", "Gerenciador de Tarefas"]
+)
+
+if pagina == "Página Inicial / Dashboard":
+    # 1. ALERTAS NO TOPO DA PÁGINA INICIAL
+    exibir_alertas_tarefas()
+
+    st.title("📊 Dashboard Executivo")
+    st.write("Acompanhamento geral de métricas e performance.")
+
+elif pagina == "CRM / Funil":
+    st.title("🎯 CRM & Pipeline de Vendas")
+
+    df_crm = st.session_state.df_crm
+    empresas = df_crm["Empresa"].unique().tolist()
+    empresa_sel = st.selectbox("Selecione um Cliente para detalhar:", empresas)
+
+    if empresa_sel:
+        # 3. HISTÓRICO, TAREFAS VINCULADAS E PERDA DENTRO DO CRM
+        renderizar_historico_e_perda(empresa_sel)
+
+elif pagina == "Gerenciador de Tarefas":
+    # 2. GERENCIADOR DE TAREFAS COM SELEÇÃO DE CLIENTES
+    renderizar_gerenciador_tarefas()
 
 # ---------------------------------------------------------
 # BARRA LATERAL (FILTROS E CONFIGURAÇÕES)
