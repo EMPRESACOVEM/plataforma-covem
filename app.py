@@ -360,18 +360,79 @@ def renderizar_historico_e_perda(empresa_selecionada):
 
 
 # ==============================================================================
-# ATUALIZAÇÃO DA PÁGINA INICIAL / DASHBOARD
+# NAVEGAÇÃO DA PLATAFORMA (SIDEBAR) & FILTROS
 # ==============================================================================
-# (Substitua o trecho 'if pagina == "Página Inicial / Dashboard":' por este)
+st.sidebar.title(f"Plataforma {COVEM_NAME}")
 
+# 1. A variável 'pagina' é criada AQUI PRIMEIRO
+pagina = st.sidebar.radio(
+    "Navegação",
+    ["Página Inicial / Dashboard", "CRM / Funil", "Gerenciador de Tarefas"],
+)
+
+st.sidebar.title("🎯 Filtros & Configurações")
+
+# Opções fixas de filtragem por carteira
+opcoes_filtro = [f"{COVEM_NAME} (Consolidado)"] + CARTEIRAS_OFICIAIS
+cliente_sel = st.sidebar.selectbox("Filtrar por Carteira:", opcoes_filtro)
+
+if cliente_sel != f"{COVEM_NAME} (Consolidado)":
+    df_filtered = df[df["Cliente"] == cliente_sel]
+    titulo_dinamico = f"CRM {cliente_sel}"
+else:
+    df_filtered = df
+    titulo_dinamico = f"CRM - Grupo {COVEM_NAME}"
+
+st.sidebar.divider()
+
+with st.sidebar.expander("🎨 Personalizar Cores das Etapas", expanded=False):
+    st.caption("Altere as cores das etapas do funil:")
+    for etapa_nome in PROB_MAP.keys():
+        cor_atual = st.session_state.funnel_colors.get(etapa_nome, "#3B82F6")
+        nova_cor = st.color_picker(
+            f"Cor: {etapa_nome}", cor_atual, key=f"picker_{etapa_nome}"
+        )
+        st.session_state.funnel_colors[etapa_nome] = nova_cor
+
+st.sidebar.divider()
+
+buffer = io.BytesIO()
+with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
+    df_filtered.to_excel(writer, index=False, sheet_name="CRM_COVEM")
+buffer.seek(0)
+
+st.sidebar.download_button(
+    label="📊 Baixar Excel",
+    data=buffer,
+    file_name="crm_covem.xlsx",
+    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    use_container_width=True,
+)
+
+# ==============================================================================
+# ROTEAMENTO CONDICIONAL DAS PÁGINAS
+# ==============================================================================
 if pagina == "Página Inicial / Dashboard":
-    # 1. Alertas de Tarefas
+    # 1. ALERTAS E PAINEL FINANCEIRO
     exibir_alertas_tarefas()
-
     st.title("📊 Dashboard Executivo & Previsão de Faturamento")
-
-    # 2. Painel Financeiro & Stalled Deals
     renderizar_painel_financeiro_e_forecast()
+
+elif pagina == "CRM / Funil":
+    st.title("🎯 CRM & Pipeline de Vendas")
+
+    df_crm = st.session_state.df_crm
+    if not df_crm.empty:
+        empresas = df_crm["Empresa"].dropna().unique().tolist()
+        empresa_sel = st.selectbox(
+            "Selecione um Cliente para detalhar:", empresas
+        )
+
+        if empresa_sel:
+            renderizar_historico_e_perda(empresa_sel)
+
+elif pagina == "Gerenciador de Tarefas":
+    renderizar_gerenciador_tarefas()
 # ==============================================================================
 # NAVEGAÇÃO DA PLATAFORMA (SIDEBAR)
 # ==============================================================================
