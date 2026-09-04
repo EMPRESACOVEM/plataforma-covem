@@ -595,12 +595,12 @@ with aba_dash:
 
     st.divider()
 
-    # -------------------------------------------------------------------------
-    # 5. ANÁLISE DE MOTIVOS DE PERDA
+   # -------------------------------------------------------------------------
+    # 5. ANÁLISE DE MOTIVOS DE PERDA (CORRIGIDO)
     # -------------------------------------------------------------------------
     st.subheader("2. ANÁLISE DE MOTIVOS DE PERDA")
 
-    motivos_padrao = MOTIVOS_PERDA_PADRAO if 'MOTIVOS_PERDA_PADRAO' in locals() else ["Preço Alto", "Prazo", "Concorrência", "Sem Orçamento", "Outros"]
+    motivos_padrao = list(dict.fromkeys(MOTIVOS_PERDA_PADRAO)) if 'MOTIVOS_PERDA_PADRAO' in locals() else ["Preço Alto", "Prazo", "Concorrência", "Sem Orçamento", "Outros"]
     cores_perda_map = CORES_PERDAS if 'CORES_PERDAS' in locals() else {}
 
     perdas_reais = {m: 0 for m in motivos_padrao}
@@ -620,22 +620,24 @@ with aba_dash:
     if st.session_state.manual_perdas is None:
         st.session_state.manual_perdas = perdas_reais.copy()
 
-    # --- TABELA EDITÁVEL DE PERDAS ---
+    # --- TABELA EDITÁVEL DE PERDAS COM KEYS ÚNICAS ---
     with st.expander("📝 Tabela Editável: Ajustar Quantidade por Motivo de Perda", expanded=False):
         cols_p = st.columns(len(motivos_padrao))
         for idx, motivo in enumerate(motivos_padrao):
             val_motivo = st.session_state.manual_perdas.get(motivo, 0)
+            
+            # ATENÇÃO: Adicionado _{idx} na key para garantir que seja única
             novo_val_m = cols_p[idx].number_input(
                 motivo, 
                 min_value=0, 
                 value=int(val_motivo), 
-                key=f"perda_input_{motivo}"
+                key=f"perda_input_{idx}_{motivo}"
             )
             st.session_state.manual_perdas[motivo] = novo_val_m
             
         c_p1, _ = st.columns([1, 4])
         with c_p1:
-            if st.button("🔄 Sincronizar com CRM", key="reset_perdas"):
+            if st.button("🔄 Sincronizar com CRM", key="reset_perdas_dash"):
                 st.session_state.manual_perdas = perdas_reais.copy()
                 st.rerun()
 
