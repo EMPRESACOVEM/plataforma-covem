@@ -24,6 +24,9 @@ COVEM_NAME = "GRUPO COVEM"
 # Lista de Clientes do GRUPO COVEM
 CARTEIRAS_COVEM = ["BraClean", "QV Energia Solar", "Elleven"]
 
+# Limite de dias padrão para considerar um lead estagnado (Vermelho)
+DIAS_ESTAGNACAO_LIMITE = 10
+
 # ---------------------------------------------------------
 # PALETA COVEM & ESTILIZAÇÃO CSS
 # ---------------------------------------------------------
@@ -78,6 +81,35 @@ st.markdown("""
         div[data-testid="stMetricLabel"] {
             font-size: 12px !important;
         }
+        
+        /* Estilização para o Kanban Inteligente */
+        .kanban-card {
+            background-color: #1E293B;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 12px;
+            border-left: 5px solid #64748B;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .kanban-card-green {
+            border-left: 6px solid #22C55E !important;
+            background-color: #064E3B22;
+        }
+        .kanban-card-yellow {
+            border-left: 6px solid #EAB308 !important;
+            background-color: #713F1222;
+        }
+        .kanban-card-red {
+            border-left: 6px solid #EF4444 !important;
+            background-color: #7F1D1D22;
+        }
+        .kanban-tag {
+            font-size: 10px;
+            font-weight: bold;
+            padding: 2px 6px;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
     </style>
 """, unsafe_allow_html=True)
 
@@ -102,8 +134,10 @@ if 'df_crm' not in st.session_state:
             "Contato": "Roberto Alves", "Cargo": "Diretor Comercial", "Telefone": "(16) 99876-5432", 
             "Email": "roberto@grupodelta.com.br", "Cidade": "Sertãozinho / SP", "Valor": 50000.0, 
             "Prob": 0.20, "Vendedor": "Lucas Mendes", "Perda": "",
-            "Data_Cadastro": str(date.today()),
-            "Followup_Data": str(date.today()), "Followup_Nota": "Enviar apresentação institucional atualizada.", 
+            "Data_Cadastro": str(date.today() - timedelta(days=12)),
+            "Data_Ultima_Movimentacao": str(date.today() - timedelta(days=2)),
+            "Followup_Data": str(date.today() + timedelta(days=1)), 
+            "Followup_Nota": "Enviar apresentação institucional atualizada.", 
             "Historico": "01/09: Primeiro contato realizado."
         },
         {
@@ -111,8 +145,9 @@ if 'df_crm' not in st.session_state:
             "Contato": "Patricia Lima", "Cargo": "Gerente de Compras", "Telefone": "(16) 99765-4321", 
             "Email": "patricia@sigmasistemas.com.br", "Cidade": "Ribeirão Preto / SP", "Valor": 35000.0, 
             "Prob": 0.20, "Vendedor": "Lucas Mendes", "Perda": "",
-            "Data_Cadastro": str(date.today()),
-            "Followup_Data": str(date.today()), "Followup_Nota": "Ligar para confirmar se recebeu o e-mail.", 
+            "Data_Cadastro": str(date.today() - timedelta(days=15)),
+            "Data_Ultima_Movimentacao": str(date.today() - timedelta(days=12)),
+            "Followup_Data": "", "Followup_Nota": "", 
             "Historico": "02/09: E-mail enviado."
         },
         {
@@ -120,7 +155,8 @@ if 'df_crm' not in st.session_state:
             "Contato": "Fernando Souza", "Cargo": "Sócio-Proprietário", "Telefone": "(11) 98123-4567", 
             "Email": "fernando@omegaind.com.br", "Cidade": "São Paulo / SP", "Valor": 80000.0, 
             "Prob": 0.40, "Vendedor": "Gabriel Silva", "Perda": "",
-            "Data_Cadastro": str(date.today()),
+            "Data_Cadastro": str(date.today() - timedelta(days=5)),
+            "Data_Ultima_Movimentacao": str(date.today() - timedelta(days=1)),
             "Followup_Data": str(date.today()), "Followup_Nota": "Alinhar escopo do projeto técnico.", 
             "Historico": "30/08: Reunião inicial."
         },
@@ -129,11 +165,16 @@ if 'df_crm' not in st.session_state:
             "Contato": "Carlos Eduardo", "Cargo": "Comprador", "Telefone": "(16) 98888-7777", 
             "Email": "carlos@betatech.com", "Cidade": "Sertãozinho / SP", "Valor": 25000.0, 
             "Prob": 0.00, "Vendedor": "Lucas Mendes", "Perda": "Preço / Orçamento",
-            "Data_Cadastro": str(date.today()),
+            "Data_Cadastro": str(date.today() - timedelta(days=20)),
+            "Data_Ultima_Movimentacao": str(date.today() - timedelta(days=8)),
             "Followup_Data": "", "Followup_Nota": "", 
             "Historico": "25/08: Achou o valor acima do orçamento."
         }
     ])
+
+# Garantir colunas de rastreamento temporal se não existirem
+if "Data_Ultima_Movimentacao" not in st.session_state.df_crm.columns:
+    st.session_state.df_crm["Data_Ultima_Movimentacao"] = str(date.today())
 
 if 'df_tarefas' not in st.session_state:
     st.session_state.df_tarefas = pd.DataFrame([
@@ -181,6 +222,9 @@ if 'cliente_selecionado_id' not in st.session_state:
 if 'modo_edicao' not in st.session_state:
     st.session_state.modo_edicao = False
 
+if 'pending_stage_change' not in st.session_state:
+    st.session_state.pending_stage_change = None
+
 if 'manual_counts' not in st.session_state:
     st.session_state.manual_counts = {}
 
@@ -188,6 +232,67 @@ if 'manual_perdas' not in st.session_state:
     st.session_state.manual_perdas = None
 
 df = st.session_state.df_crm
+
+# ---------------------------------------------------------
+# LÓGICA DO KANBAN INTELIGENTE (STATUS POR CORES)
+# ---------------------------------------------------------
+def calcular_status_kanban(row, df_tarefas):
+    """
+    Retorna o status de saúde da oportunidade no Kanban:
+    - RED (🔴): Parado há mais de X dias ou tarefa em atraso.
+    - YELLOW (🟡): Sem nenhuma próxima ação/tarefa agendada.
+    - GREEN (🟢): Tarefa agendada em dia.
+    """
+    if row["Etapa"] in ["5. Fechado", "6. Perdido"]:
+        return "GREEN", "Concluído", 0
+
+    hoje = date.today()
+    
+    # Calcular dias retidos na etapa
+    data_mov = row.get("Data_Ultima_Movimentacao", str(hoje))
+    try:
+        dt_mov = dt.strptime(str(data_mov), "%Y-%m-%d").date()
+    except:
+        dt_mov = hoje
+    dias_na_etapa = (hoje - dt_mov).days
+
+    # Verificar tarefas do cliente
+    empresa = row["Empresa"]
+    tarefas_cliente = df_tarefas[(df_tarefas["Cliente"] == empresa) & (df_tarefas["Status"] != "Concluído")] if not df_tarefas.empty else pd.DataFrame()
+    
+    tem_followup_nota = bool(str(row.get("Followup_Nota", "")).strip())
+    followup_data = row.get("Followup_Data", "")
+    
+    dt_followup = None
+    if followup_data:
+        try:
+            dt_followup = dt.strptime(str(followup_data), "%Y-%m-%d").date()
+        except:
+            pass
+
+    # 1. VERIFICAÇÃO CRÍTICA (RED)
+    if dias_na_etapa >= DIAS_ESTAGNACAO_LIMITE:
+        return "RED", f"Parado há {dias_na_etapa} dias", dias_na_etapa
+
+    if dt_followup and dt_followup < hoje:
+        return "RED", "Follow-up Atrasado!", dias_na_etapa
+
+    if not tarefas_cliente.empty:
+        for _, t in tarefas_cliente.iterrows():
+            try:
+                dt_venc = dt.strptime(str(t["Data_Vencimento"]), "%Y-%m-%d").date()
+                if dt_venc < hoje:
+                    return "RED", "Tarefa Atrasada!", dias_na_etapa
+            except:
+                pass
+
+    # 2. VERIFICAÇÃO DE ATENÇÃO (YELLOW)
+    if not tem_followup_nota and tarefas_cliente.empty:
+        return "YELLOW", "Sem Próxima Ação Definitiva", dias_na_etapa
+
+    # 3. VERIFICAÇÃO DE SAÚDE BOA (GREEN)
+    return "GREEN", "Atividades em Dia", dias_na_etapa
+
 
 # ---------------------------------------------------------
 # FUNÇÕES DE ALERTAS E TAREFAS
@@ -287,7 +392,7 @@ st.divider()
 # NAVEGAÇÃO POR ABAS REDUZIDAS
 # ---------------------------------------------------------
 aba_crm, aba_dash, aba_relatorio, aba_novo = st.tabs([
-    "📌 CRM (Funil & Tarefas)", 
+    "📌 CRM (Kanban Inteligente & Tarefas)", 
     "📊 DASHBOARD", 
     "📄 RELATÓRIO EXECUTIVO", 
     "➕ NOVO CADASTRO"
@@ -310,7 +415,7 @@ def criar_link_google_agenda(empresa, contato, nota_followup, data_str):
         return "#"
 
 # =========================================================
-# ABA 1: GERENCIADOR DE TAREFAS NO TOPO + CRM ABAIXO
+# ABA 1: GERENCIADOR DE TAREFAS NO TOPO + CRM KANBAN ABAIXO
 # =========================================================
 with aba_crm:
     st.subheader("📌 Gerenciador de Tarefas Integrado")
@@ -368,10 +473,67 @@ with aba_crm:
     st.write("---")
 
     # ---------------------------------------------------------
-    # GESTÃO VISUAL DO FUNIL DE VENDAS (CRM)
+    # MODAL DE GATILHO RÁPIDO (MUDANÇA DE ETAPA)
     # ---------------------------------------------------------
-    st.subheader("Gestão Visual do Funil de Vendas")
-    
+    if st.session_state.pending_stage_change is not None:
+        change_info = st.session_state.pending_stage_change
+        c_id = change_info["id"]
+        nova_et = change_info["nova_etapa"]
+        
+        idx_lead = st.session_state.df_crm.index[st.session_state.df_crm["id"] == c_id].tolist()[0]
+        lead_data = st.session_state.df_crm.loc[idx_lead]
+
+        st.warning(f"⚡ **Gatilho de Etapa:** Atualizando '{lead_data['Empresa']}' para **{nova_et}**")
+        
+        with st.form(key=f"modal_gatilho_{c_id}"):
+            if nova_et == "4. Proposta Enviada":
+                novo_val = st.number_input("Valor Final da Proposta (R$)", value=float(lead_data["Valor"]), step=1000.0)
+                dt_prev = st.date_input("Data Prevista para Fechamento", value=date.today() + timedelta(days=15))
+                nota_prop = st.text_input("Observação / Detalhes da Proposta", value="Proposta comercial enviada.")
+                
+            elif nova_et == "6. Perdido":
+                motivo_p = st.selectbox("Motivo Principal da Perda *", MOTIVOS_PERDA_PADRAO)
+                nota_prop = st.text_area("Justificativa do Feedback", placeholder="Detalhe o motivo da perda...")
+                novo_val = 0.0
+                
+            else:
+                nota_prop = st.text_input("Próximo Passo / Nota de Acompanhamento", value=f"Movido para {nova_et}")
+                novo_val = float(lead_data["Valor"])
+                dt_prev = None
+
+            c_mod1, c_mod2 = st.columns(2)
+            with c_mod1:
+                btn_confirmar_gatilho = st.form_submit_button("✅ Confirmar Transição", use_container_width=True)
+            with c_mod2:
+                btn_cancelar_gatilho = st.form_submit_button("❌ Cancelar", use_container_width=True)
+
+            if btn_confirmar_gatilho:
+                st.session_state.df_crm.loc[idx_lead, "Etapa"] = nova_et
+                st.session_state.df_crm.loc[idx_lead, "Prob"] = PROB_MAP[nova_et]
+                st.session_state.df_crm.loc[idx_lead, "Data_Ultima_Movimentacao"] = str(date.today())
+                st.session_state.df_crm.loc[idx_lead, "Valor"] = novo_val
+                
+                if nova_et == "6. Perdido":
+                    st.session_state.df_crm.loc[idx_lead, "Perda"] = motivo_p
+                
+                if nota_prop:
+                    st.session_state.df_crm.loc[idx_lead, "Followup_Nota"] = nota_prop
+                    st.session_state.df_crm.loc[idx_lead, "Followup_Data"] = str(date.today())
+
+                hist_ant = str(lead_data.get("Historico", ""))
+                st.session_state.df_crm.loc[idx_lead, "Historico"] = f"{hist_ant}\n[{date.today().strftime('%d/%m')}] Movido para {nova_et}. {nota_prop}".strip()
+
+                st.session_state.pending_stage_change = None
+                st.success("Transição concluída!")
+                st.rerun()
+
+            if btn_cancelar_gatilho:
+                st.session_state.pending_stage_change = None
+                st.rerun()
+
+    # ---------------------------------------------------------
+    # FICHA DETALHADA DO CLIENTE SELECIONADO
+    # ---------------------------------------------------------
     if st.session_state.cliente_selecionado_id is not None:
         cliente_dado = df[df["id"] == st.session_state.cliente_selecionado_id]
         
@@ -424,8 +586,7 @@ with aba_crm:
                             idx_etapa = etapas_list.index(c['Etapa']) if c['Etapa'] in etapas_list else 0
                             nova_etapa = st.selectbox("Etapa Atual:", options=etapas_list, index=idx_etapa, key=f"etapa_vis_{c['id']}")
                             if nova_etapa != c['Etapa']:
-                                st.session_state.df_crm.loc[idx_cliente, "Etapa"] = nova_etapa
-                                st.session_state.df_crm.loc[idx_cliente, "Prob"] = PROB_MAP[nova_etapa]
+                                st.session_state.pending_stage_change = {"id": c['id'], "nova_etapa": nova_etapa}
                                 st.rerun()
 
                         st.divider()
@@ -478,19 +639,11 @@ with aba_crm:
                         with st.form(key=f"form_perda_{cliente_nome_atual}"):
                             motivo_perda = st.selectbox(
                                 "Motivo Principal da Perda",
-                                options=[
-                                    "Preço / Orçamento fora do esperado",
-                                    "Prazo de entrega incompatibility",
-                                    "Fechou com Concorrente",
-                                    "Falta de escopo técnico / Solução não atende",
-                                    "Projeto Cancelado pelo Cliente",
-                                    "Sem retorno / Lead esfriou",
-                                    "Outros",
-                                ],
+                                options=MOTIVOS_PERDA_PADRAO
                             )
                             obs_tecnica = st.text_area(
                                 "Observação Técnica do Vendedor / Feedback do Cliente",
-                                placeholder="Ex: O cliente optou pelo concorrente X por conta do prazo de entrega ser de 15 dias.",
+                                placeholder="Ex: O cliente optou pelo concorrente X por conta do prazo de entrega.",
                             )
 
                             btn_salvar_perda = st.form_submit_button("Confirmar Perda do Negócio")
@@ -499,6 +652,7 @@ with aba_crm:
                                 st.session_state.df_crm.loc[idx_cliente, "Etapa"] = "6. Perdido"
                                 st.session_state.df_crm.loc[idx_cliente, "Prob"] = 0.00
                                 st.session_state.df_crm.loc[idx_cliente, "Perda"] = motivo_perda
+                                st.session_state.df_crm.loc[idx_cliente, "Data_Ultima_Movimentacao"] = str(date.today())
                                 
                                 historico_antigo = str(c.get("Historico", ""))
                                 novo_hist = f"{historico_antigo}\n[{date.today().strftime('%d/%m/%Y')}] Perda registrada ({motivo_perda}): {obs_tecnica}".strip()
@@ -549,6 +703,12 @@ with aba_crm:
                 st.markdown('</div>', unsafe_allow_html=True)
                 st.divider()
 
+    # ---------------------------------------------------------
+    # KANBAN INTELIGENTE COM SINALIZAÇÃO POR CORES
+    # ---------------------------------------------------------
+    st.subheader("Gestão Visual do Funil de Vendas (Kanban Inteligente)")
+    st.caption("🟢 **Verde:** Em dia | 🟡 **Amarelo:** Sem ação agendada | 🔴 **Vermelho:** Parado / Atrasado")
+    
     etapas = list(PROB_MAP.keys())
     cols = st.columns(len(etapas))
     
@@ -568,14 +728,50 @@ with aba_crm:
             sub_df = df_filtered[df_filtered["Etapa"] == etapa]
             
             for _, row in sub_df.iterrows():
-                tem_followup = bool(str(row.get("Followup_Nota", "")).strip())
-                status_tag = "🔴 Follow-up" if tem_followup else "⚪ Sem Ação"
-                btn_label = f"🏢 {row['Empresa']}\n({status_tag})"
+                status_cor, msg_status, dias_ret = calcular_status_kanban(row, st.session_state.df_tarefas)
                 
-                if st.button(btn_label, key=f"btn_card_{row['id']}", use_container_width=True):
-                    st.session_state.cliente_selecionado_id = row['id']
-                    st.session_state.modo_edicao = False
-                    st.rerun()
+                # Definir ícone de sinalização
+                icon = "🟢" if status_cor == "GREEN" else ("🟡" if status_cor == "YELLOW" else "🔴")
+                
+                # Renderizar Card Customizado
+                with st.container():
+                    st.markdown(
+                        f"""
+                        <div class="kanban-card kanban-card-{status_cor.lower()}">
+                            <div style="display:flex; justify-between; align-items:center;">
+                                <span style="font-size:11px; color:#94A3B8;">{row['Cliente']}</span>
+                                <span style="font-size:12px;">{icon}</span>
+                            </div>
+                            <strong style="font-size:14px; color:#F8FAFC;">{row['Empresa']}</strong><br/>
+                            <span style="font-size:12px; color:#38BDF8; font-weight:bold;">R$ {row['Valor']:,.2f}</span>
+                            <hr style="margin:4px 0; border-color:#334155;"/>
+                            <div style="font-size:10px; color:#CBD5E1;">
+                                ⏱️ {dias_ret}d nesta etapa<br/>
+                                📌 <i>{msg_status}</i>
+                            </div>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
+                    
+                    c_btn_a, c_btn_b = st.columns([2, 1])
+                    with c_btn_a:
+                        if st.button("📄 Ficha", key=f"btn_card_{row['id']}", use_container_width=True):
+                            st.session_state.cliente_selecionado_id = row['id']
+                            st.session_state.modo_edicao = False
+                            st.rerun()
+                    with c_btn_b:
+                        # Seletor rápido de transição no card
+                        proximas_etapas = [e for e in etapas if e != etapa]
+                        prox_et = st.selectbox(
+                            "Mover", 
+                            ["Mover..."] + proximas_etapas, 
+                            key=f"move_quick_{row['id']}",
+                            label_visibility="collapsed"
+                        )
+                        if prox_et != "Mover...":
+                            st.session_state.pending_stage_change = {"id": row['id'], "nova_etapa": prox_et}
+                            st.rerun()
 
 # =========================================================
 # ABA 2: DASHBOARD
@@ -990,6 +1186,7 @@ with aba_novo:
                     "Vendedor": "Não informado",
                     "Perda": "",
                     "Data_Cadastro": str(date.today()),
+                    "Data_Ultima_Movimentacao": str(date.today()),
                     "Followup_Data": "",
                     "Followup_Nota": "",
                     "Historico": f"Cadastro rápido realizado em {dt.now().strftime('%d/%m/%Y')}"
@@ -1053,6 +1250,7 @@ with aba_novo:
                     "Vendedor": novo_vendedor if novo_vendedor else "Não informado",
                     "Perda": motivo_perda if "Perdido" in nova_etapa else "",
                     "Data_Cadastro": str(date.today()),
+                    "Data_Ultima_Movimentacao": str(date.today()),
                     "Followup_Data": str(f_data_ini) if f_nota_ini else "",
                     "Followup_Nota": f_nota_ini,
                     "Historico": f"Cadastrado em {dt.now().strftime('%d/%m/%Y')}"
