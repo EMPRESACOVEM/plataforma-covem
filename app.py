@@ -308,9 +308,69 @@ def criar_link_google_agenda(empresa, contato, nota_followup, data_str):
         return "#"
 
 # =========================================================
-# ABA 1: CRM + GERENCIADOR DE TAREFAS INTEGRADO ABAIXO
+# ABA 1: GERENCIADOR DE TAREFAS NO TOPO + CRM ABAIXO
 # =========================================================
 with aba_crm:
+    # ---------------------------------------------------------
+    # 1. GERENCIADOR DE TAREFAS INTEGRADO (ABAIXO DA CENTRAL DE ALERTAS)
+    # ---------------------------------------------------------
+    st.subheader("📌 Gerenciador de Tarefas Integrado")
+
+    lista_clientes = (
+        ["Nenhum / Tarefa Geral"] + st.session_state.df_crm["Empresa"].dropna().tolist()
+        if not st.session_state.df_crm.empty
+        else ["Nenhum / Tarefa Geral"]
+    )
+
+    with st.expander("➕ Criar Nova Tarefa", expanded=False):
+        with st.form(key="form_nova_tarefa_crm", clear_on_submit=True):
+            col1, col2 = st.columns([2, 1])
+
+            with col1:
+                titulo_tarefa = st.text_input("Título da Tarefa / Ação")
+                descricao = st.text_area("Descrição / Detalhes")
+
+            with col2:
+                cliente_vinculado = st.selectbox(
+                    "Vincular ao Cliente / Oportunidade", options=lista_clientes
+                )
+                data_vencimento = st.date_input(
+                    "Data de Vencimento", min_value=datetime.date.today()
+                )
+                prioridade = st.selectbox(
+                    "Prioridade", options=["Baixa", "Média", "Alta", "Urgente"]
+                )
+
+            submit_tarefa = st.form_submit_button("Salvar Tarefa")
+
+            if submit_tarefa and titulo_tarefa:
+                nova_linha_tarefa = {
+                    "Titulo": titulo_tarefa,
+                    "Descricao": descricao,
+                    "Cliente": cliente_vinculado,
+                    "Data_Vencimento": str(data_vencimento),
+                    "Prioridade": prioridade,
+                    "Status": "Pendente",
+                    "Data_Criacao": str(datetime.date.today()),
+                }
+                st.session_state.df_tarefas = pd.concat(
+                    [st.session_state.df_tarefas, pd.DataFrame([nova_linha_tarefa])],
+                    ignore_index=True
+                )
+                st.success(f"Tarefa '{titulo_tarefa}' vinculada a '{cliente_vinculado}' com sucesso!")
+                st.rerun()
+
+    st.markdown("#### 📋 Lista Geral de Tarefas Pendentes")
+    if not st.session_state.df_tarefas.empty:
+        st.dataframe(st.session_state.df_tarefas, use_container_width=True)
+    else:
+        st.info("Nenhuma tarefa pendente.")
+
+    st.write("---")
+
+    # ---------------------------------------------------------
+    # 2. GESTÃO VISUAL DO FUNIL DE VENDAS (CRM)
+    # ---------------------------------------------------------
     st.subheader("Gestão Visual do Funil de Vendas")
     
     if st.session_state.cliente_selecionado_id is not None:
@@ -518,62 +578,6 @@ with aba_crm:
                     st.session_state.cliente_selecionado_id = row['id']
                     st.session_state.modo_edicao = False
                     st.rerun()
-
-    # ---------------------------------------------------------
-    # GERENCIADOR DE TAREFAS (INCORPORADO NA MESMA ABA ABAIXO DO FUNIL)
-    # ---------------------------------------------------------
-    st.write("---")
-    st.subheader("📌 Gerenciador de Tarefas Integrado")
-
-    lista_clientes = (
-        ["Nenhum / Tarefa Geral"] + st.session_state.df_crm["Empresa"].dropna().tolist()
-        if not st.session_state.df_crm.empty
-        else ["Nenhum / Tarefa Geral"]
-    )
-
-    with st.expander("➕ Criar Nova Tarefa", expanded=False):
-        with st.form(key="form_nova_tarefa_crm", clear_on_submit=True):
-            col1, col2 = st.columns([2, 1])
-
-            with col1:
-                titulo_tarefa = st.text_input("Título da Tarefa / Ação")
-                descricao = st.text_area("Descrição / Detalhes")
-
-            with col2:
-                cliente_vinculado = st.selectbox(
-                    "Vincular ao Cliente / Oportunidade", options=lista_clientes
-                )
-                data_vencimento = st.date_input(
-                    "Data de Vencimento", min_value=datetime.date.today()
-                )
-                prioridade = st.selectbox(
-                    "Prioridade", options=["Baixa", "Média", "Alta", "Urgente"]
-                )
-
-            submit_tarefa = st.form_submit_button("Salvar Tarefa")
-
-            if submit_tarefa and titulo_tarefa:
-                nova_linha_tarefa = {
-                    "Titulo": titulo_tarefa,
-                    "Descricao": descricao,
-                    "Cliente": cliente_vinculado,
-                    "Data_Vencimento": str(data_vencimento),
-                    "Prioridade": prioridade,
-                    "Status": "Pendente",
-                    "Data_Criacao": str(datetime.date.today()),
-                }
-                st.session_state.df_tarefas = pd.concat(
-                    [st.session_state.df_tarefas, pd.DataFrame([nova_linha_tarefa])],
-                    ignore_index=True
-                )
-                st.success(f"Tarefa '{titulo_tarefa}' vinculada a '{cliente_vinculado}' com sucesso!")
-                st.rerun()
-
-    st.markdown("#### 📋 Lista Geral de Tarefas Pendentes")
-    if not st.session_state.df_tarefas.empty:
-        st.dataframe(st.session_state.df_tarefas, use_container_width=True)
-    else:
-        st.info("Nenhuma tarefa pendente.")
 
 # =========================================================
 # ABA 2: DASHBOARD
@@ -944,7 +948,70 @@ with aba_relatorio:
 # ABA 4: NOVO CADASTRO
 # =========================================================
 with aba_novo:
-    st.subheader("➕ Cadastrar Nova Oportunidade")
+    # ---------------------------------------------------------
+    # CADASTRO RÁPIDO (CAMPOS ESSENCIAIS)
+    # ---------------------------------------------------------
+    st.subheader("⚡ Cadastro Rápido")
+    st.caption("Cadastre rapidamente uma nova empresa informando apenas os dados fundamentais.")
+
+    with st.form("form_cadastro_rapido", clear_on_submit=True):
+        col_r1, col_r2 = st.columns(2)
+
+        with col_r1:
+            rapido_empresa = st.text_input("Nome da Empresa *")
+            rapido_telefone = st.text_input("Telefone *")
+
+        with col_r2:
+            rapido_carteira = st.selectbox(
+                "Carteira *", 
+                [COVEM_NAME, "BraClean", "QV Energia Solar", "Elleven"], 
+                key="rapido_carteira"
+            )
+            rapido_etapa = st.selectbox(
+                "Etapa da Venda *", 
+                list(PROB_MAP.keys()), 
+                key="rapido_etapa"
+            )
+
+        btn_salvar_rapido = st.form_submit_button("⚡ Cadastrar Rapidamente", use_container_width=True)
+
+        if btn_salvar_rapido:
+            if not rapido_empresa or not rapido_telefone:
+                st.error("Por favor, preencha o Nome da Empresa e o Telefone.")
+            else:
+                novo_id = df["id"].max() + 1 if not df.empty else 1
+                nova_linha_rapida = {
+                    "id": novo_id,
+                    "Empresa": rapido_empresa,
+                    "Cliente": rapido_carteira,
+                    "Etapa": rapido_etapa,
+                    "Contato": "Não informado",
+                    "Cargo": "Não informado",
+                    "Telefone": rapido_telefone,
+                    "Email": "Não informado",
+                    "Cidade": "Não informado",
+                    "Valor": 0.0,
+                    "Prob": PROB_MAP[rapido_etapa],
+                    "Vendedor": "Não informado",
+                    "Perda": "",
+                    "Data_Cadastro": str(date.today()),
+                    "Followup_Data": "",
+                    "Followup_Nota": "",
+                    "Historico": f"Cadastro rápido realizado em {dt.now().strftime('%d/%m/%Y')}"
+                }
+                st.session_state.df_crm = pd.concat(
+                    [st.session_state.df_crm, pd.DataFrame([nova_linha_rapida])], 
+                    ignore_index=True
+                )
+                st.success(f"✅ Empresa '{rapido_empresa}' cadastrada com sucesso via Cadastro Rápido!")
+                st.rerun()
+
+    st.write("---")
+
+    # ---------------------------------------------------------
+    # CADASTRO COMPLETO DE OPORTUNIDADE
+    # ---------------------------------------------------------
+    st.subheader("➕ Cadastrar Oportunidade Completa")
     
     with st.form("form_oportunidade", clear_on_submit=True):
         col_f1, col_f2 = st.columns(2)
@@ -969,7 +1036,7 @@ with aba_novo:
         f_data_ini = st.date_input("Data do Primeiro Follow-up", value=date.today())
         f_nota_ini = st.text_input("Lembrete / Ação de Follow-up")
 
-        btn_salvar = st.form_submit_button("💾 Salvar Oportunidade")
+        btn_salvar = st.form_submit_button("💾 Salvar Oportunidade Completa")
         
         if btn_salvar:
             if not nova_empresa:
