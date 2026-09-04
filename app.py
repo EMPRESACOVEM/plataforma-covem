@@ -358,7 +358,167 @@ def renderizar_historico_e_perda(empresa_selecionada):
                 st.error("Oportunidade atualizada como PERDIDA.")
                 st.rerun()
 
+# ==============================================================================
+# GESTÃO FINANCEIRA, FORECAST & STALLED DEALS
+# ==============================================================================
 
+
+def calcular_forecast_e_estagnados(dias_limite_atencao=7, dias_limite_critico=15):
+    """Calcula o Forecast Ponderado e identifica oportunidades estagnadas."""
+    df_crm = st.session_state.df_crm.copy()
+    df_tarefas = st.session_state.df_tarefas.copy()
+
+    if df_crm.empty:
+        return df_crm, 0.0, 0.0, 0, 0
+
+    # Certifica tipos de dados numéricos e de data
+    df_crm["Valor_Estimado"] = pd.to_numeric(
+        df_crm["Valor_Estimado"], errors="coerce"
+    ).fillna(0.0)
+    df_crm["Prob"] = (
+        pd.to_numeric(df_crm["Prob"], errors="coerce").fillna(0.0) / 100.0
+    )  # Converte % para decimal
+
+    # 1. Cálculo do Forecast (Apenas para oportunidades ativas, excluindo 'Ganhos' e 'Perdidos')
+    df_ativas = df_crm[~df_crm["Etapa"].isin(["5. Ganho", "6. Perdido"])].copy()
+    df_ativas["Valor_Ponderado"] = (
+        df_ativas["Valor_Estimado"] * df_ativas["Prob"]
+    )
+
+    valor_total_bruto = df_ativas["Valor_Estimado"].sum()
+    forecast_ponderado = df_ativas["Valor_Ponderado"].sum()
+
+    # 2. Análise de Negócios Estagnados
+    hoje = pd.to_datetime(date.today())
+    if "Ultima_Atualizacao" in df_crm.columns:
+        df_crm["Data_Atualizacao"] = pd.to_datetime(
+            df_crm["Ultima_Atualizacao"], errors="coerce"
+        )
+    else:
+        df_crm["Data_Atualizacao"] = hoje
+
+    # Calcula dias sem movimentação
+    df_crm["Dias_Sem_Movimento"] = (
+        hoje - df_crm["Data_Atualizacao"]
+    ).dt.days.fillna(0)
+
+    # Identifica clientes com tarefas pendentes ativas
+    clientes_com_tarefas_pendentes = (
+        df_tarefas[df_tarefas["Status"] != "Concluído"]["Cliente"]
+        .dropna()
+        .unique()
+    )
+
+    def definir_status_estagnacao(row):
+        if row["Etapa"] in ["5. Ganho", "6. Perdido"]:
+            return "Finalizado"
+
+        dias = row["Dias_Sem_Movimento"]
+        tem_tarefa = row["Empresa"] in clientes_com_tarefas_pendentes
+
+        if dias >= dias_limite_critico or not tem_tarefa:
+            return "🔴 Estagnado"
+        elif dias >= dias_limite_atencao:
+            return "🟡 Atenção"
+        return "🟢 Em Dia"
+
+    df_crm["Status_Estagnacao"] = df_crm.apply(
+        definir_status_estagnacao, axis=1
+    )
+
+    num_estagnados = (df_crm["Status_Estagnacao"] == "🔴 Estagnado").sum()
+    num_atencao = (df_crm["Status_Estagnacao"] == "🟡 Atenção").sum()
+
+    return (
+        df_crm,
+        valor_total_bruto,
+        forecast_ponderado,
+        num_estagnados,
+        num_atencao,
+    )
+
+
+def renderizar_painel_financeiro_e_forecast():
+    """Painel de Métricas Financeiras e Análise de Risco do Pipeline"""
+    (
+        df_crm_analisado,
+        valor_bruto,
+        forecast,
+        num_estagnados,
+        num_atencao,
+    ) = calcular_forecast_e_estagnados()
+
+    st.subheader("💰 Previsão de Fechamento (Sales Forecast)")
+
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric(
+            label="Pipeline Total Bruto", value=f"R$ {valor_bruto:,.2f}"
+        )
+    with col2:
+        st.metric(
+            label="Forecast Ponderado (Previsto)", value=f"R$ {forecast:,.2f}"
+        )
+    with col3:
+        st.metric(
+            label="Oportunidades em Risco",
+            value=f"{num_estagnados}",
+            delta="- Estagnados",
+            delta_color="inverse",
+        )
+    with col4:
+        st.metric(
+            label="Requer Atenção",
+            value=f"{num_atencao}",
+            delta="Sem movimentação recente",
+            delta_color="off",
+        )
+
+    st.markdown("---")
+    st.subheader("⚠️ Sinalização de Negócios Estagnados (Stalled Deals)")
+
+    df_risco = df_crm_analisado[
+        df_crm_analisado["Status_Estagnacao"].isin(
+            ["🔴 Estagnado", "🟡 Atenção"]
+        )
+    ]
+
+    if not df_risco.empty:
+        st.warning(
+            f"Exibindo **{len(df_risco)}** negócio(s) que precisam de ação imediata da equipe de vendas:"
+        )
+        st.dataframe(
+            df_risco[
+                [
+                    "Empresa",
+                    "Etapa",
+                    "Valor_Estimado",
+                    "Prob",
+                    "Dias_Sem_Movimento",
+                    "Status_Estagnacao",
+                ]
+            ],
+            use_container_width=True,
+        )
+    else:
+        st.success(
+            "🎉 Parabéns! Todos os negócios no pipeline estão atualizados e com ações em dia."
+        )
+
+
+# ==============================================================================
+# ATUALIZAÇÃO DA PÁGINA INICIAL / DASHBOARD
+# ==============================================================================
+# (Substitua o trecho 'if pagina == "Página Inicial / Dashboard":' por este)
+
+if pagina == "Página Inicial / Dashboard":
+    # 1. Alertas de Tarefas
+    exibir_alertas_tarefas()
+
+    st.title("📊 Dashboard Executivo & Previsão de Faturamento")
+
+    # 2. Painel Financeiro & Stalled Deals
+    renderizar_painel_financeiro_e_forecast()
 # ==============================================================================
 # NAVEGAÇÃO DA PLATAFORMA (SIDEBAR)
 # ==============================================================================
