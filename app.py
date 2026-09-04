@@ -282,11 +282,10 @@ st.markdown(f'<div class="notranslate"><h1 style="margin:0; padding:0;">{titulo_
 st.divider()
 
 # ---------------------------------------------------------
-# NAVEGAÇÃO POR ABAS
+# NAVEGAÇÃO POR ABAS REDUZIDAS
 # ---------------------------------------------------------
-aba_crm, aba_tarefas_tab, aba_dash, aba_relatorio, aba_novo = st.tabs([
-    "📌 CRM (Funil)", 
-    "📅 GERENCIADOR DE TAREFAS",
+aba_crm, aba_dash, aba_relatorio, aba_novo = st.tabs([
+    "📌 CRM (Funil & Tarefas)", 
     "📊 DASHBOARD", 
     "📄 RELATÓRIO EXECUTIVO", 
     "➕ NOVO CADASTRO"
@@ -309,7 +308,7 @@ def criar_link_google_agenda(empresa, contato, nota_followup, data_str):
         return "#"
 
 # =========================================================
-# ABA 1: CRM (MINIMALISTA + FICHA COMPLETA COM TABS)
+# ABA 1: CRM + GERENCIADOR DE TAREFAS INTEGRADO ABAIXO
 # =========================================================
 with aba_crm:
     st.subheader("Gestão Visual do Funil de Vendas")
@@ -520,11 +519,11 @@ with aba_crm:
                     st.session_state.modo_edicao = False
                     st.rerun()
 
-# =========================================================
-# ABA 2: GERENCIADOR DE TAREFAS INTEGRADO
-# =========================================================
-with aba_tarefas_tab:
-    st.title("📌 Gerenciador de Tarefas COVEM")
+    # ---------------------------------------------------------
+    # GERENCIADOR DE TAREFAS (INCORPORADO NA MESMA ABA ABAIXO DO FUNIL)
+    # ---------------------------------------------------------
+    st.write("---")
+    st.subheader("📌 Gerenciador de Tarefas Integrado")
 
     lista_clientes = (
         ["Nenhum / Tarefa Geral"] + st.session_state.df_crm["Empresa"].dropna().tolist()
@@ -532,53 +531,52 @@ with aba_tarefas_tab:
         else ["Nenhum / Tarefa Geral"]
     )
 
-    with st.form(key="form_nova_tarefa", clear_on_submit=True):
-        st.subheader("➕ Criar Nova Tarefa")
-        col1, col2 = st.columns([2, 1])
+    with st.expander("➕ Criar Nova Tarefa", expanded=False):
+        with st.form(key="form_nova_tarefa_crm", clear_on_submit=True):
+            col1, col2 = st.columns([2, 1])
 
-        with col1:
-            titulo_tarefa = st.text_input("Título da Tarefa / Ação")
-            descricao = st.text_area("Descrição / Detalhes")
+            with col1:
+                titulo_tarefa = st.text_input("Título da Tarefa / Ação")
+                descricao = st.text_area("Descrição / Detalhes")
 
-        with col2:
-            cliente_vinculado = st.selectbox(
-                "Vincular ao Cliente / Oportunidade", options=lista_clientes
-            )
-            data_vencimento = st.date_input(
-                "Data de Vencimento", min_value=datetime.date.today()
-            )
-            prioridade = st.selectbox(
-                "Prioridade", options=["Baixa", "Média", "Alta", "Urgente"]
-            )
+            with col2:
+                cliente_vinculado = st.selectbox(
+                    "Vincular ao Cliente / Oportunidade", options=lista_clientes
+                )
+                data_vencimento = st.date_input(
+                    "Data de Vencimento", min_value=datetime.date.today()
+                )
+                prioridade = st.selectbox(
+                    "Prioridade", options=["Baixa", "Média", "Alta", "Urgente"]
+                )
 
-        submit_tarefa = st.form_submit_button("Salvar Tarefa")
+            submit_tarefa = st.form_submit_button("Salvar Tarefa")
 
-        if submit_tarefa and titulo_tarefa:
-            nova_linha_tarefa = {
-                "Titulo": titulo_tarefa,
-                "Descricao": descricao,
-                "Cliente": cliente_vinculado,
-                "Data_Vencimento": str(data_vencimento),
-                "Prioridade": prioridade,
-                "Status": "Pendente",
-                "Data_Criacao": str(datetime.date.today()),
-            }
-            st.session_state.df_tarefas = pd.concat(
-                [st.session_state.df_tarefas, pd.DataFrame([nova_linha_tarefa])],
-                ignore_index=True
-            )
-            st.success(f"Tarefa '{titulo_tarefa}' vinculada a '{cliente_vinculado}' com sucesso!")
-            st.rerun()
+            if submit_tarefa and titulo_tarefa:
+                nova_linha_tarefa = {
+                    "Titulo": titulo_tarefa,
+                    "Descricao": descricao,
+                    "Cliente": cliente_vinculado,
+                    "Data_Vencimento": str(data_vencimento),
+                    "Prioridade": prioridade,
+                    "Status": "Pendente",
+                    "Data_Criacao": str(datetime.date.today()),
+                }
+                st.session_state.df_tarefas = pd.concat(
+                    [st.session_state.df_tarefas, pd.DataFrame([nova_linha_tarefa])],
+                    ignore_index=True
+                )
+                st.success(f"Tarefa '{titulo_tarefa}' vinculada a '{cliente_vinculado}' com sucesso!")
+                st.rerun()
 
-    st.divider()
-    st.subheader("📋 Lista Geral de Tarefas")
+    st.markdown("#### 📋 Lista Geral de Tarefas Pendentes")
     if not st.session_state.df_tarefas.empty:
         st.dataframe(st.session_state.df_tarefas, use_container_width=True)
     else:
         st.info("Nenhuma tarefa pendente.")
 
 # =========================================================
-# ABA 3: DASHBOARD
+# ABA 2: DASHBOARD
 # =========================================================
 with aba_dash:
     st.markdown(f'<div class="notranslate"><h3>1. DISTRIBUIÇÃO DO FUNIL DE VENDAS ({COVEM_NAME})</h3></div>', unsafe_allow_html=True)
@@ -757,7 +755,7 @@ with aba_dash:
         st.info("Nenhuma perda registrada no momento.")
 
 # =========================================================
-# ABA 4: RELATÓRIO EXECUTIVO
+# ABA 3: RELATÓRIO EXECUTIVO
 # =========================================================
 with aba_relatorio:
     st.title("📄 Relatório Executivo")
@@ -943,7 +941,7 @@ with aba_relatorio:
         st.plotly_chart(fig_linha_fin, use_container_width=True)
 
 # =========================================================
-# ABA 5: NOVO CADASTRO
+# ABA 4: NOVO CADASTRO
 # =========================================================
 with aba_novo:
     st.subheader("➕ Cadastrar Nova Oportunidade")
