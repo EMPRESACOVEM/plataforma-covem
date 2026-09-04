@@ -10,7 +10,7 @@ from pathlib import Path
 
 # Configuração da página
 st.set_page_config(
-    page_title="Plataforma Executiva COVEM",
+    page_title="Plataforma Executiva GRUPO COVEM",
     page_icon="🏢",
     layout="wide"
 )
@@ -18,10 +18,10 @@ st.set_page_config(
 # Caminho do diretório base
 BASE_DIR = Path(__file__).parent if "__file__" in locals() else Path.cwd()
 
-# Proteção contra tradução automática (Zero-Width Space)
-COVEM_NAME = "C\u200Bo\u200Be\u200Bm"
+# Nome Oficial do Grupo
+COVEM_NAME = "GRUPO COVEM"
 
-# Lista de Clientes do Grupo COVEM
+# Lista de Clientes do GRUPO COVEM
 CARTEIRAS_COVEM = ["BraClean", "QV Energia Solar", "Elleven"]
 
 # ---------------------------------------------------------
@@ -243,10 +243,10 @@ cliente_sel = st.sidebar.selectbox("Filtrar por Carteira:", opcoes_filtro)
 
 if cliente_sel != "TODOS":
     df_filtered = df[df["Cliente"] == cliente_sel]
-    titulo_dinamico = f"CRM {cliente_sel}"
+    titulo_dinamico = f"CRM - {cliente_sel}"
 else:
     df_filtered = df
-    titulo_dinamico = f"Grupo {COVEM_NAME}"
+    titulo_dinamico = COVEM_NAME
 
 st.sidebar.divider()
 
@@ -313,9 +313,6 @@ def criar_link_google_agenda(empresa, contato, nota_followup, data_str):
 # ABA 1: GERENCIADOR DE TAREFAS NO TOPO + CRM ABAIXO
 # =========================================================
 with aba_crm:
-    # ---------------------------------------------------------
-    # 1. GERENCIADOR DE TAREFAS INTEGRADO (ABAIXO DA CENTRAL DE ALERTAS)
-    # ---------------------------------------------------------
     st.subheader("📌 Gerenciador de Tarefas Integrado")
 
     lista_clientes = (
@@ -371,7 +368,7 @@ with aba_crm:
     st.write("---")
 
     # ---------------------------------------------------------
-    # 2. GESTÃO VISUAL DO FUNIL DE VENDAS (CRM)
+    # GESTÃO VISUAL DO FUNIL DE VENDAS (CRM)
     # ---------------------------------------------------------
     st.subheader("Gestão Visual do Funil de Vendas")
     
@@ -949,9 +946,6 @@ with aba_relatorio:
 # ABA 4: NOVO CADASTRO
 # =========================================================
 with aba_novo:
-    # ---------------------------------------------------------
-    # CADASTRO RÁPIDO (CAMPOS ESSENCIAIS)
-    # ---------------------------------------------------------
     st.subheader("⚡ Cadastro Rápido")
     st.caption("Cadastre rapidamente uma nova empresa informando apenas os dados fundamentais.")
 
