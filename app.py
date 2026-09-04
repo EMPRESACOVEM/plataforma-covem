@@ -19,7 +19,10 @@ st.set_page_config(
 BASE_DIR = Path(__file__).parent if "__file__" in locals() else Path.cwd()
 
 # Proteção contra tradução automática (Zero-Width Space)
-COVEM_NAME = "C\u200Bo\u200Bv\u200Be\u200Bm"
+COVEM_NAME = "C\u200Bo\u200Be\u200Bm"
+
+# Lista de Clientes do Grupo COVEM
+CARTEIRAS_COVEM = ["BraClean", "QV Energia Solar", "Elleven"]
 
 # ---------------------------------------------------------
 # PALETA COVEM & ESTILIZAÇÃO CSS
@@ -95,7 +98,7 @@ MOTIVOS_PERDA_PADRAO = list(CORES_PERDAS.keys())
 if 'df_crm' not in st.session_state:
     st.session_state.df_crm = pd.DataFrame([
         {
-            "id": 1, "Empresa": "Grupo Delta", "Cliente": COVEM_NAME, "Etapa": "1. Contatado", 
+            "id": 1, "Empresa": "Grupo Delta", "Cliente": "BraClean", "Etapa": "1. Contatado", 
             "Contato": "Roberto Alves", "Cargo": "Diretor Comercial", "Telefone": "(16) 99876-5432", 
             "Email": "roberto@grupodelta.com.br", "Cidade": "Sertãozinho / SP", "Valor": 50000.0, 
             "Prob": 0.20, "Vendedor": "Lucas Mendes", "Perda": "",
@@ -104,7 +107,7 @@ if 'df_crm' not in st.session_state:
             "Historico": "01/09: Primeiro contato realizado."
         },
         {
-            "id": 2, "Empresa": "Sistemas Sigma", "Cliente": COVEM_NAME, "Etapa": "1. Contatado", 
+            "id": 2, "Empresa": "Sistemas Sigma", "Cliente": "QV Energia Solar", "Etapa": "1. Contatado", 
             "Contato": "Patricia Lima", "Cargo": "Gerente de Compras", "Telefone": "(16) 99765-4321", 
             "Email": "patricia@sigmasistemas.com.br", "Cidade": "Ribeirão Preto / SP", "Valor": 35000.0, 
             "Prob": 0.20, "Vendedor": "Lucas Mendes", "Perda": "",
@@ -113,7 +116,7 @@ if 'df_crm' not in st.session_state:
             "Historico": "02/09: E-mail enviado."
         },
         {
-            "id": 3, "Empresa": "Indústria Omega", "Cliente": COVEM_NAME, "Etapa": "2. Conversando", 
+            "id": 3, "Empresa": "Indústria Omega", "Cliente": "Elleven", "Etapa": "2. Conversando", 
             "Contato": "Fernando Souza", "Cargo": "Sócio-Proprietário", "Telefone": "(11) 98123-4567", 
             "Email": "fernando@omegaind.com.br", "Cidade": "São Paulo / SP", "Valor": 80000.0, 
             "Prob": 0.40, "Vendedor": "Gabriel Silva", "Perda": "",
@@ -122,7 +125,7 @@ if 'df_crm' not in st.session_state:
             "Historico": "30/08: Reunião inicial."
         },
         {
-            "id": 4, "Empresa": "Tecnologia Beta", "Cliente": COVEM_NAME, "Etapa": "6. Perdido", 
+            "id": 4, "Empresa": "Tecnologia Beta", "Cliente": "BraClean", "Etapa": "6. Perdido", 
             "Contato": "Carlos Eduardo", "Cargo": "Comprador", "Telefone": "(16) 98888-7777", 
             "Email": "carlos@betatech.com", "Cidade": "Sertãozinho / SP", "Valor": 25000.0, 
             "Prob": 0.00, "Vendedor": "Lucas Mendes", "Perda": "Preço / Orçamento",
@@ -234,8 +237,7 @@ def exibir_alertas_tarefas(df_tarefas):
 # ---------------------------------------------------------
 st.sidebar.title("🎯 Filtros & Configurações")
 
-carteiras_unicas = [c for c in df["Cliente"].unique() if c]
-opcoes_filtro = ["TODOS"] + carteiras_unicas
+opcoes_filtro = ["TODOS"] + CARTEIRAS_COVEM
 
 cliente_sel = st.sidebar.selectbox("Filtrar por Carteira:", opcoes_filtro)
 
@@ -244,7 +246,7 @@ if cliente_sel != "TODOS":
     titulo_dinamico = f"CRM {cliente_sel}"
 else:
     df_filtered = df
-    titulo_dinamico = f"CRM - Grupo {COVEM_NAME}"
+    titulo_dinamico = f"Grupo {COVEM_NAME}"
 
 st.sidebar.divider()
 
@@ -524,9 +526,8 @@ with aba_crm:
                             edit_cidade = st.text_input("Cidade / Estado", value=c.get('Cidade', ''))
 
                         with e_col3:
-                            carteiras = [COVEM_NAME, "BraClean", "QV Energia Solar", "Elleven"]
-                            idx_cart = carteiras.index(c['Cliente']) if c['Cliente'] in carteiras else 0
-                            edit_carteira = st.selectbox("Carteira", carteiras, index=idx_cart)
+                            idx_cart = CARTEIRAS_COVEM.index(c['Cliente']) if c['Cliente'] in CARTEIRAS_COVEM else 0
+                            edit_carteira = st.selectbox("Carteira", CARTEIRAS_COVEM, index=idx_cart)
                             edit_valor = st.number_input("Valor (R$)", value=float(c['Valor']), step=1000.0, format="%.2f")
                             edit_vendedor = st.text_input("Vendedor / Responsável", value=c.get('Vendedor', ''))
 
@@ -964,7 +965,7 @@ with aba_novo:
         with col_r2:
             rapido_carteira = st.selectbox(
                 "Carteira *", 
-                [COVEM_NAME, "BraClean", "QV Energia Solar", "Elleven"], 
+                CARTEIRAS_COVEM, 
                 key="rapido_carteira"
             )
             rapido_etapa = st.selectbox(
@@ -1018,7 +1019,7 @@ with aba_novo:
         
         with col_f1:
             nova_empresa = st.text_input("Nome da Empresa / Cliente *")
-            novo_cliente = st.selectbox("Marca / Carteira *", [COVEM_NAME, "BraClean", "QV Energia Solar", "Elleven"])
+            novo_cliente = st.selectbox("Marca / Carteira *", CARTEIRAS_COVEM)
             novo_contato = st.text_input("Contato / Nome")
             novo_cargo = st.text_input("Cargo")
             novo_telefone = st.text_input("Telefone de Contato *")
