@@ -413,7 +413,7 @@ with aba_dash:
         st.session_state.manual_perdas = None
 
     nome_exibicao_dash = cliente_sel if cliente_sel != f"{COVEM_NAME} (Consolidado)" else COVEM_NAME
-    st.markdown(f'<div class="notranslate"><h3>1. DISTRIBUIÇÃO DO FUNIL DE VENDAS ({nome_exibicao_dash})</h3></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="notranslate"><h3>📊 DASHBOARD EXECUTIVO & KPIs ({nome_exibicao_dash})</h3></div>', unsafe_allow_html=True)
     
     # -------------------------------------------------------------------------
     # 1. FILTRO DE PERÍODO
@@ -443,10 +443,41 @@ with aba_dash:
         elif periodo_sel == "3 Meses":
             df_dash = df_dash[df_dash["Data_Cadastro"] >= hoje - pd.Timedelta(days=90)]
 
+    # Tratamento da coluna de Valor para conversão em número
+    if not df_dash.empty and "Valor" in df_dash.columns:
+        df_dash["Valor_Num"] = pd.to_numeric(
+            df_dash["Valor"].astype(str).str.replace("R$", "", regex=False).str.replace(".", "", regex=False).str.replace(",", ".", regex=False).str.strip(),
+            errors="coerce"
+        ).fillna(0)
+    else:
+        if not df_dash.empty:
+            df_dash["Valor_Num"] = 0
+
     st.divider()
 
     # -------------------------------------------------------------------------
-    # 2. CONTAGEM DAS ETAPAS DO FUNIL
+    # 2. CARTOES DE MÉTRICAS FINANCEIRAS (KPIS NO TOPO)
+    # -------------------------------------------------------------------------
+    if not df_dash.empty:
+        col_kpi1, col_kpi2, col_kpi3, col_kpi4 = st.columns(4)
+        
+        tot_leads = len(df_dash)
+        val_total = df_dash["Valor_Num"].sum()
+        ticket_med = val_total / tot_leads if tot_leads > 0 else 0
+        
+        # Filtrar fechados/ganhos
+        df_ganhos = df_dash[df_dash["Etapa"].astype(str).str.contains("Fechado|Ganho|5.", case=False, na=False)]
+        val_fechado = df_ganhos["Valor_Num"].sum()
+        
+        col_kpi1.metric("Total de Oportunidades", tot_leads)
+        col_kpi2.metric("Valor Total em Pipeline", f"R$ {val_total:,.2f}")
+        col_kpi3.metric("Ticket Médio", f"R$ {ticket_med:,.2f}")
+        col_kpi4.metric("Valor Convertido (Ganhos)", f"R$ {val_fechado:,.2f}")
+
+    st.divider()
+
+    # -------------------------------------------------------------------------
+    # 3. CONTAGEM DAS ETAPAS DO FUNIL
     # -------------------------------------------------------------------------
     etapas_crm = list(PROB_MAP.keys()) if 'PROB_MAP' in locals() else ["1. Lead", "2. Contato", "3. Proposta", "4. Negociação", "5. Fechado", "6. Perdido"]
     contagem_calculada = {}
@@ -457,7 +488,6 @@ with aba_dash:
         
     total_leads = sum(contagem_calculada.values())
 
-    # --- CARTOES DE METRICAS POR ETAPA ---
     cols_m = st.columns(len(etapas_crm) + 1)
     funnel_colors = st.session_state.get("funnel_colors", {})
     
@@ -509,35 +539,137 @@ with aba_dash:
     st.divider()
 
     # -------------------------------------------------------------------------
-    # 3. GRÁFICO DE PIZZA (DISTRIBUIÇÃO DO FUNIL)
+    # 4. NOVOS GRÁFICOS INTERATIVOS LADO A LADO
     # -------------------------------------------------------------------------
-    st.markdown(f'<div class="notranslate"><h3>Funil de Vendas — {nome_exibicao_dash}</h3></div>', unsafe_allow_html=True)
-    df_pizza = pd.DataFrame(list(contagem_calculada.items()), columns=["Etapa", "Quantidade"])
-    df_pizza_valida = df_pizza[df_pizza["Quantidade"] > 0]
+    col_g1, col_g2 = st.columns(2)
 
-    if not df_pizza_valida.empty:
-        fig_pizza = px.pie(
-            df_pizza_valida, 
-            values="Quantidade", 
-            names="Etapa",
-            color="Etapa",
-            color_discrete_map=funnel_colors,
-            hole=0.0
-        )
-        fig_pizza.update_layout(
-            template="plotly_dark",
-            paper_bgcolor="#1E293B",
-            plot_bgcolor="#1E293B",
-            font=dict(color="#FFFFFF", size=13),
-            height=440
-        )
-        fig_pizza.update_traces(textinfo="percent+value")
-        st.plotly_chart(fig_pizza, use_container_width=True)
-    else:
-        st.info("Nenhum dado encontrado para o período selecionado.")
+    with col_g1:
+        st.subheader("Distribuição por Etapa (Quantidade)")
+        df_pizza = pd.DataFrame(list(contagem_calculada.items()), columns=["Etapa", "Quantidade"])
+        df_pizza_valida = df_pizza[df_pizza["Quantidade"] > 0]
+
+        if not df_pizza_valida.empty:
+            fig_pizza = px.pie(
+                df_pizza_valida, 
+                values="Quantidade", 
+                names="Etapa",
+                color="Etapa",
+                color_discrete_map=funnel_colors,
+                hole=0.4
+            )
+            fig_pizza.update_layout(
+                template="plotly_dark",
+                paper_bgcolor="#1E293B",
+                plot_bgcolor="#1E293B",
+                font=dict(color="#FFFFFF", size=12),
+                height=380
+            )
+            fig_pizza.update_traces(textinfo="percent+value")
+            st.plotly_chart(fig_pizza, use_container_width=True)
+        else:
+            st.info("Nenhum dado para exibir no gráfico de pizza.")
+
+    with col_g2:
+        st.subheader("Distribuição do Valor (R$) por Unidade")
+        if not df_dash.empty and "Empresa" in df_dash.columns:
+            df_empresa = df_dash.groupby("Empresa")["Valor_Num"].sum().reset_index()
+            fig_empresa = px.bar(
+                df_empresa,
+                x="Empresa",
+                y="Valor_Num",
+                text_auto=".2s",
+                color="Empresa",
+                title="Valor em Pipeline por Unidade de Negócio"
+            )
+            fig_empresa.update_layout(
+                template="plotly_dark",
+                paper_bgcolor="#1E293B",
+                plot_bgcolor="#1E293B",
+                font=dict(color="#FFFFFF", size=12),
+                height=380,
+                showlegend=False
+            )
+            st.plotly_chart(fig_empresa, use_container_width=True)
+        else:
+            st.info("Coluna 'Empresa' não encontrada na planilha.")
 
     st.divider()
 
+    # -------------------------------------------------------------------------
+    # 5. ANÁLISE DE MOTIVOS DE PERDA
+    # -------------------------------------------------------------------------
+    st.subheader("2. ANÁLISE DE MOTIVOS DE PERDA")
+
+    motivos_padrao = MOTIVOS_PERDA_PADRAO if 'MOTIVOS_PERDA_PADRAO' in locals() else ["Preço Alto", "Prazo", "Concorrência", "Sem Orçamento", "Outros"]
+    cores_perda_map = CORES_PERDAS if 'CORES_PERDAS' in locals() else {}
+
+    perdas_reais = {m: 0 for m in motivos_padrao}
+    
+    if not df_dash.empty and "Etapa" in df_dash.columns and "Perda" in df_dash.columns:
+        df_perdidos = df_dash[df_dash["Etapa"].astype(str).str.contains("Perdido|6.", case=False, na=False)]
+        for p in df_perdidos["Perda"].dropna():
+            p_str = str(p).strip()
+            if p_str in perdas_reais:
+                perdas_reais[p_str] += 1
+            elif p_str != "":
+                if "Outros" in perdas_reais:
+                    perdas_reais["Outros"] += 1
+                else:
+                    perdas_reais[p_str] = 1
+
+    if st.session_state.manual_perdas is None:
+        st.session_state.manual_perdas = perdas_reais.copy()
+
+    # --- TABELA EDITÁVEL DE PERDAS ---
+    with st.expander("📝 Tabela Editável: Ajustar Quantidade por Motivo de Perda", expanded=False):
+        cols_p = st.columns(len(motivos_padrao))
+        for idx, motivo in enumerate(motivos_padrao):
+            val_motivo = st.session_state.manual_perdas.get(motivo, 0)
+            novo_val_m = cols_p[idx].number_input(
+                motivo, 
+                min_value=0, 
+                value=int(val_motivo), 
+                key=f"perda_input_{motivo}"
+            )
+            st.session_state.manual_perdas[motivo] = novo_val_m
+            
+        c_p1, _ = st.columns([1, 4])
+        with c_p1:
+            if st.button("🔄 Sincronizar com CRM", key="reset_perdas"):
+                st.session_state.manual_perdas = perdas_reais.copy()
+                st.rerun()
+
+    # --- GRÁFICO DE BARRAS DE PERDAS ---
+    df_graf_perdas = pd.DataFrame(
+        list(st.session_state.manual_perdas.items()), 
+        columns=["Motivo de Perda", "Quantidade"]
+    )
+    total_perdas_num = df_graf_perdas["Quantidade"].sum()
+
+    if total_perdas_num > 0:
+        fig_barras_perda = px.bar(
+            df_graf_perdas,
+            x="Motivo de Perda",
+            y="Quantidade",
+            text="Quantidade",
+            title=f"Motivos de Perda — {nome_exibicao_dash} (Total: {total_perdas_num})",
+            color="Motivo de Perda",
+            color_discrete_map=cores_perda_map
+        )
+        fig_barras_perda.update_layout(
+            template="plotly_dark",
+            paper_bgcolor="#1E293B",
+            plot_bgcolor="#1E293B",
+            font=dict(color="#FFFFFF", size=12),
+            xaxis_title="MOTIVO",
+            yaxis_title="QUANTIDADE DE OPORTUNIDADES",
+            showlegend=False,
+            height=380
+        )
+        fig_barras_perda.update_traces(textposition="outside")
+        st.plotly_chart(fig_barras_perda, use_container_width=True)
+    else:
+        st.info("Nenhuma perda registrada no momento.")
     # -------------------------------------------------------------------------
     # 4. ANÁLISE DE MOTIVOS DE PERDA
     # -------------------------------------------------------------------------
