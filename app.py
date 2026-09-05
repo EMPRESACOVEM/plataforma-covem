@@ -24,7 +24,7 @@ COVEM_NAME = "GRUPO COVEM"
 # Lista de Clientes do GRUPO COVEM
 CARTEIRAS_COVEM = ["BraClean", "QV Energia Solar", "Elleven"]
 
-# Limite de dias padrão para considerar um lead estagnado (Vermelho)
+# Limite de dias padrão para considerar um lead estagnado
 DIAS_ESTAGNACAO_LIMITE = 10
 
 # ---------------------------------------------------------
@@ -82,34 +82,19 @@ st.markdown("""
             font-size: 12px !important;
         }
         
-        /* Estilização para o Kanban Inteligente */
-        .kanban-card {
+        /* Estilização para o Kanban Minimalista */
+        .kanban-card-minimal {
             background-color: #1E293B;
-            border-radius: 8px;
-            padding: 12px;
-            margin-bottom: 12px;
-            border-left: 5px solid #64748B;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            border-radius: 6px;
+            padding: 8px 10px;
+            margin-bottom: 8px;
+            border-left: 4px solid #64748B;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+            transition: transform 0.1s ease;
         }
-        .kanban-card-green {
-            border-left: 6px solid #22C55E !important;
-            background-color: #064E3B22;
-        }
-        .kanban-card-yellow {
-            border-left: 6px solid #EAB308 !important;
-            background-color: #713F1222;
-        }
-        .kanban-card-red {
-            border-left: 6px solid #EF4444 !important;
-            background-color: #7F1D1D22;
-        }
-        .kanban-tag {
-            font-size: 10px;
-            font-weight: bold;
-            padding: 2px 6px;
-            border-radius: 4px;
-            text-transform: uppercase;
-        }
+        .kanban-card-green { border-left-color: #22C55E !important; }
+        .kanban-card-yellow { border-left-color: #EAB308 !important; }
+        .kanban-card-red { border-left-color: #EF4444 !important; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -233,7 +218,7 @@ if 'manual_perdas' not in st.session_state:
 df = st.session_state.df_crm
 
 # ---------------------------------------------------------
-# LÓGICA DO KANBAN INTELIGENTE (STATUS POR CORES)
+# LÓGICA DO KANBAN STATUS (CORES)
 # ---------------------------------------------------------
 def calcular_status_kanban(row, df_tarefas):
     if row["Etapa"] in ["5. Fechado", "6. Perdido"]:
@@ -281,7 +266,7 @@ def calcular_status_kanban(row, df_tarefas):
     return "GREEN", "Em Dia", dias_na_etapa
 
 # ---------------------------------------------------------
-# CENTRAL DE ALERTAS OTIMIZADA E COMPACTA
+# CENTRAL DE ALERTAS SLIM
 # ---------------------------------------------------------
 def exibir_alertas_tarefas(df_tarefas):
     if df_tarefas.empty or "Data_Vencimento" not in df_tarefas.columns:
@@ -385,7 +370,50 @@ st.markdown(f'<div class="notranslate"><h1 style="margin:0; padding:0 0 10px 0;"
 exibir_alertas_tarefas(st.session_state.df_tarefas)
 
 # =========================================================
-# 3. NAVEGAÇÃO PRINCIPAL (ABAS)
+# 3. SEÇÃO TAREFAS & PRÓXIMAS AÇÕES (NO TOPO, COM BOTÃO NOVA TAREFA)
+# =========================================================
+c_tit_top, c_btn_add_top = st.columns([4, 1])
+
+with c_tit_top:
+    st.markdown("<h4 style='margin:0; padding:0;'>📌 Tarefas & Próximas Ações</h4>", unsafe_allow_html=True)
+
+with c_btn_add_top:
+    with st.popover("➕ Nova Tarefa", use_container_width=True):
+        lista_clientes = (
+            ["Nenhum / Tarefa Geral"] + st.session_state.df_crm["Empresa"].dropna().tolist()
+            if not st.session_state.df_crm.empty
+            else ["Nenhum / Tarefa Geral"]
+        )
+        with st.form(key="form_nova_tarefa_popover_top", clear_on_submit=True):
+            st.caption("Criar Tarefa / Lembrete")
+            titulo_tarefa = st.text_input("Título *")
+            descricao = st.text_area("Descrição / Observação", height=60)
+            cliente_vinculado = st.selectbox("Cliente", options=lista_clientes)
+            data_vencimento = st.date_input("Vencimento", min_value=datetime.date.today())
+            prioridade = st.selectbox("Prioridade", options=["Baixa", "Média", "Alta", "Urgente"], index=1)
+            
+            if st.form_submit_button("Salvar Tarefa", use_container_width=True):
+                if titulo_tarefa:
+                    nova_linha_tarefa = {
+                        "Titulo": titulo_tarefa,
+                        "Descricao": descricao,
+                        "Cliente": cliente_vinculado,
+                        "Data_Vencimento": str(data_vencimento),
+                        "Prioridade": prioridade,
+                        "Status": "Pendente",
+                        "Data_Criacao": str(datetime.date.today()),
+                    }
+                    st.session_state.df_tarefas = pd.concat(
+                        [st.session_state.df_tarefas, pd.DataFrame([nova_linha_tarefa])],
+                        ignore_index=True
+                    )
+                    st.success("Tarefa salva!")
+                    st.rerun()
+
+st.markdown("<hr style='margin: 10px 0 16px 0;'/>", unsafe_allow_html=True)
+
+# =========================================================
+# 4. NAVEGAÇÃO PRINCIPAL (ABAS)
 # =========================================================
 aba_crm, aba_dash, aba_relatorio, aba_novo = st.tabs([
     "📌 CRM (Funil & Tarefas)", 
@@ -411,62 +439,10 @@ def criar_link_google_agenda(empresa, contato, nota_followup, data_str):
         return "#"
 
 # =========================================================
-# ABA 1: GERENCIADOR DE TAREFAS SLIM + CRM KANBAN
+# ABA 1: CRM KANBAN MINIMALISTA + TABELA COMPLETA DE TAREFAS
 # =========================================================
 with aba_crm:
-    c_tit, c_btn_add, c_btn_ver = st.columns([3, 1, 1])
-    
-    with c_tit:
-        st.markdown("<h4 style='margin:0; padding:0;'>📌 Tarefas & Próximas Ações</h4>", unsafe_allow_html=True)
-    
-    with c_btn_add:
-        with st.popover("➕ Nova Tarefa", use_container_width=True):
-            lista_clientes = (
-                ["Nenhum / Tarefa Geral"] + st.session_state.df_crm["Empresa"].dropna().tolist()
-                if not st.session_state.df_crm.empty
-                else ["Nenhum / Tarefa Geral"]
-            )
-            with st.form(key="form_nova_tarefa_popover", clear_on_submit=True):
-                st.caption("Criar Tarefa / Lembrete")
-                titulo_tarefa = st.text_input("Título *")
-                descricao = st.text_area("Descrição / Observação", height=60)
-                cliente_vinculado = st.selectbox("Cliente", options=lista_clientes)
-                data_vencimento = st.date_input("Vencimento", min_value=datetime.date.today())
-                prioridade = st.selectbox("Prioridade", options=["Baixa", "Média", "Alta", "Urgente"], index=1)
-                
-                if st.form_submit_button("Salvar Tarefa", use_container_width=True):
-                    if titulo_tarefa:
-                        nova_linha_tarefa = {
-                            "Titulo": titulo_tarefa,
-                            "Descricao": descricao,
-                            "Cliente": cliente_vinculado,
-                            "Data_Vencimento": str(data_vencimento),
-                            "Prioridade": prioridade,
-                            "Status": "Pendente",
-                            "Data_Criacao": str(datetime.date.today()),
-                        }
-                        st.session_state.df_tarefas = pd.concat(
-                            [st.session_state.df_tarefas, pd.DataFrame([nova_linha_tarefa])],
-                            ignore_index=True
-                        )
-                        st.success("Tarefa salva!")
-                        st.rerun()
-
-    with c_btn_ver:
-        with st.popover("📋 Tabela Geral", use_container_width=True):
-            st.caption("Lista Completa de Tarefas Cadastradas")
-            if not st.session_state.df_tarefas.empty:
-                st.dataframe(
-                    st.session_state.df_tarefas[["Titulo", "Cliente", "Data_Vencimento", "Prioridade", "Status"]], 
-                    use_container_width=True,
-                    height=200
-                )
-            else:
-                st.info("Nenhuma tarefa pendente.")
-
-    st.markdown("<hr style='margin: 8px 0 16px 0;'/>", unsafe_allow_html=True)
-
-    # MODAL DE TRANSITION DE ETAPA
+    # MODAL DE TRANSIÇÃO DE ETAPA
     if st.session_state.pending_stage_change is not None:
         change_info = st.session_state.pending_stage_change
         c_id = change_info["id"]
@@ -684,9 +660,7 @@ with aba_crm:
                 st.markdown('</div>', unsafe_allow_html=True)
                 st.divider()
 
-    # KANBAN VISUAL
-    st.caption("🟢 **Em dia** | 🟡 **Sem ação** | 🔴 **Atrasado/Parado**")
-    
+    # KANBAN VISUAL MINIMALISTA (SOMENTE NOME DA EMPRESA)
     etapas = list(PROB_MAP.keys())
     cols = st.columns(len(etapas))
     
@@ -696,7 +670,7 @@ with aba_crm:
         with cols[idx]:
             st.markdown(
                 f"""
-                <div style="background-color: {cor_header}; padding: 6px; border-radius: 6px; text-align: center; margin-bottom: 8px;">
+                <div style="background-color: {cor_header}; padding: 6px; border-radius: 6px; text-align: center; margin-bottom: 10px;">
                     <b style="color: #FFFFFF; font-size: 12px;">{etapa}</b>
                 </div>
                 """, 
@@ -706,46 +680,34 @@ with aba_crm:
             sub_df = df_filtered[df_filtered["Etapa"] == etapa]
             
             for _, row in sub_df.iterrows():
-                status_cor, msg_status, dias_ret = calcular_status_kanban(row, st.session_state.df_tarefas)
-                icon = "🟢" if status_cor == "GREEN" else ("🟡" if status_cor == "YELLOW" else "🔴")
+                status_cor, _, _ = calcular_status_kanban(row, st.session_state.df_tarefas)
                 
-                with st.container():
-                    st.markdown(
-                        f"""
-                        <div class="kanban-card kanban-card-{status_cor.lower()}">
-                            <div style="display:flex; justify-between; align-items:center;">
-                                <span style="font-size:11px; color:#94A3B8;">{row['Cliente']}</span>
-                                <span style="font-size:12px;">{icon}</span>
-                            </div>
-                            <strong style="font-size:14px; color:#F8FAFC;">{row['Empresa']}</strong><br/>
-                            <span style="font-size:12px; color:#38BDF8; font-weight:bold;">R$ {row['Valor']:,.2f}</span>
-                            <hr style="margin:4px 0; border-color:#334155;"/>
-                            <div style="font-size:10px; color:#CBD5E1;">
-                                ⏱️ {dias_ret}d nesta etapa<br/>
-                                📌 <i>{msg_status}</i>
-                            </div>
-                        </div>
-                        """,
-                        unsafe_allow_html=True
-                    )
-                    
-                    c_btn_a, c_btn_b = st.columns([2, 1])
-                    with c_btn_a:
-                        if st.button("📄 Ficha", key=f"btn_card_{row['id']}", use_container_width=True):
-                            st.session_state.cliente_selecionado_id = row['id']
-                            st.session_state.modo_edicao = False
-                            st.rerun()
-                    with c_btn_b:
-                        proximas_etapas = [e for e in etapas if e != etapa]
-                        prox_et = st.selectbox(
-                            "Mover", 
-                            ["Mover..."] + proximas_etapas, 
-                            key=f"move_quick_{row['id']}",
-                            label_visibility="collapsed"
-                        )
-                        if prox_et != "Mover...":
-                            st.session_state.pending_stage_change = {"id": row['id'], "nova_etapa": prox_et}
-                            st.rerun()
+                # Card Minimalista com apenas o Nome da Empresa clicável
+                st.markdown(
+                    f"""
+                    <div class="kanban-card-minimal kanban-card-{status_cor.lower()}">
+                        <strong style="font-size:13px; color:#F8FAFC;">{row['Empresa']}</strong>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+                if st.button("🏢 Abrir Ficha", key=f"btn_card_min_{row['id']}", use_container_width=True):
+                    st.session_state.cliente_selecionado_id = row['id']
+                    st.session_state.modo_edicao = False
+                    st.rerun()
+
+    st.markdown("<hr style='margin: 30px 0 20px 0;'/>", unsafe_allow_html=True)
+
+    # TABELA GERAL DE TAREFAS (ABAIXO DO CRM KANBAN)
+    st.markdown("### 📋 Tabela Geral de Tarefas Cadastradas")
+    if not st.session_state.df_tarefas.empty:
+        st.dataframe(
+            st.session_state.df_tarefas,
+            use_container_width=True,
+            hide_index=True
+        )
+    else:
+        st.info("Nenhuma tarefa cadastrada no momento.")
 
 # =========================================================
 # ABA 2: DASHBOARD
