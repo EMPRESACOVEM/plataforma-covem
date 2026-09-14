@@ -280,11 +280,20 @@ def calcular_status_followup(data_str):
         return "sem_data", "Sem Follow-up", "⚪"
 
 # ---------------------------------------------------------
-# BARRA LATERAL (REORGANIZADA & SEM TÍTULO DE FILTROS)
+# BARRA LATERAL (COM A LOGO DA COVEM NO TOPO)
 # ---------------------------------------------------------
+logo_path = BASE_DIR / "covem logo vert.png"
+
+if logo_path.exists():
+    st.sidebar.image(str(logo_path), use_container_width=True)
+else:
+    st.sidebar.markdown("<h2 style='text-align: center; color: #00A3FF; margin-bottom: 0px;'>GRUPO COVEM</h2>", unsafe_allow_html=True)
+
+st.sidebar.divider()
+
 opcoes_filtro = ["TODOS"] + CARTEIRAS_COVEM
 
-# Aba de clientes posicionada no topo absoluto da barra lateral, com o subtítulo solicitado
+# Seletor de clientes posicionado logo abaixo da logo na barra lateral
 cliente_sel = st.sidebar.selectbox("Clientes COVEM:", opcoes_filtro)
 
 if cliente_sel != "TODOS":
