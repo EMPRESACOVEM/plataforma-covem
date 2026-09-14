@@ -18,9 +18,6 @@ st.set_page_config(
 # Caminho do diretório base
 BASE_DIR = Path(__file__).parent if "__file__" in locals() else Path.cwd()
 
-# Caminho do arquivo CSV local para persistência permanente dos clientes
-CSV_DATABASE_PATH = BASE_DIR / "crm_covem_database.csv"
-
 # Nome Oficial do Grupo
 COVEM_NAME = "GRUPO COVEM"
 
@@ -169,69 +166,47 @@ PROB_MAP = {
 MOTIVOS_PERDA_PADRAO = list(CORES_PERDAS.keys())
 
 # ---------------------------------------------------------
-# FUNÇÃO AUXILIAR DE PERSISTÊNCIA (SALVAR CRM)
-# ---------------------------------------------------------
-def salvar_crm():
-    if 'df_crm' in st.session_state:
-        st.session_state.df_crm.to_csv(CSV_DATABASE_PATH, index=False)
-
-# ---------------------------------------------------------
-# ESTADO DA SESSÃO (COM CARREGAMENTO PERMANENTE DO CSV)
+# ESTADO DA SESSÃO (CRM, TAREFAS, HISTÓRICO E FINANCEIRO)
 # ---------------------------------------------------------
 if 'df_crm' not in st.session_state:
-    if CSV_DATABASE_PATH.exists():
-        try:
-            st.session_state.df_crm = pd.read_csv(CSV_DATABASE_PATH)
-            if "id" in st.session_state.df_crm.columns:
-                st.session_state.df_crm["id"] = st.session_state.df_crm["id"].astype(int)
-            # Garante que colunas importantes existam caso o CSV seja antigo
-            for col_nec in ["Perda", "Data_Cadastro", "Followup_Data", "Followup_Nota", "Historico"]:
-                if col_nec not in st.session_state.df_crm.columns:
-                    st.session_state.df_crm[col_nec] = ""
-        except Exception:
-            # Se houver qualquer erro de leitura, recria com os padrões
-            st.session_state.df_crm = pd.DataFrame()
-    
-    if 'df_crm' not in st.session_state or st.session_state.df_crm.empty:
-        st.session_state.df_crm = pd.DataFrame([
-            {
-                "id": 1, "Empresa": "Grupo Delta", "Cliente": "BraClean", "Etapa": "1. Contatado", 
-                "Contato": "Roberto Alves", "Cargo": "Diretor Comercial", "Telefone": "(16) 99876-5432", 
-                "Email": "roberto@grupodelta.com.br", "Cidade": "Sertãozinho / SP", "Valor": 50000.0, 
-                "Prob": 0.20, "Vendedor": "Lucas Mendes", "Perda": "",
-                "Data_Cadastro": str(date.today()),
-                "Followup_Data": str(date.today() - timedelta(days=2)), "Followup_Nota": "Enviar apresentação institucional atualizada.", 
-                "Historico": "01/09: Primeiro contato realizado."
-            },
-            {
-                "id": 2, "Empresa": "Sistemas Sigma", "Cliente": "QV Energia Solar", "Etapa": "1. Contatado", 
-                "Contato": "Patricia Lima", "Cargo": "Gerente de Compras", "Telefone": "(16) 99765-4321", 
-                "Email": "patricia@sigmasistemas.com.br", "Cidade": "Ribeirão Preto / SP", "Valor": 35000.0, 
-                "Prob": 0.20, "Vendedor": "Lucas Mendes", "Perda": "",
-                "Data_Cadastro": str(date.today()),
-                "Followup_Data": str(date.today()), "Followup_Nota": "Ligar para confirmar se recebeu o e-mail.", 
-                "Historico": "02/09: E-mail enviado."
-            },
-            {
-                "id": 3, "Empresa": "Indústria Omega", "Cliente": "Elleven", "Etapa": "2. Conversando", 
-                "Contato": "Fernando Souza", "Cargo": "Sócio-Proprietário", "Telefone": "(11) 98123-4567", 
-                "Email": "fernando@omegaind.com.br", "Cidade": "São Paulo / SP", "Valor": 80000.0, 
-                "Prob": 0.40, "Vendedor": "Gabriel Silva", "Perda": "",
-                "Data_Cadastro": str(date.today()),
-                "Followup_Data": str(date.today() + timedelta(days=3)), "Followup_Nota": "Alinhar escopo do projeto técnico.", 
-                "Historico": "30/08: Reunião inicial."
-            },
-            {
-                "id": 4, "Empresa": "Tecnologia Beta", "Cliente": "BraClean", "Etapa": "6. Perdido", 
-                "Contato": "Carlos Eduardo", "Cargo": "Comprador", "Telefone": "(16) 98888-7777", 
-                "Email": "carlos@betatech.com", "Cidade": "Sertãozinho / SP", "Valor": 25000.0, 
-                "Prob": 0.00, "Vendedor": "Lucas Mendes", "Perda": "Preço / Orçamento",
-                "Data_Cadastro": str(date.today()),
-                "Followup_Data": "", "Followup_Nota": "", 
-                "Historico": "25/08: Achou o valor acima do orçamento."
-            }
-        ])
-        salvar_crm()
+    st.session_state.df_crm = pd.DataFrame([
+        {
+            "id": 1, "Empresa": "Grupo Delta", "Cliente": "BraClean", "Etapa": "1. Contatado", 
+            "Contato": "Roberto Alves", "Cargo": "Diretor Comercial", "Telefone": "(16) 99876-5432", 
+            "Email": "roberto@grupodelta.com.br", "Cidade": "Sertãozinho / SP", "Valor": 50000.0, 
+            "Prob": 0.20, "Vendedor": "Lucas Mendes", "Perda": "",
+            "Data_Cadastro": str(date.today()),
+            "Followup_Data": str(date.today() - timedelta(days=2)), "Followup_Nota": "Enviar apresentação institucional atualizada.", 
+            "Historico": "01/09: Primeiro contato realizado."
+        },
+        {
+            "id": 2, "Empresa": "Sistemas Sigma", "Cliente": "QV Energia Solar", "Etapa": "1. Contatado", 
+            "Contato": "Patricia Lima", "Cargo": "Gerente de Compras", "Telefone": "(16) 99765-4321", 
+            "Email": "patricia@sigmasistemas.com.br", "Cidade": "Ribeirão Preto / SP", "Valor": 35000.0, 
+            "Prob": 0.20, "Vendedor": "Lucas Mendes", "Perda": "",
+            "Data_Cadastro": str(date.today()),
+            "Followup_Data": str(date.today()), "Followup_Nota": "Ligar para confirmar se recebeu o e-mail.", 
+            "Historico": "02/09: E-mail enviado."
+        },
+        {
+            "id": 3, "Empresa": "Indústria Omega", "Cliente": "Elleven", "Etapa": "2. Conversando", 
+            "Contato": "Fernando Souza", "Cargo": "Sócio-Proprietário", "Telefone": "(11) 98123-4567", 
+            "Email": "fernando@omegaind.com.br", "Cidade": "São Paulo / SP", "Valor": 80000.0, 
+            "Prob": 0.40, "Vendedor": "Gabriel Silva", "Perda": "",
+            "Data_Cadastro": str(date.today()),
+            "Followup_Data": str(date.today() + timedelta(days=3)), "Followup_Nota": "Alinhar escopo do projeto técnico.", 
+            "Historico": "30/08: Reunião inicial."
+        },
+        {
+            "id": 4, "Empresa": "Tecnologia Beta", "Cliente": "BraClean", "Etapa": "6. Perdido", 
+            "Contato": "Carlos Eduardo", "Cargo": "Comprador", "Telefone": "(16) 98888-7777", 
+            "Email": "carlos@betatech.com", "Cidade": "Sertãozinho / SP", "Valor": 25000.0, 
+            "Prob": 0.00, "Vendedor": "Lucas Mendes", "Perda": "Preço / Orçamento",
+            "Data_Cadastro": str(date.today()),
+            "Followup_Data": "", "Followup_Nota": "", 
+            "Historico": "25/08: Achou o valor acima do orçamento."
+        }
+    ])
 
 if 'df_tarefas' not in st.session_state:
     st.session_state.df_tarefas = pd.DataFrame([
@@ -576,7 +551,6 @@ with aba_crm:
                     st.session_state.df_crm.loc[idx_df, "Followup_Nota"] = edit_fu_nota
                     st.session_state.df_crm.loc[idx_df, "Historico"] = edit_hist
                     
-                    salvar_crm()  # <--- Salva permanentemente no arquivo CSV
                     st.session_state.cliente_editando_id = None
                     st.success("Atualizado com sucesso!")
                     st.rerun()
@@ -587,7 +561,6 @@ with aba_crm:
                     
                 if btn_excluir:
                     st.session_state.df_crm = st.session_state.df_crm[st.session_state.df_crm["id"] != cliente_edit_id]
-                    salvar_crm()  # <--- Salva permanentemente no arquivo CSV
                     st.session_state.cliente_editando_id = None
                     st.warning("Cliente excluído com sucesso!")
                     st.rerun()
@@ -647,8 +620,6 @@ with aba_crm:
                         st.session_state.df_crm.loc[idx_df, "Prob"] = PROB_MAP[nova_etapa_card]
                         if nova_etapa_card == "6. Perdido":
                             st.session_state.df_crm.loc[idx_df, "Perda"] = "Outros"
-                        
-                        salvar_crm()  # <--- Salva permanentemente no arquivo CSV
                         st.success(f"Movido para {nova_etapa_card}!")
                         st.rerun()
 
@@ -693,6 +664,7 @@ with aba_dash:
     
     for etapa in etapas_crm:
         count_real = len(df_dash[df_dash["Etapa"] == etapa])
+        # Chave dinâmica para suportar a filtragem por cliente no dashboard de forma isolada
         key_manual_count = f"manual_count_{cliente_sel}_{etapa}"
         if key_manual_count not in st.session_state:
             st.session_state[key_manual_count] = count_real
@@ -1084,7 +1056,6 @@ with aba_novo:
                     [st.session_state.df_crm, pd.DataFrame([nova_linha_rapida])], 
                     ignore_index=True
                 )
-                salvar_crm()  # <--- Salva permanentemente no arquivo CSV
                 st.success(f"Empresa '{rapido_empresa}' cadastrada com sucesso via Cadastro Rápido!")
                 st.rerun()
 
@@ -1130,7 +1101,7 @@ with aba_novo:
                     "Contato": nova_contato if nova_contato else "Não informado",
                     "Cargo": novo_cargo if novo_cargo else "Não informado",
                     "Telefone": nova_telefone if nova_telefone else "Não informado",
-                    "Email": nova_email if nova_email else "Não informado",
+                    "Email": nova_email if nova_email else "Non informado",
                     "Cidade": nova_cidade if nova_cidade else "Não informado",
                     "Valor": nova_valor,
                     "Prob": PROB_MAP[nova_etapa],
@@ -1143,11 +1114,9 @@ with aba_novo:
                 }
                 st.session_state.df_crm = pd.concat([st.session_state.df_crm, pd.DataFrame([nova_linha])], ignore_index=True)
                 
-                salvar_crm()  # <--- Salva permanentemente no arquivo CSV
-                
                 key_manual_perdas = f"manual_perdas_{novo_cliente}"
                 if key_manual_perdas in st.session_state and st.session_state[key_manual_perdas] is not None:
-                    if nova_etapa == "6. Perdido" && motivo_perda in st.session_state[key_manual_perdas]:
+                    if nova_etapa == "6. Perdido" and motivo_perda in st.session_state[key_manual_perdas]:
                         st.session_state[key_manual_perdas][motivo_perda] += 1
                 
                 st.success("Cadastrado com sucesso!")
