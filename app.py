@@ -150,7 +150,7 @@ PROB_MAP = {
 MOTIVOS_PERDA_PADRAO = list(CORES_PERDAS.keys())
 
 # ---------------------------------------------------------
-# FUNÇÕES DE PERSISTÊNCIA (SALVAR / CARREGAR DO EXCEL LOCAL)
+# FUNÇÕES DE PERSISTÊNCIA
 # ---------------------------------------------------------
 def carregar_dados_crm():
     if ARQUIVO_DADOS.exists():
@@ -250,7 +250,7 @@ if 'cliente_editando_id' not in st.session_state:
 df = st.session_state.df_crm
 
 # ---------------------------------------------------------
-# FUNÇÃO DE LÓGICA DE CORES DO FOLLOW-UP (BLINDADA CONTRA ERROS)
+# FUNÇÃO DE LÓGICA DE CORES DO FOLLOW-UP
 # ---------------------------------------------------------
 def calcular_status_followup(data_str):
     if not data_str or pd.isna(data_str) or str(data_str).strip() in ["", "nan", "NaT", "None"]:
@@ -394,10 +394,11 @@ def exibir_agenda_semana(df_tarefas, df_crm):
     st.divider()
 
 # ---------------------------------------------------------
-# NAVEGAÇÃO POR ABAS
+# NAVEGAÇÃO POR ABAS (COM A NOVA ABA DE CALENDÁRIO)
 # ---------------------------------------------------------
-aba_tarefas, aba_crm, aba_dash, aba_relatorio, aba_novo = st.tabs([
+aba_tarefas, aba_calendario, aba_crm, aba_dash, aba_relatorio, aba_novo = st.tabs([
     "Gerenciador de Tarefas",
+    "📅 Calendário Futuro",
     "Funil de Vendas", 
     "Dashboard", 
     "Relatório Executivo", 
@@ -490,7 +491,117 @@ with aba_tarefas:
         st.info("Nenhuma tarefa pendente.")
 
 # =========================================================
-# ABA 2: FUNIL DE VENDAS
+# ABA 2: 📅 CALENDÁRIO FUTURO (NOVO!)
+# =========================================================
+with aba_calendario:
+    st.subheader("📅 Calendário de Tarefas e Follow-ups Futuros")
+    st.caption("Visualize em formato de linha do tempo e tabela cronológica todas as suas entregas, reuniões e interações planejadas para os próximos dias.")
+
+    # Filtro de horizonte de tempo
+    col_h1, col_h2 = st.columns([2, 2])
+    with col_h1:
+        horizonte = st.selectbox(
+            "Horizonte de Visualização:",
+            ["Próximos 7 Dias", "Próximos 15 Dias", "Próximos 30 Dias", "Todos os Registros Futuros"]
+        )
+
+    hoje = date.today()
+    if horizonte == "Próximos 7 Dias":
+        limite_data = hoje + timedelta(days=7)
+    elif horizonte == "Próximos 15 Dias":
+        limite_data = hoje + timedelta(days=15)
+    elif horizonte == "Próximos 30 Dias":
+        limite_data = hoje + timedelta(days=30)
+    else:
+        limite_data = hoje + timedelta(days=365)
+
+    st.divider()
+
+    # Consolidando Tarefas e Follow-ups em uma única visão cronológica
+    eventos_futuros = []
+
+    # Processar Tarefas
+    if not st.session_state.df_tarefas.empty:
+        for _, t in st.session_state.df_tarefas.iterrows():
+            if pd.notna(t.get("Data_Vencimento")):
+                try:
+                    dt_v = dt.strptime(str(t["Data_Vencimento"])[:10], "%Y-%m-%d").date()
+                    if hoje <= dt_v <= limite_data:
+                        eventos_futuros.append({
+                            "Data": dt_v,
+                            "Tipo": "📌 Tarefa",
+                            "Título / Ação": t["Titulo"],
+                            "Vinculado a": t.get("Cliente", "Geral"),
+                            "Prioridade / Status": f"Prioridade: {t.get('Prioridade', 'Normal')}"
+                        })
+                except:
+                    pass
+
+    # Processar Follow-ups do CRM
+    if not df_filtered.empty:
+        for _, c in df_filtered.iterrows():
+            f_dat = c.get("Followup_Data", "")
+            if pd.notna(f_dat) and str(f_dat).strip() not in ["", "nan", "NaT"]:
+                try:
+                    dt_f = dt.strptime(str(f_dat)[:10], "%Y-%m-%d").date()
+                    if hoje <= dt_f <= limite_data:
+                        eventos_futuros.append({
+                            "Data": dt_f,
+                            "Tipo": "📞 Follow-up CRM",
+                            "Título / Ação": c.get("Followup_Nota", "Contato Comercial"),
+                            "Vinculado a": f"Empresa: {c['Empresa']} ({c['Contato']})",
+                            "Prioridade / Status": f"Etapa: {c['Etapa']}"
+                        })
+                except:
+                    pass
+
+    if eventos_futuros:
+        df_futuro = pd.DataFrame(eventos_futuros)
+        df_futuro = df_futuro.sort_values(by="Data", ascending=True)
+        df_futuro["Data_Formatada"] = pd.to_datetime(df_futuro["Data"]).dt.strftime("%d/%m/%Y")
+
+        # Exibição em Tabela Cronológica Estilizada
+        st.markdown(f"#### Compromissos no período ({len(df_futuro)} encontrados)")
+        
+        # Exibir métricas rápidas de planejamento
+        c_m1, c_m2, c_m3 = st.columns(3)
+        c_m1.metric("Total de Ações no Período", len(df_futuro))
+        c_m2.metric("Tarefas Pendentes", len(df_futuro[df_futuro["Tipo"] == "📌 Tarefa"]))
+        c_m3.metric("Follow-ups de CRM", len(df_futuro[df_futuro["Tipo"] == "📞 Follow-up CRM"]))
+
+        st.divider()
+
+        # Tabela limpa para leitura rápida
+        st.dataframe(
+            df_futuro[["Data_Formatada", "Tipo", "Título / Ação", "Vinculado a", "Prioridade / Status"]],
+            use_container_width=True,
+            hide_index=True
+        )
+
+        # Gráfico de Gantt / Timeline visual simples integrado
+        st.markdown("#### Linha do Tempo Gráfica")
+        fig_timeline = px.scatter(
+            df_futuro,
+            x="Data",
+            y="Tipo",
+            color="Tipo",
+            hover_data=["Título / Ação", "Vinculado a"],
+            title="Distribuição Cronológica dos Compromissos Futuros"
+        )
+        fig_timeline.update_layout(
+            template="plotly_dark",
+            paper_bgcolor="#1E293B",
+            plot_bgcolor="#1E293B",
+            font=dict(color="#FFFFFF", size=13),
+            height=350
+        )
+        st.plotly_chart(fig_timeline, use_container_width=True)
+
+    else:
+        st.info("Nenhuma tarefa ou follow-up agendado para este horizonte de tempo.")
+
+# =========================================================
+# ABA 3: FUNIL DE VENDAS
 # =========================================================
 with aba_crm:
     st.subheader(f"Funil de Vendas — {titulo_dinamico}")
@@ -643,7 +754,7 @@ with aba_crm:
                         st.rerun()
 
 # =========================================================
-# ABA 3: DASHBOARD
+# ABA 4: DASHBOARD
 # =========================================================
 with aba_dash:
     st.markdown(f'<div class="notranslate"><h3>1. DISTRIBUIÇÃO DO FUNIL DE VENDAS ({titulo_dinamico})</h3></div>', unsafe_allow_html=True)
@@ -741,7 +852,7 @@ with aba_dash:
         st.info("Nenhum dado encontrado para o período selecionado.")
 
 # =========================================================
-# ABA 4: RELATÓRIO EXECUTIVO
+# ABA 5: RELATÓRIO EXECUTIVO
 # =========================================================
 with aba_relatorio:
     st.title("Relatório Executivo")
@@ -792,7 +903,7 @@ with aba_relatorio:
         st.plotly_chart(fig_linha_atv, use_container_width=True)
 
 # =========================================================
-# ABA 5: ➕ NOVO CADASTRO
+# ABA 6: ➕ NOVO CADASTRO
 # =========================================================
 with aba_novo:
     st.subheader("➕ Novo Cadastro Rápido")
