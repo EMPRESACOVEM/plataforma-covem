@@ -272,12 +272,11 @@ def calcular_status_followup(data_str):
 
 # ---------------------------------------------------------
 # BARRA LATERAL (FILTROS E CONFIGURAÇÕES)
+# Reorganizada: "Clientes COVEM" posicionada acima de "Personalizar Cores das Etapas" e exportação
 # ---------------------------------------------------------
-st.sidebar.title("Filtros & Configurações")
-
 opcoes_filtro = ["TODOS"] + CARTEIRAS_COVEM
 
-cliente_sel = st.sidebar.selectbox("Filtrar por Carteira:", opcoes_filtro)
+cliente_sel = st.sidebar.selectbox("Clientes COVEM:", opcoes_filtro)
 
 if cliente_sel != "TODOS":
     df_filtered = df[df["Cliente"] == cliente_sel]
@@ -397,7 +396,7 @@ def exibir_agenda_semana(df_tarefas, df_crm):
     st.divider()
 
 # ---------------------------------------------------------
-# NAVEGAÇÃO POR ABAS (ATUALIZADA)
+# NAVEGAÇÃO POR ABAS
 # ---------------------------------------------------------
 aba_tarefas, aba_crm, aba_dash, aba_relatorio, aba_novo = st.tabs([
     "Gerenciador de Tarefas",
@@ -482,7 +481,7 @@ with aba_tarefas:
         st.info("Nenhuma tarefa pendente.")
 
 # =========================================================
-# 4. ABA 2: FUNIL DE VENDAS (SEM A FRASE EXPLICATIVA)
+# 4. ABA 2: FUNIL DE VENDAS
 # =========================================================
 with aba_crm:
     st.subheader(f"Funil de Vendas — {titulo_dinamico}")
@@ -508,7 +507,6 @@ with aba_crm:
             for _, row in sub_df.iterrows():
                 st_code, st_label, st_icon = calcular_status_followup(row.get("Followup_Data", ""))
                 
-                # Cada cliente abre um expander compacto com a bolinha de status correspondente
                 with st.expander(f"{st_icon} {row['Empresa']}"):
                     dt_f_exib = row.get('Followup_Data', '')
                     dt_f_str = dt.strptime(str(dt_f_exib), "%Y-%m-%d").strftime("%d/%m/%Y") if dt_f_exib else "Não agendado"
