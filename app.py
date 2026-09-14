@@ -510,7 +510,7 @@ with aba_tarefas:
         st.info("Nenhuma tarefa pendente.")
 
 # =========================================================
-# ABA 2: FUNIL DE VENDAS
+# ABA 2: FUNIL DE VENDAS (MANTIDO COM AS CORES ORIGINAIS POR ETAPA)
 # =========================================================
 with aba_crm:
     st.subheader(f"Funil de Vendas — {titulo_dinamico}")
@@ -596,7 +596,8 @@ with aba_dash:
     cols_m = st.columns(len(etapas_crm) + 1)
     
     for i, etapa in enumerate(etapas_crm):
-        cor_header = st.session_state.funnel_colors.get(etapa, "#00A3FF")
+        # Utilizando o fundo padrão Ciano COVEM para os cabeçalhos indicadores desta aba
+        cor_header = "#00A3FF"
         qtd = contagem_calculada[etapa]
         
         with cols_m[i]:
@@ -744,12 +745,13 @@ with aba_relatorio:
         df_hist = st.session_state.df_historico_executivo.copy()
 
         def estilizar_atividades(val):
+            # Padronizado com o fundo azul ciano COVEM (#00A3FF) para todas as colunas indicadoras
             return [
-                'background-color: #FEF08A; color: #000000; font-weight: bold; text-align: center;', 
                 'background-color: #00A3FF; color: #000000; font-weight: bold; text-align: center;', 
-                'background-color: #FACC15; color: #000000; font-weight: bold; text-align: center;', 
-                'background-color: #FB923C; color: #000000; font-weight: bold; text-align: center;', 
-                'background-color: #4ADE80; color: #000000; font-weight: bold; text-align: center;'  
+                'background-color: #00A3FF; color: #000000; font-weight: bold; text-align: center;', 
+                'background-color: #00A3FF; color: #000000; font-weight: bold; text-align: center;', 
+                'background-color: #00A3FF; color: #000000; font-weight: bold; text-align: center;', 
+                'background-color: #00A3FF; color: #000000; font-weight: bold; text-align: center;'  
             ]
 
         df_styled = df_hist.style.apply(estilizar_atividades, axis=1)
@@ -835,10 +837,11 @@ with aba_relatorio:
         df_fin = st.session_state.df_historico_financeiro.copy()
 
         def estilizar_financeiro(val):
+            # Padronizado com o fundo azul ciano COVEM (#00A3FF) para todas as colunas indicadoras
             return [
-                'background-color: #FEF08A; color: #000000; font-weight: bold; text-align: center;', 
                 'background-color: #00A3FF; color: #000000; font-weight: bold; text-align: center;', 
-                'background-color: #4ADE80; color: #000000; font-weight: bold; text-align: center;'  
+                'background-color: #00A3FF; color: #000000; font-weight: bold; text-align: center;', 
+                'background-color: #00A3FF; color: #000000; font-weight: bold; text-align: center;'  
             ]
 
         df_fin_formated = df_fin.copy()
