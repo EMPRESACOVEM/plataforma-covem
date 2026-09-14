@@ -156,7 +156,6 @@ def carregar_dados_crm():
     if ARQUIVO_DADOS.exists():
         try:
             df_loaded = pd.read_excel(ARQUIVO_DADOS)
-            # Garante colunas essenciais caso o arquivo seja antigo
             for col in ["id", "Empresa", "Cliente", "Etapa", "Contato", "Cargo", "Telefone", "Email", "Cidade", "Valor", "Prob", "Vendedor", "Perda", "Data_Cadastro", "Followup_Data", "Followup_Nota", "Historico"]:
                 if col not in df_loaded.columns:
                     df_loaded[col] = ""
@@ -164,7 +163,6 @@ def carregar_dados_crm():
         except Exception:
             pass
             
-    # Dados padrão iniciais caso o arquivo não exista
     df_inicial = pd.DataFrame([
         {
             "id": 1, "Empresa": "Grupo Delta", "Cliente": "BraClean", "Etapa": "1. Contatado", 
@@ -210,7 +208,7 @@ def salvar_dados_crm(df):
     df.to_excel(ARQUIVO_DADOS, index=False)
 
 # ---------------------------------------------------------
-# ESTADO DA SESSÃO (CRM, TAREFAS, HISTÓRICO E FINANCEIRO)
+# ESTADO DA SESSÃO
 # ---------------------------------------------------------
 if 'df_crm' not in st.session_state:
     st.session_state.df_crm = carregar_dados_crm()
@@ -246,28 +244,21 @@ if 'df_historico_executivo' not in st.session_state:
         {"Mês/Ano": "Fev/26", "Leads Qualificados": 15, "Reuniões Agendadas": 12, "Propostas Enviadas": 10, "Projetos Fechados": 6}
     ])
 
-if 'df_historico_financeiro' not in st.session_state:
-    st.session_state.df_historico_financeiro = pd.DataFrame([
-        {"Mês/Ano": "Out/25", "Pipeline Total (R$)": 180000.0, "Receita Fechada (R$)": 90000.0},
-        {"Mês/Ano": "Nov/25", "Pipeline Total (R$)": 140000.0, "Receita Fechada (R$)": 80000.0},
-        {"Mês/Ano": "Dez/25", "Pipeline Total (R$)": 310000.0, "Receita Fechada (R$)": 200000.0},
-        {"Mês/Ano": "Jan/26", "Pipeline Total (R$)": 120000.0, "Receita Fechada (R$)": 55000.0},
-        {"Mês/Ano": "Fev/26", "Pipeline Total (R$)": 525000.0, "Receita Fechada (R$)": 285000.0}
-    ])
-
 if 'cliente_editando_id' not in st.session_state:
     st.session_state.cliente_editando_id = None
 
 df = st.session_state.df_crm
 
 # ---------------------------------------------------------
-# FUNÇÃO DE LÓGICA DE CORES DO FOLLOW-UP
+# FUNÇÃO DE LÓGICA DE CORES DO FOLLOW-UP (BLINDADA CONTRA ERROS)
 # ---------------------------------------------------------
 def calcular_status_followup(data_str):
-    if not data_str or pd.isna(data_str) or str(data_str).strip() == "":
+    if not data_str or pd.isna(data_str) or str(data_str).strip() in ["", "nan", "NaT", "None"]:
         return "sem_data", "Sem Follow-up", "⚪"
     try:
-        dt_follow = dt.strptime(str(data_str), "%Y-%m-%d").date()
+        # Pega apenas os primeiros 10 caracteres caso venha com hora (ex: 2026-09-01 00:00:00)
+        limpa_data = str(data_str).strip()[:10]
+        dt_follow = dt.strptime(limpa_data, "%Y-%m-%d").date()
         hoje = date.today()
         if dt_follow < hoje:
             return "atrasado", "Atrasado", "🔴"
@@ -282,7 +273,6 @@ def calcular_status_followup(data_str):
 # BARRA LATERAL (FILTROS E CONFIGURAÇÕES)
 # ---------------------------------------------------------
 opcoes_filtro = ["TODOS"] + CARTEIRAS_COVEM
-
 cliente_sel = st.sidebar.selectbox("Clientes COVEM:", opcoes_filtro)
 
 if cliente_sel != "TODOS":
@@ -368,7 +358,6 @@ def exibir_agenda_semana(df_tarefas, df_crm):
             st.info("Nenhum cliente no CRM.")
         else:
             crm_temp = df_crm.copy()
-            
             status_list = []
             for _, r in crm_temp.iterrows():
                 st_code, st_label, st_icon = calcular_status_followup(r.get("Followup_Data", ""))
@@ -385,7 +374,11 @@ def exibir_agenda_semana(df_tarefas, df_crm):
                 with st.expander("Ver Follow-ups Atrasados"):
                     if not c_atrasados.empty:
                         for _, row in c_atrasados.iterrows():
-                            dt_f_br = dt.strptime(str(row['Followup_Data']), "%Y-%m-%d").strftime("%d/%m/%Y") if row['Followup_Data'] else "Sem Data"
+                            raw_dt = str(row['Followup_Data']).strip()[:10]
+                            try:
+                                dt_f_br = dt.strptime(raw_dt, "%Y-%m-%d").strftime("%d/%m/%Y")
+                            except:
+                                dt_f_br = "Data Inválida"
                             st.write(f"• 🔴 **{row['Empresa']}** | Contato: `{row['Contato']}` | Data: {dt_f_br}")
                     else:
                         st.write("Nenhum follow-up atrasado.")
@@ -395,7 +388,6 @@ def exibir_agenda_semana(df_tarefas, df_crm):
                 with st.expander("Ver Follow-ups para Hoje"):
                     if not c_hoje.empty:
                         for _, row in c_hoje.iterrows():
-                            dt_f_br = dt.strptime(str(row['Followup_Data']), "%Y-%m-%d").strftime("%d/%m/%Y") if row['Followup_Data'] else "Sem Data"
                             st.write(f"• 🟡 **{row['Empresa']}** | Contato: `{row['Contato']}`")
                     else:
                         st.write("Nenhum follow-up para hoje.")
@@ -462,7 +454,7 @@ with aba_tarefas:
                     [st.session_state.df_tarefas, pd.DataFrame([nova_linha_tarefa])],
                     ignore_index=True
                 )
-                st.success(f"Tarefa '{titulo_tarefa}' vinculada a '{cliente_vinculado}' com sucesso!")
+                st.success(f"Tarefa '{titulo_tarefa}' vinculada com sucesso!")
                 st.rerun()
 
     st.markdown("#### Lista Geral de Tarefas")
@@ -506,7 +498,12 @@ with aba_crm:
                 with hc3:
                     edit_valor = st.number_input("Valor (R$)", value=float(row_edit["Valor"]), step=1000.0)
                     edit_vendedor = st.text_input("Vendedor", value=row_edit["Vendedor"])
-                    dt_parse = dt.strptime(str(row_edit["Followup_Data"]), "%Y-%m-%d").date() if row_edit["Followup_Data"] else date.today()
+                    
+                    try:
+                        dt_parse = dt.strptime(str(row_edit["Followup_Data"]).strip()[:10], "%Y-%m-%d").date() if row_edit["Followup_Data"] and str(row_edit["Followup_Data"]).strip() not in ["nan", "NaT", ""] else date.today()
+                    except:
+                        dt_parse = date.today()
+                        
                     edit_fu_data = st.date_input("Data de Follow-up", value=dt_parse)
                 
                 edit_fu_nota = st.text_area("Nota / Ação de Follow-up", value=row_edit["Followup_Nota"])
@@ -534,9 +531,7 @@ with aba_crm:
                     st.session_state.df_crm.loc[idx_df, "Followup_Nota"] = edit_fu_nota
                     st.session_state.df_crm.loc[idx_df, "Historico"] = edit_hist
                     
-                    # Salva alterações de forma permanente no arquivo local
                     salvar_dados_crm(st.session_state.df_crm)
-                    
                     st.session_state.cliente_editando_id = None
                     st.success("Atualizado e salvo com sucesso!")
                     st.rerun()
@@ -549,7 +544,7 @@ with aba_crm:
                     st.session_state.df_crm = st.session_state.df_crm[st.session_state.df_crm["id"] != cliente_edit_id]
                     salvar_dados_crm(st.session_state.df_crm)
                     st.session_state.cliente_editando_id = None
-                    st.warning("Cliente excluído e alteração salva!")
+                    st.warning("Cliente excluído com sucesso!")
                     st.rerun()
 
             st.markdown("</div>", unsafe_allow_html=True)
@@ -579,7 +574,13 @@ with aba_crm:
                 
                 with st.expander(f"{st_icon} {row['Empresa']}"):
                     dt_f_exib = row.get('Followup_Data', '')
-                    dt_f_str = dt.strptime(str(dt_f_exib), "%Y-%m-%d").strftime("%d/%m/%Y") if dt_f_exib else "Não agendado"
+                    
+                    # LINHA CORRIGIDA COM TRATAMENTO SEGURO
+                    try:
+                        raw_val = str(dt_f_exib).strip()[:10]
+                        dt_f_str = dt.strptime(raw_val, "%Y-%m-%d").strftime("%d/%m/%Y") if raw_val and raw_val not in ["nan", "NaT", ""] else "Não agendado"
+                    except:
+                        dt_f_str = "Não agendado"
                     
                     st.markdown(
                         f"""
@@ -608,9 +609,8 @@ with aba_crm:
                         if nova_etapa_card == "6. Perdido":
                             st.session_state.df_crm.loc[idx_df, "Perda"] = "Outros"
                         
-                        # Salva a movimentação de etapa de forma permanente
                         salvar_dados_crm(st.session_state.df_crm)
-                        st.success(f"Movido para {nova_etapa_card} e salvo!")
+                        st.success(f"Movido para {nova_etapa_card}!")
                         st.rerun()
 
                     if st.button("EDITAR", key=f"btn_edit_{cliente_id}", use_container_width=True):
@@ -660,7 +660,6 @@ with aba_dash:
         contagem_calculada[etapa] = st.session_state[key_manual_count]
         
     total_leads = sum(contagem_calculada.values())
-
     cols_m = st.columns(len(etapas_crm) + 1)
     
     for i, etapa in enumerate(etapas_crm):
@@ -782,16 +781,8 @@ with aba_novo:
             rapido_telefone = st.text_input("Telefone *")
 
         with col_r2:
-            rapido_carteira = st.selectbox(
-                "Carteira *", 
-                CARTEIRAS_COVEM, 
-                key="rapido_carteira"
-            )
-            rapido_etapa = st.selectbox(
-                "Etapa da Venda *", 
-                list(PROB_MAP.keys()), 
-                key="rapido_etapa"
-            )
+            rapido_carteira = st.selectbox("Carteira *", CARTEIRAS_COVEM, key="rapido_carteira")
+            rapido_etapa = st.selectbox("Etapa da Venda *", list(PROB_MAP.keys()), key="rapido_etapa")
 
         btn_salvar_rapido = st.form_submit_button("Cadastrar Rapidamente", use_container_width=True)
 
@@ -799,7 +790,7 @@ with aba_novo:
             if not rapido_empresa or not rapido_telefone:
                 st.error("Por favor, preencha o Nome da Empresa e o Telefone.")
             else:
-                novo_id = df["id"].max() + 1 if not df.empty else 1
+                novo_id = int(df["id"].max() + 1) if not df.empty and pd.notna(df["id"].max()) else 1
                 nova_linha_rapida = {
                     "id": novo_id,
                     "Empresa": rapido_empresa,
@@ -823,13 +814,11 @@ with aba_novo:
                     [st.session_state.df_crm, pd.DataFrame([nova_linha_rapida])], 
                     ignore_index=True
                 )
-                # Salva permanentemente no Excel local
                 salvar_dados_crm(st.session_state.df_crm)
                 st.success(f"Empresa '{rapido_empresa}' cadastrada e salva com sucesso!")
                 st.rerun()
 
     st.write("---")
-
     st.subheader("Cadastrar Oportunidade Completa")
     
     with st.form("form_oportunidade", clear_on_submit=True):
@@ -861,7 +850,7 @@ with aba_novo:
             if not nova_empresa:
                 st.error("Preencha o Nome da Empresa.")
             else:
-                novo_id = df["id"].max() + 1 if not df.empty else 1
+                novo_id = int(df["id"].max() + 1) if not df.empty and pd.notna(df["id"].max()) else 1
                 nova_linha = {
                     "id": novo_id,
                     "Empresa": nova_empresa,
@@ -882,9 +871,6 @@ with aba_novo:
                     "Historico": f"Cadastrado em {dt.now().strftime('%d/%m/%Y')}"
                 }
                 st.session_state.df_crm = pd.concat([st.session_state.df_crm, pd.DataFrame([nova_linha])], ignore_index=True)
-                
-                # Salva permanentemente no Excel local
                 salvar_dados_crm(st.session_state.df_crm)
-                
                 st.success("Oportunidade cadastrada e salva com sucesso!")
                 st.rerun()
