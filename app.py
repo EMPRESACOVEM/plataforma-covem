@@ -272,18 +272,18 @@ df = st.session_state.df_crm
 # ---------------------------------------------------------
 def calcular_status_followup(data_str):
     if not data_str or pd.isna(data_str) or str(data_str).strip() == "":
-        return "sem_data", "Sem Follow-up", "⚪"
+        return "sem_data", "Sem Follow-up", "⚪", "badge-sucesso"
     try:
         dt_follow = dt.strptime(str(data_str), "%Y-%m-%d").date()
         hoje = date.today()
         if dt_follow < hoje:
-            return "atrasado", "Atrasado", "🔴"
+            return "atrasado", "Atrasado", "🔴", "badge-atrasada"
         elif dt_follow == hoje:
-            return "hoje", "Atenção (Hoje)", "🟡"
+            return "hoje", "Atenção (Hoje)", "🟡", "badge-hoje"
         else:
-            return "em_dia", "Em Dia", "🟢"
+            return "em_dia", "Em Dia", "🟢", "badge-sucesso"
     except:
-        return "sem_data", "Sem Follow-up", "⚪"
+        return "sem_data", "Sem Follow-up", "⚪", "badge-sucesso"
 
 # ---------------------------------------------------------
 # BARRA LATERAL (FILTROS E CONFIGURAÇÕES)
@@ -382,7 +382,7 @@ def exibir_agenda_semana(df_tarefas, df_crm):
             
             status_list = []
             for _, r in crm_temp.iterrows():
-                st_code, st_label, st_icon = calcular_status_followup(r.get("Followup_Data", ""))
+                st_code, st_label, st_icon, _ = calcular_status_followup(r.get("Followup_Data", ""))
                 status_list.append(st_code)
             crm_temp["status_fu"] = status_list
 
@@ -457,7 +457,7 @@ with aba_crm:
             idx_cliente = st.session_state.df_crm.index[st.session_state.df_crm["id"] == c["id"]].tolist()[0]
             cliente_nome_atual = c['Empresa']
             
-            st_code, st_label, st_icon = calcular_status_followup(c.get("Followup_Data", ""))
+            st_code, st_label, st_icon, css_classe_badge = calcular_status_followup(c.get("Followup_Data", ""))
             
             col_titulo, col_acoes_top = st.columns([3, 2])
             with col_titulo:
@@ -482,17 +482,22 @@ with aba_crm:
             with st.container():
                 st.markdown('<div class="bloco-detalhes-retangular">', unsafe_allow_html=True)
                 
+                # Bloco de Informações Principais do Cliente Selecionado com Status Colorido de Follow-up
                 col_info1, col_info2, col_info3 = st.columns(3)
                 with col_info1:
-                    st.markdown(f"**🏢 Nome da Empresa:** {c['Empresa']}")
-                    st.markdown(f"**👤 Responsável:** {c['Contato']}")
+                    st.markdown(f"**🏢 Empresa:** {c['Empresa']}")
                 with col_info2:
-                    st.markdown(f"**💼 Cargo:** {c.get('Cargo', 'Não informado')}")
-                    st.markdown(f"**📞 Telefone:** <span class='phone-highlight'>{c.get('Telefone', 'Não informado')}</span>", unsafe_allow_html=True)
+                    st.markdown(f"**👤 Responsável:** {c['Contato']}")
                 with col_info3:
-                    dt_f_exib = c.get('Followup_Data', '')
-                    dt_f_str = dt.strptime(str(dt_f_exib), "%Y-%m-%d").strftime("%d/%m/%Y") if dt_f_exib else "Não agendado"
-                    st.markdown(f"**🗓️ Próximo Follow-up:** {st_icon} **{dt_f_str}** ({st_label})")
+                    st.markdown(f"**📞 Telefone:** <span class='phone-highlight'>{c.get('Telefone', 'Não informado')}</span>", unsafe_allow_html=True)
+
+                st.markdown("<br>", unsafe_allow_html=True)
+                
+                dt_f_exib = c.get('Followup_Data', '')
+                dt_f_str = dt.strptime(str(dt_f_exib), "%Y-%m-%d").strftime("%d/%m/%Y") if dt_f_exib else "Não agendado"
+                
+                # Exibição do Follow-up com cores (Vermelho atrasado, Amarelo atenção/hoje, Verde em dia)
+                st.markdown(f'<div class="{css_classe_badge}">{st_icon} Follow-up: {dt_f_str} ({st_label})</div>', unsafe_allow_html=True)
 
                 st.divider()
 
@@ -504,6 +509,7 @@ with aba_crm:
                     with aba_historico_f:
                         col1, col2, col3 = st.columns([1.5, 1.5, 1.5])
                         with col1:
+                            st.markdown(f"**Cargo:** {c.get('Cargo', 'Não informado')}")
                             st.markdown(f"**E-mail:** {c.get('Email', 'Não informado')}")
                             st.markdown(f"**Cidade:** {c.get('Cidade', 'Não informado')}")
                         with col2:
@@ -659,7 +665,7 @@ with aba_crm:
             sub_df = df_filtered[df_filtered["Etapa"] == etapa]
             
             for _, row in sub_df.iterrows():
-                st_code, st_label, st_icon = calcular_status_followup(row.get("Followup_Data", ""))
+                st_code, st_label, st_icon, _ = calcular_status_followup(row.get("Followup_Data", ""))
                 btn_label = f"{st_icon} {row['Empresa']}\n({st_label})"
                 
                 if st.button(btn_label, key=f"btn_card_{row['id']}", use_container_width=True):
