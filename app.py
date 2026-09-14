@@ -860,7 +860,7 @@ with aba_novo:
         with col_f2:
             nova_cidade = st.text_input("Cidade / Estado")
             novo_vendedor = st.text_input("Vendedor / Responsável")
-            novo_valor = st.number_input("Valor da Oportunidade (R$)", min_value=0.0, step=1000.0, format="%.2f")
+            nova_valor = st.number_input("Valor da Oportunidade (R$)", min_value=0.0, step=1000.0, format="%.2f")
             nova_etapa = st.selectbox("Etapa Inicial *", list(PROB_MAP.keys()))
             motivo_perda = st.selectbox("Motivo de Perda (Se for '6. Perdido')", [""] + MOTIVOS_PERDA_PADRAO)
             
