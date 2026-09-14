@@ -134,7 +134,7 @@ st.markdown("""
         }
 
         div[data-testid="stVerticalBlock"] > div {
-            gap: 0.3rem !important;
+            gap: 0.15rem !important;
         }
 
         div[data-testid="stMetricValue"] {
@@ -257,18 +257,18 @@ df = st.session_state.df_crm
 # ---------------------------------------------------------
 def calcular_status_followup(data_str):
     if not data_str or pd.isna(data_str) or str(data_str).strip() == "":
-        return "sem_data", "Sem Follow-up", "⚪"
+        return "sem_data", "Sem Follow-up", ""
     try:
         dt_follow = dt.strptime(str(data_str), "%Y-%m-%d").date()
         hoje = date.today()
         if dt_follow < hoje:
-            return "atrasado", "Atrasado", "🔴"
+            return "atrasado", "Atrasado", ""
         elif dt_follow == hoje:
-            return "hoje", "Atenção (Hoje)", "🟡"
+            return "hoje", "Atenção (Hoje)", ""
         else:
-            return "em_dia", "Em Dia", "🟢"
+            return "em_dia", "Em Dia", ""
     except:
-        return "sem_data", "Sem Follow-up", "⚪"
+        return "sem_data", "Sem Follow-up", ""
 
 # ---------------------------------------------------------
 # BARRA LATERAL (FILTROS E CONFIGURAÇÕES)
@@ -340,7 +340,7 @@ def exibir_agenda_semana(df_tarefas, df_crm):
             col_atraso, col_hoje = st.columns(2)
 
             with col_atraso:
-                st.markdown(f'<div class="badge-atrasada">🔴 {len(atrasadas)} Tarefas Atrasadas</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="badge-atrasada">{len(atrasadas)} Tarefas Atrasadas</div>', unsafe_allow_html=True)
                 with st.expander("Ver Tarefas Atrasadas"):
                     if not atrasadas.empty:
                         for _, row in atrasadas.iterrows():
@@ -349,7 +349,7 @@ def exibir_agenda_semana(df_tarefas, df_crm):
                         st.write("Nenhuma tarefa atrasada.")
 
             with col_hoje:
-                st.markdown(f'<div class="badge-hoje">🟡 {len(hoje_tarefas)} Tarefas para Hoje</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="badge-hoje">{len(hoje_tarefas)} Tarefas para Hoje</div>', unsafe_allow_html=True)
                 with st.expander("Ver Tarefas para Hoje"):
                     if not hoje_tarefas.empty:
                         for _, row in hoje_tarefas.iterrows():
@@ -375,7 +375,7 @@ def exibir_agenda_semana(df_tarefas, df_crm):
             col_c_atraso, col_c_hoje = st.columns(2)
 
             with col_c_atraso:
-                st.markdown(f'<div class="badge-atrasada">🔴 {len(c_atrasados)} Follow-ups Atrasados</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="badge-atrasada">{len(c_atrasados)} Follow-ups Atrasados</div>', unsafe_allow_html=True)
                 with st.expander("Ver Follow-ups Atrasados"):
                     if not c_atrasados.empty:
                         for _, row in c_atrasados.iterrows():
@@ -385,7 +385,7 @@ def exibir_agenda_semana(df_tarefas, df_crm):
                         st.write("Nenhum follow-up atrasado.")
 
             with col_c_hoje:
-                st.markdown(f'<div class="badge-hoje">🟡 {len(c_hoje)} Follow-ups para Hoje</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="badge-hoje">{len(c_hoje)} Follow-ups para Hoje</div>', unsafe_allow_html=True)
                 with st.expander("Ver Follow-ups para Hoje"):
                     if not c_hoje.empty:
                         for _, row in c_hoje.iterrows():
@@ -453,17 +453,22 @@ with aba_crm:
             for _, row in sub_df.iterrows():
                 st_code, st_label, st_icon = calcular_status_followup(row.get("Followup_Data", ""))
                 
-                # Cada cliente abre um expander individual exatamente igual aos alertas da agenda
-                with st.expander(f"{st_icon} {row['Empresa']}"):
-                    st.markdown(f"**🏢 Empresa:** {row['Empresa']}")
-                    st.markdown(f"**👤 Responsável:** {row['Contato']}")
-                    st.markdown(f"**📞 Telefone:** <span class='phone-highlight'>{row.get('Telefone', 'Não informado')}</span>", unsafe_allow_html=True)
-                    
+                # Cada cliente abre um expander compacto e sem emojis
+                with st.expander(f"{row['Empresa']}"):
                     dt_f_exib = row.get('Followup_Data', '')
                     dt_f_str = dt.strptime(str(dt_f_exib), "%Y-%m-%d").strftime("%d/%m/%Y") if dt_f_exib else "Não agendado"
                     
-                    # Status do Follow-up com cores (Vermelho, Amarelo, Verde)
-                    st.markdown(f"**Follow-up:** {st_icon} {dt_f_str} ({st_label})")
+                    st.markdown(
+                        f"""
+                        <div style="line-height: 1.25; margin-bottom: 2px;">
+                            <span style="font-size: 13px;"><b>{row['Empresa']}</b></span><br>
+                            <span style="font-size: 12px; color: #94A3B8;">{row['Contato']}</span><br>
+                            <span class="phone-highlight" style="font-size: 12px;">{row.get('Telefone', 'Não informado')}</span><br>
+                            <span style="font-size: 11px; color: #CBD5E1;">Follow-up: {dt_f_str} ({st_label})</span>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
 
 # =========================================================
 # 4. ABA 2: GERENCIADOR DE TAREFAS
