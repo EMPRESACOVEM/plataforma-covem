@@ -216,7 +216,7 @@ if 'df_crm' not in st.session_state:
 if 'df_tarefas' not in st.session_state:
     st.session_state.df_tarefas = pd.DataFrame([
         {
-            "Titulo": "Enviar proposta comercial",
+            "Titulo": "📞 Ligar - Enviar proposta comercial",
             "Descricao": "Elaborar minuta contratual e enviar em PDF",
             "Cliente": "Grupo Delta",
             "Data_Vencimento": str(date.today() - timedelta(days=1)),
@@ -225,7 +225,7 @@ if 'df_tarefas' not in st.session_state:
             "Data_Criacao": str(date.today() - timedelta(days=3))
         },
         {
-            "Titulo": "Reunião de Alinhamento",
+            "Titulo": "💬 Enviar mensagem - Reunião de Alinhamento",
             "Descricao": "Validar requisitos técnicos",
             "Cliente": "Indústria Omega",
             "Data_Vencimento": str(date.today()),
@@ -256,7 +256,6 @@ def calcular_status_followup(data_str):
     if not data_str or pd.isna(data_str) or str(data_str).strip() in ["", "nan", "NaT", "None"]:
         return "sem_data", "Sem Follow-up", "⚪"
     try:
-        # Pega apenas os primeiros 10 caracteres caso venha com hora (ex: 2026-09-01 00:00:00)
         limpa_data = str(data_str).strip()[:10]
         dt_follow = dt.strptime(limpa_data, "%Y-%m-%d").date()
         hoje = date.today()
@@ -424,8 +423,16 @@ with aba_tarefas:
             col1, col2 = st.columns([2, 1])
 
             with col1:
-                titulo_tarefa = st.text_input("Título da Tarefa / Ação")
-                descricao = st.text_area("Descrição / Detalhes")
+                st.markdown("**Selecione a Ação Rápida:**")
+                acao_selecionada = st.radio(
+                    "Ação",
+                    options=["📞 Ligar", "💬 Enviar mensagem", "📧 Enviar e-mail", "📄 Enviar proposta"],
+                    horizontal=True,
+                    label_visibility="collapsed"
+                )
+                
+                complemento_titulo = st.text_input("Detalhes adicionais (Opcional)", placeholder="Ex: Falar com o gerente sobre o orçamento")
+                descricao = st.text_area("Descrição / Observações")
 
             with col2:
                 cliente_vinculado = st.selectbox(
@@ -440,9 +447,11 @@ with aba_tarefas:
 
             submit_tarefa = st.form_submit_button("Salvar Tarefa", use_container_width=True)
 
-            if submit_tarefa and titulo_tarefa:
+            if submit_tarefa:
+                titulo_final = f"{acao_selecionada}" + (f" - {complemento_titulo}" if complemento_titulo else "")
+                
                 nova_linha_tarefa = {
-                    "Titulo": titulo_tarefa,
+                    "Titulo": titulo_final,
                     "Descricao": descricao,
                     "Cliente": cliente_vinculado,
                     "Data_Vencimento": str(data_vencimento),
@@ -454,7 +463,7 @@ with aba_tarefas:
                     [st.session_state.df_tarefas, pd.DataFrame([nova_linha_tarefa])],
                     ignore_index=True
                 )
-                st.success(f"Tarefa '{titulo_tarefa}' vinculada com sucesso!")
+                st.success("Tarefa criada com sucesso!")
                 st.rerun()
 
     st.markdown("#### Lista Geral de Tarefas")
@@ -575,7 +584,6 @@ with aba_crm:
                 with st.expander(f"{st_icon} {row['Empresa']}"):
                     dt_f_exib = row.get('Followup_Data', '')
                     
-                    # LINHA CORRIGIDA COM TRATAMENTO SEGURO
                     try:
                         raw_val = str(dt_f_exib).strip()[:10]
                         dt_f_str = dt.strptime(raw_val, "%Y-%m-%d").strftime("%d/%m/%Y") if raw_val and raw_val not in ["nan", "NaT", ""] else "Não agendado"
