@@ -66,26 +66,28 @@ st.markdown("""
             letter-spacing: -0.4px !important;
         }
 
-        /* Título Principal Executivo */
+        /* Título Principal Executivo Centralizado e Sofisticado */
         .title-covem {
             font-family: 'Inter', sans-serif;
-            font-size: 38px;
+            font-size: 42px;
             font-weight: 800;
-            letter-spacing: -0.8px;
+            letter-spacing: 1.5px;
             color: #F1F5F9;
-            margin-bottom: 8px;
-            margin-top: -10px;
+            text-align: center;
+            margin-bottom: 2px;
+            margin-top: -20px;
+            text-transform: uppercase;
         }
 
-        /* Subtítulos */
-        .section-header {
+        .subtitle-covem {
             font-family: 'Inter', sans-serif;
-            font-size: 20px;
-            font-weight: 600;
-            color: #E2E8F0;
-            letter-spacing: -0.3px;
-            margin-top: 15px;
-            margin-bottom: 12px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #94A3B8;
+            text-align: center;
+            letter-spacing: 0.5px;
+            margin-bottom: 25px;
+            text-transform: uppercase;
         }
 
         /* Badges de Follow-up e Alertas */
@@ -311,10 +313,10 @@ st.sidebar.download_button(
 )
 
 # ---------------------------------------------------------
-# 1. TÍTULO PRINCIPAL: GRUPO COVEM (NO TOPO)
+# 1. TÍTULO PRINCIPAL: GRUPO COVEM (CENTRALIZADO NO TOPO)
 # ---------------------------------------------------------
 st.markdown(f'<div class="title-covem">{COVEM_NAME}</div>', unsafe_allow_html=True)
-st.caption("Plataforma Executiva de Gestão Comercial e Operacional")
+st.markdown('<div class="subtitle-covem">Plataforma Executiva de Gestão Comercial e Operacional</div>', unsafe_allow_html=True)
 st.divider()
 
 # ---------------------------------------------------------
@@ -956,7 +958,7 @@ with aba_novo:
         col_f1, col_f2 = st.columns(2)
         
         with col_f1:
-            nova_empresa = st.text_input("Nome da Empresa / Cliente *")
+            nova_empresa = st.text_icon = st.text_input("Nome da Empresa / Cliente *")
             novo_cliente = st.selectbox("Marca / Carteira *", CARTEIRAS_COVEM)
             novo_contato = st.text_input("Contato / Nome")
             novo_cargo = st.text_input("Cargo")
@@ -987,9 +989,9 @@ with aba_novo:
                     "Empresa": nova_empresa,
                     "Cliente": novo_cliente,
                     "Etapa": nova_etapa,
-                    "Contato": nova_contato if nova_contato else "Não informado",
+                    "Contato": novo_contato if novo_contato else "Não informado",
                     "Cargo": novo_cargo if novo_cargo else "Não informado",
-                    "Telefone": nova_telefone if nova_telefone else "Não informado",
+                    "Telefone": novo_telefone if novo_telefone else "Não informado",
                     "Email": novo_email if novo_email else "Não informado",
                     "Cidade": nova_cidade if nova_cidade else "Não informado",
                     "Valor": nova_valor,
