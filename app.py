@@ -254,7 +254,6 @@ if 'manual_counts' not in st.session_state:
 if 'manual_perdas' not in st.session_state:
     st.session_state.manual_perdas = None
 
-# Variável de controle para edição horizontal em destaque
 if 'cliente_editando_id' not in st.session_state:
     st.session_state.cliente_editando_id = None
 
@@ -494,7 +493,7 @@ with aba_crm:
     st.subheader(f"Funil de Vendas — {titulo_dinamico}")
     st.caption("Dica: Use o seletor em cada card para mover rapidamente o cliente de etapa, ou clique em EDITAR para abrir a ficha completa em destaque abaixo.")
 
-    # Se houver um cliente selecionado para edição, exibe a aba horizontal em destaque logo no topo
+    # Se houver um cliente selecionado para edição, exibe a ficha completa com toda a estrutura em destaque azul
     if st.session_state.cliente_editando_id is not None:
         cliente_edit_id = st.session_state.cliente_editando_id
         filtro_reg = df[df["id"] == cliente_edit_id]
@@ -502,10 +501,11 @@ with aba_crm:
         if not filtro_reg.empty:
             row_edit = filtro_reg.iloc[0]
             
+            # Bloco com fundo e borda azul para destacar toda a ficha de edição
             st.markdown(
                 f"""
-                <div style="background-color: #1E293B; border: 2px solid #38BDF8; padding: 20px; border-radius: 10px; margin-bottom: 25px;">
-                    <h3 style="color: #38BDF8; margin-top: 0;">✏️ Ficha Completa: {row_edit['Empresa']}</h3>
+                <div style="background-color: #0F172A; border: 2px solid #38BDF8; padding: 25px; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 4px 12px rgba(56, 189, 248, 0.15);">
+                    <h3 style="color: #38BDF8; margin-top: 0; margin-bottom: 20px; font-weight: 700;">Ficha Completa: {row_edit['Empresa']}</h3>
                 """,
                 unsafe_allow_html=True
             )
@@ -606,7 +606,6 @@ with aba_crm:
                         unsafe_allow_html=True
                     )
                     
-                    # Movimentação rápida de Etapa direto no card
                     nova_etapa_card = st.selectbox(
                         "Mover Etapa:", 
                         options=etapas, 
@@ -624,7 +623,6 @@ with aba_crm:
                         st.success(f"Movido para {nova_etapa_card}!")
                         st.rerun()
 
-                    # Botão EDITAR: ativa a aba horizontal no topo da página
                     if st.button("EDITAR", key=f"btn_edit_{cliente_id}", use_container_width=True):
                         st.session_state.cliente_editando_id = cliente_id
                         st.rerun()
