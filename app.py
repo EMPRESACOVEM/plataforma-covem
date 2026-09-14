@@ -318,7 +318,7 @@ st.caption("Plataforma Executiva de Gestão Comercial e Operacional")
 st.divider()
 
 # ---------------------------------------------------------
-# 2. AGENDA DA SEMANA (TAREFAS + FOLLOW-UPS DE CLIENTES)
+# FUNÇÃO DE RENDERIZAÇÃO DA AGENDA DA SEMANA
 # ---------------------------------------------------------
 def exibir_agenda_semana(df_tarefas, df_crm):
     st.markdown('<div class="section-header">Agenda da Semana</div>', unsafe_allow_html=True)
@@ -396,14 +396,12 @@ def exibir_agenda_semana(df_tarefas, df_crm):
 
     st.divider()
 
-exibir_agenda_semana(st.session_state.df_tarefas, st.session_state.df_crm)
-
 # ---------------------------------------------------------
-# NAVEGAÇÃO POR ABAS
+# NAVEGAÇÃO POR ABAS (ATUALIZADA)
 # ---------------------------------------------------------
-aba_crm, aba_tarefas, aba_dash, aba_relatorio, aba_novo = st.tabs([
-    "Funil de Vendas", 
+aba_tarefas, aba_crm, aba_dash, aba_relatorio, aba_novo = st.tabs([
     "Gerenciador de Tarefas",
+    "Funil de Vendas", 
     "Dashboard", 
     "Relatório Executivo", 
     "➕ Novo Cadastro"
@@ -426,54 +424,11 @@ def criar_link_google_agenda(empresa, contato, nota_followup, data_str):
         return "#"
 
 # =========================================================
-# 3. ABA 1: FUNIL DE VENDAS (COM EXPANDER EM CADA CLIENTE)
-# =========================================================
-with aba_crm:
-    st.subheader(f"Funil de Vendas — {titulo_dinamico}")
-    st.caption("Clique no nome do cliente nas colunas abaixo para abrir a aba de informações detalhadas e status de follow-up (🔴 Atrasado | 🟡 Hoje/Atenção | 🟢 Em Dia).")
-
-    etapas = list(PROB_MAP.keys())
-    cols = st.columns(len(etapas))
-    
-    for idx, etapa in enumerate(etapas):
-        cor_header = st.session_state.funnel_colors.get(etapa, "#3B82F6")
-        
-        with cols[idx]:
-            st.markdown(
-                f"""
-                <div style="background-color: {cor_header}; padding: 6px; border-radius: 6px; text-align: center; margin-bottom: 8px;">
-                    <b style="color: #FFFFFF; font-size: 12px;">{etapa}</b>
-                </div>
-                """, 
-                unsafe_allow_html=True
-            )
-            
-            sub_df = df_filtered[df_filtered["Etapa"] == etapa]
-            
-            for _, row in sub_df.iterrows():
-                st_code, st_label, st_icon = calcular_status_followup(row.get("Followup_Data", ""))
-                
-                # Cada cliente abre um expander compacto com a bolinha de status correspondente
-                with st.expander(f"{st_icon} {row['Empresa']}"):
-                    dt_f_exib = row.get('Followup_Data', '')
-                    dt_f_str = dt.strptime(str(dt_f_exib), "%Y-%m-%d").strftime("%d/%m/%Y") if dt_f_exib else "Não agendado"
-                    
-                    st.markdown(
-                        f"""
-                        <div style="line-height: 1.25; margin-bottom: 2px;">
-                            <span style="font-size: 13px;"><b>{st_icon} {row['Empresa']}</b></span><br>
-                            <span style="font-size: 12px; color: #94A3B8;">{row['Contato']}</span><br>
-                            <span class="phone-highlight" style="font-size: 12px;">{row.get('Telefone', 'Não informado')}</span><br>
-                            <span style="font-size: 11px; color: #CBD5E1;">Follow-up: {dt_f_str} ({st_label})</span>
-                        </div>
-                        """,
-                        unsafe_allow_html=True
-                    )
-
-# =========================================================
-# 4. ABA 2: GERENCIADOR DE TAREFAS
+# 3. ABA 1: GERENCIADOR DE TAREFAS (COM AGENDA DA SEMANA NO TOPO)
 # =========================================================
 with aba_tarefas:
+    exibir_agenda_semana(st.session_state.df_tarefas, st.session_state.df_crm)
+    
     st.subheader("Gerenciador de Tarefas")
 
     lista_clientes = (
@@ -525,6 +480,50 @@ with aba_tarefas:
         st.dataframe(st.session_state.df_tarefas, use_container_width=True)
     else:
         st.info("Nenhuma tarefa pendente.")
+
+# =========================================================
+# 4. ABA 2: FUNIL DE VENDAS (SEM A FRASE EXPLICATIVA)
+# =========================================================
+with aba_crm:
+    st.subheader(f"Funil de Vendas — {titulo_dinamico}")
+
+    etapas = list(PROB_MAP.keys())
+    cols = st.columns(len(etapas))
+    
+    for idx, etapa in enumerate(etapas):
+        cor_header = st.session_state.funnel_colors.get(etapa, "#3B82F6")
+        
+        with cols[idx]:
+            st.markdown(
+                f"""
+                <div style="background-color: {cor_header}; padding: 6px; border-radius: 6px; text-align: center; margin-bottom: 8px;">
+                    <b style="color: #FFFFFF; font-size: 12px;">{etapa}</b>
+                </div>
+                """, 
+                unsafe_allow_html=True
+            )
+            
+            sub_df = df_filtered[df_filtered["Etapa"] == etapa]
+            
+            for _, row in sub_df.iterrows():
+                st_code, st_label, st_icon = calcular_status_followup(row.get("Followup_Data", ""))
+                
+                # Cada cliente abre um expander compacto com a bolinha de status correspondente
+                with st.expander(f"{st_icon} {row['Empresa']}"):
+                    dt_f_exib = row.get('Followup_Data', '')
+                    dt_f_str = dt.strptime(str(dt_f_exib), "%Y-%m-%d").strftime("%d/%m/%Y") if dt_f_exib else "Não agendado"
+                    
+                    st.markdown(
+                        f"""
+                        <div style="line-height: 1.25; margin-bottom: 2px;">
+                            <span style="font-size: 13px;"><b>{st_icon} {row['Empresa']}</b></span><br>
+                            <span style="font-size: 12px; color: #94A3B8;">{row['Contato']}</span><br>
+                            <span class="phone-highlight" style="font-size: 12px;">{row.get('Telefone', 'Não informado')}</span><br>
+                            <span style="font-size: 11px; color: #CBD5E1;">Follow-up: {dt_f_str} ({st_label})</span>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
 
 # =========================================================
 # ABA 3: DASHBOARD
