@@ -254,6 +254,10 @@ if 'manual_counts' not in st.session_state:
 if 'manual_perdas' not in st.session_state:
     st.session_state.manual_perdas = None
 
+# Variável de controle para edição horizontal em destaque
+if 'cliente_editando_id' not in st.session_state:
+    st.session_state.cliente_editando_id = None
+
 df = st.session_state.df_crm
 
 # ---------------------------------------------------------
@@ -488,7 +492,81 @@ with aba_tarefas:
 # =========================================================
 with aba_crm:
     st.subheader(f"Funil de Vendas — {titulo_dinamico}")
-    st.caption("Dica: Use o seletor em cada card para mover rapidamente o cliente de etapa, ou clique no botão de edição para abrir a ficha completa.")
+    st.caption("Dica: Use o seletor em cada card para mover rapidamente o cliente de etapa, ou clique em EDITAR para abrir a ficha completa em destaque abaixo.")
+
+    # Se houver um cliente selecionado para edição, exibe a aba horizontal em destaque logo no topo
+    if st.session_state.cliente_editando_id is not None:
+        cliente_edit_id = st.session_state.cliente_editando_id
+        filtro_reg = df[df["id"] == cliente_edit_id]
+        
+        if not filtro_reg.empty:
+            row_edit = filtro_reg.iloc[0]
+            
+            st.markdown(
+                f"""
+                <div style="background-color: #1E293B; border: 2px solid #38BDF8; padding: 20px; border-radius: 10px; margin-bottom: 25px;">
+                    <h3 style="color: #38BDF8; margin-top: 0;">✏️ Ficha Completa: {row_edit['Empresa']}</h3>
+                """,
+                unsafe_allow_html=True
+            )
+            
+            with st.form(key=f"form_full_edit_horizontal_{cliente_edit_id}"):
+                hc1, hc2, hc3 = st.columns(3)
+                with hc1:
+                    edit_empresa = st.text_input("Empresa", value=row_edit["Empresa"])
+                    edit_contato = st.text_input("Contato", value=row_edit["Contato"])
+                    edit_cargo = st.text_input("Cargo", value=row_edit["Cargo"])
+                with hc2:
+                    edit_tel = st.text_input("Telefone", value=row_edit["Telefone"])
+                    edit_email = st.text_input("E-mail", value=row_edit["Email"])
+                    edit_cidade = st.text_input("Cidade", value=row_edit["Cidade"])
+                with hc3:
+                    edit_valor = st.number_input("Valor (R$)", value=float(row_edit["Valor"]), step=1000.0)
+                    edit_vendedor = st.text_input("Vendedor", value=row_edit["Vendedor"])
+                    dt_parse = dt.strptime(str(row_edit["Followup_Data"]), "%Y-%m-%d").date() if row_edit["Followup_Data"] else date.today()
+                    edit_fu_data = st.date_input("Data de Follow-up", value=dt_parse)
+                
+                edit_fu_nota = st.text_area("Nota / Ação de Follow-up", value=row_edit["Followup_Nota"])
+                edit_hist = st.text_area("Histórico do Cliente", value=row_edit["Historico"])
+                
+                bcol1, bcol2, bcol3 = st.columns([2, 2, 2])
+                with bcol1:
+                    btn_salvar_alt = st.form_submit_button("💾 Salvar Alterações", use_container_width=True)
+                with bcol2:
+                    btn_fechar_modal = st.form_submit_button("❌ Fechar Ficha", use_container_width=True)
+                with bcol3:
+                    btn_excluir = st.form_submit_button("🗑️ Excluir Cliente", use_container_width=True)
+                    
+                if btn_salvar_alt:
+                    idx_df = st.session_state.df_crm[st.session_state.df_crm["id"] == cliente_edit_id].index
+                    st.session_state.df_crm.loc[idx_df, "Empresa"] = edit_empresa
+                    st.session_state.df_crm.loc[idx_df, "Contato"] = edit_contato
+                    st.session_state.df_crm.loc[idx_df, "Cargo"] = edit_cargo
+                    st.session_state.df_crm.loc[idx_df, "Telefone"] = edit_tel
+                    st.session_state.df_crm.loc[idx_df, "Email"] = edit_email
+                    st.session_state.df_crm.loc[idx_df, "Cidade"] = edit_cidade
+                    st.session_state.df_crm.loc[idx_df, "Valor"] = edit_valor
+                    st.session_state.df_crm.loc[idx_df, "Vendedor"] = edit_vendedor
+                    st.session_state.df_crm.loc[idx_df, "Followup_Data"] = str(edit_fu_data)
+                    st.session_state.df_crm.loc[idx_df, "Followup_Nota"] = edit_fu_nota
+                    st.session_state.df_crm.loc[idx_df, "Historico"] = edit_hist
+                    
+                    st.session_state.cliente_editando_id = None
+                    st.success("Atualizado com sucesso!")
+                    st.rerun()
+                    
+                if btn_fechar_modal:
+                    st.session_state.cliente_editando_id = None
+                    st.rerun()
+                    
+                if btn_excluir:
+                    st.session_state.df_crm = st.session_state.df_crm[st.session_state.df_crm["id"] != cliente_edit_id]
+                    st.session_state.cliente_editando_id = None
+                    st.warning("Cliente excluído com sucesso!")
+                    st.rerun()
+
+            st.markdown("</div>", unsafe_allow_html=True)
+            st.divider()
 
     etapas = list(PROB_MAP.keys())
     cols = st.columns(len(etapas))
@@ -528,7 +606,7 @@ with aba_crm:
                         unsafe_allow_html=True
                     )
                     
-                    # 1. Movimentação rápida de Etapa direto no card (Sem o título "Mover Etapa:")
+                    # Movimentação rápida de Etapa direto no card
                     nova_etapa_card = st.selectbox(
                         "Mover Etapa:", 
                         options=etapas, 
@@ -546,57 +624,10 @@ with aba_crm:
                         st.success(f"Movido para {nova_etapa_card}!")
                         st.rerun()
 
-                    # 2. Botão para Abrir Ficha Completa de Edição (Apenas com o texto "EDITAR")
+                    # Botão EDITAR: ativa a aba horizontal no topo da página
                     if st.button("EDITAR", key=f"btn_edit_{cliente_id}", use_container_width=True):
-                        st.session_state[f"modal_edit_{cliente_id}"] = True
-
-                    # 3. Janela / Expander de Edição Completa do Cliente
-                    if st.session_state.get(f"modal_edit_{cliente_id}", False):
-                        st.markdown("---")
-                        st.markdown(f"**Editando: {row['Empresa']}**")
-                        
-                        with st.form(key=f"form_full_edit_{cliente_id}"):
-                            edit_empresa = st.text_input("Empresa", value=row["Empresa"])
-                            edit_contato = st.text_input("Contato", value=row["Contato"])
-                            edit_cargo = st.text_input("Cargo", value=row["Cargo"])
-                            edit_tel = st.text_input("Telefone", value=row["Telefone"])
-                            edit_email = st.text_input("E-mail", value=row["Email"])
-                            edit_cidade = st.text_input("Cidade", value=row["Cidade"])
-                            edit_valor = st.number_input("Valor (R$)", value=float(row["Valor"]), step=1000.0)
-                            edit_vendedor = st.text_input("Vendedor", value=row["Vendedor"])
-                            
-                            dt_parse = dt.strptime(str(row["Followup_Data"]), "%Y-%m-%d").date() if row["Followup_Data"] else date.today()
-                            edit_fu_data = st.date_input("Data de Follow-up", value=dt_parse)
-                            edit_fu_nota = st.text_area("Nota / Ação de Follow-up", value=row["Followup_Nota"])
-                            edit_hist = st.text_area("Histórico do Cliente", value=row["Historico"])
-                            
-                            col_salvar, col_fechar = st.columns(2)
-                            with col_salvar:
-                                btn_salvar_alt = st.form_submit_button("Salvar Alterações", use_container_width=True)
-                            with col_fechar:
-                                btn_fechar_modal = st.form_submit_button("Fechar Ficha", use_container_width=True)
-                                
-                            if btn_salvar_alt:
-                                idx_df = st.session_state.df_crm[st.session_state.df_crm["id"] == cliente_id].index
-                                st.session_state.df_crm.loc[idx_df, "Empresa"] = edit_empresa
-                                st.session_state.df_crm.loc[idx_df, "Contato"] = edit_contato
-                                st.session_state.df_crm.loc[idx_df, "Cargo"] = edit_cargo
-                                st.session_state.df_crm.loc[idx_df, "Telefone"] = edit_tel
-                                st.session_state.df_crm.loc[idx_df, "Email"] = edit_email
-                                st.session_state.df_crm.loc[idx_df, "Cidade"] = edit_cidade
-                                st.session_state.df_crm.loc[idx_df, "Valor"] = edit_valor
-                                st.session_state.df_crm.loc[idx_df, "Vendedor"] = edit_vendedor
-                                st.session_state.df_crm.loc[idx_df, "Followup_Data"] = str(edit_fu_data)
-                                st.session_state.df_crm.loc[idx_df, "Followup_Nota"] = edit_fu_nota
-                                st.session_state.df_crm.loc[idx_df, "Historico"] = edit_hist
-                                
-                                st.session_state[f"modal_edit_{cliente_id}"] = False
-                                st.success("Atualizado com sucesso!")
-                                st.rerun()
-                                
-                            if btn_fechar_modal:
-                                st.session_state[f"modal_edit_{cliente_id}"] = False
-                                st.rerun()
+                        st.session_state.cliente_editando_id = cliente_id
+                        st.rerun()
 
 # =========================================================
 # ABA 3: DASHBOARD
