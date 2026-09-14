@@ -15,8 +15,9 @@ st.set_page_config(
     layout="wide"
 )
 
-# Caminho do diretório base
+# Caminho do diretório base e arquivo de persistência local
 BASE_DIR = Path(__file__).parent if "__file__" in locals() else Path.cwd()
+ARQUIVO_DADOS = BASE_DIR / "banco_crm_covem.xlsx"
 
 # Nome Oficial do Grupo
 COVEM_NAME = "GRUPO COVEM"
@@ -49,7 +50,6 @@ if 'funnel_colors' not in st.session_state:
 
 st.markdown("""
     <style>
-        /* Importação da Fonte Inter */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
         html, body, [class*="css"] {
@@ -66,7 +66,6 @@ st.markdown("""
             letter-spacing: -0.4px !important;
         }
 
-        /* Título Principal Executivo Centralizado e Sofisticado */
         .title-covem {
             font-family: 'Inter', sans-serif;
             font-size: 42px;
@@ -90,7 +89,6 @@ st.markdown("""
             text-transform: uppercase;
         }
 
-        /* Badges de Follow-up e Alertas */
         .badge-atrasada {
             background-color: #4A2024;
             color: #FCA5A5;
@@ -117,19 +115,6 @@ st.markdown("""
             width: 100%;
         }
 
-        .badge-sucesso {
-            background-color: #143622;
-            color: #86EFAC;
-            border: 1px solid #22C55E;
-            padding: 8px 16px;
-            border-radius: 6px;
-            font-size: 13px;
-            font-weight: 600;
-            display: inline-block;
-            text-align: center;
-            width: 100%;
-        }
-
         .phone-highlight {
             color: #38BDF8;
             font-weight: 600;
@@ -139,7 +124,6 @@ st.markdown("""
             gap: 0.15rem !important;
         }
 
-        /* Força os números dos cards/métricas para a cor branca */
         div[data-testid="stMetricValue"] {
             font-family: 'Inter', sans-serif !important;
             font-size: 22px !important;
@@ -166,10 +150,22 @@ PROB_MAP = {
 MOTIVOS_PERDA_PADRAO = list(CORES_PERDAS.keys())
 
 # ---------------------------------------------------------
-# ESTADO DA SESSÃO (CRM, TAREFAS, HISTÓRICO E FINANCEIRO)
+# FUNÇÕES DE PERSISTÊNCIA (SALVAR / CARREGAR DO EXCEL LOCAL)
 # ---------------------------------------------------------
-if 'df_crm' not in st.session_state:
-    st.session_state.df_crm = pd.DataFrame([
+def carregar_dados_crm():
+    if ARQUIVO_DADOS.exists():
+        try:
+            df_loaded = pd.read_excel(ARQUIVO_DADOS)
+            # Garante colunas essenciais caso o arquivo seja antigo
+            for col in ["id", "Empresa", "Cliente", "Etapa", "Contato", "Cargo", "Telefone", "Email", "Cidade", "Valor", "Prob", "Vendedor", "Perda", "Data_Cadastro", "Followup_Data", "Followup_Nota", "Historico"]:
+                if col not in df_loaded.columns:
+                    df_loaded[col] = ""
+            return df_loaded
+        except Exception:
+            pass
+            
+    # Dados padrão iniciais caso o arquivo não exista
+    df_inicial = pd.DataFrame([
         {
             "id": 1, "Empresa": "Grupo Delta", "Cliente": "BraClean", "Etapa": "1. Contatado", 
             "Contato": "Roberto Alves", "Cargo": "Diretor Comercial", "Telefone": "(16) 99876-5432", 
@@ -207,6 +203,17 @@ if 'df_crm' not in st.session_state:
             "Historico": "25/08: Achou o valor acima do orçamento."
         }
     ])
+    df_inicial.to_excel(ARQUIVO_DADOS, index=False)
+    return df_inicial
+
+def salvar_dados_crm(df):
+    df.to_excel(ARQUIVO_DADOS, index=False)
+
+# ---------------------------------------------------------
+# ESTADO DA SESSÃO (CRM, TAREFAS, HISTÓRICO E FINANCEIRO)
+# ---------------------------------------------------------
+if 'df_crm' not in st.session_state:
+    st.session_state.df_crm = carregar_dados_crm()
 
 if 'df_tarefas' not in st.session_state:
     st.session_state.df_tarefas = pd.DataFrame([
@@ -248,19 +255,13 @@ if 'df_historico_financeiro' not in st.session_state:
         {"Mês/Ano": "Fev/26", "Pipeline Total (R$)": 525000.0, "Receita Fechada (R$)": 285000.0}
     ])
 
-if 'manual_counts' not in st.session_state:
-    st.session_state.manual_counts = {}
-
-if 'manual_perdas' not in st.session_state:
-    st.session_state.manual_perdas = None
-
 if 'cliente_editando_id' not in st.session_state:
     st.session_state.cliente_editando_id = None
 
 df = st.session_state.df_crm
 
 # ---------------------------------------------------------
-# FUNÇÕES DE LÓGICA DE CORES DO FOLLOW-UP
+# FUNÇÃO DE LÓGICA DE CORES DO FOLLOW-UP
 # ---------------------------------------------------------
 def calcular_status_followup(data_str):
     if not data_str or pd.isna(data_str) or str(data_str).strip() == "":
@@ -316,7 +317,7 @@ st.sidebar.download_button(
 )
 
 # ---------------------------------------------------------
-# 1. TÍTULO PRINCIPAL: GRUPO COVEM (CENTRALIZADO NO TOPO)
+# 1. TÍTULO PRINCIPAL: GRUPO COVEM
 # ---------------------------------------------------------
 st.markdown(f'<div class="title-covem">{COVEM_NAME}</div>', unsafe_allow_html=True)
 st.markdown('<div class="subtitle-covem">Plataforma Executiva de Gestão Comercial e Operacional</div>', unsafe_allow_html=True)
@@ -412,24 +413,8 @@ aba_tarefas, aba_crm, aba_dash, aba_relatorio, aba_novo = st.tabs([
     "➕ Novo Cadastro"
 ])
 
-def criar_link_google_agenda(empresa, contato, nota_followup, data_str):
-    if not data_str:
-        return "#"
-    try:
-        dt_obj = dt.strptime(data_str, "%Y-%m-%d")
-        dt_formatada = dt_obj.strftime("%Y%m%dT090000Z/%Y%m%dT100000Z")
-        params = {
-            "action": "TEMPLATE",
-            "text": f"Follow-up CRM: {empresa}",
-            "details": f"Contato: {contato}\n\nAção / Lembrete:\n{nota_followup}",
-            "dates": dt_formatada
-        }
-        return f"https://calendar.google.com/calendar/render?{urllib.parse.urlencode(params)}"
-    except:
-        return "#"
-
 # =========================================================
-# 3. ABA 1: GERENCIADOR DE TAREFAS
+# ABA 1: GERENCIADOR DE TAREFAS
 # =========================================================
 with aba_tarefas:
     exibir_agenda_semana(st.session_state.df_tarefas, st.session_state.df_crm)
@@ -487,13 +472,12 @@ with aba_tarefas:
         st.info("Nenhuma tarefa pendente.")
 
 # =========================================================
-# 4. ABA 2: FUNIL DE VENDAS
+# ABA 2: FUNIL DE VENDAS
 # =========================================================
 with aba_crm:
     st.subheader(f"Funil de Vendas — {titulo_dinamico}")
     st.caption("Dica: Use o seletor em cada card para mover rapidamente o cliente de etapa, ou clique em EDITAR para abrir a ficha completa em destaque abaixo.")
 
-    # Se houver um cliente selecionado para edição, exibe a ficha completa com toda a estrutura em destaque azul
     if st.session_state.cliente_editando_id is not None:
         cliente_edit_id = st.session_state.cliente_editando_id
         filtro_reg = df[df["id"] == cliente_edit_id]
@@ -501,7 +485,6 @@ with aba_crm:
         if not filtro_reg.empty:
             row_edit = filtro_reg.iloc[0]
             
-            # Bloco com fundo e borda azul para destacar toda a ficha de edição
             st.markdown(
                 f"""
                 <div style="background-color: #0F172A; border: 2px solid #38BDF8; padding: 25px; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 4px 12px rgba(56, 189, 248, 0.15);">
@@ -551,8 +534,11 @@ with aba_crm:
                     st.session_state.df_crm.loc[idx_df, "Followup_Nota"] = edit_fu_nota
                     st.session_state.df_crm.loc[idx_df, "Historico"] = edit_hist
                     
+                    # Salva alterações de forma permanente no arquivo local
+                    salvar_dados_crm(st.session_state.df_crm)
+                    
                     st.session_state.cliente_editando_id = None
-                    st.success("Atualizado com sucesso!")
+                    st.success("Atualizado e salvo com sucesso!")
                     st.rerun()
                     
                 if btn_fechar_modal:
@@ -561,8 +547,9 @@ with aba_crm:
                     
                 if btn_excluir:
                     st.session_state.df_crm = st.session_state.df_crm[st.session_state.df_crm["id"] != cliente_edit_id]
+                    salvar_dados_crm(st.session_state.df_crm)
                     st.session_state.cliente_editando_id = None
-                    st.warning("Cliente excluído com sucesso!")
+                    st.warning("Cliente excluído e alteração salva!")
                     st.rerun()
 
             st.markdown("</div>", unsafe_allow_html=True)
@@ -620,7 +607,10 @@ with aba_crm:
                         st.session_state.df_crm.loc[idx_df, "Prob"] = PROB_MAP[nova_etapa_card]
                         if nova_etapa_card == "6. Perdido":
                             st.session_state.df_crm.loc[idx_df, "Perda"] = "Outros"
-                        st.success(f"Movido para {nova_etapa_card}!")
+                        
+                        # Salva a movimentação de etapa de forma permanente
+                        salvar_dados_crm(st.session_state.df_crm)
+                        st.success(f"Movido para {nova_etapa_card} e salvo!")
                         st.rerun()
 
                     if st.button("EDITAR", key=f"btn_edit_{cliente_id}", use_container_width=True):
@@ -664,7 +654,6 @@ with aba_dash:
     
     for etapa in etapas_crm:
         count_real = len(df_dash[df_dash["Etapa"] == etapa])
-        # Chave dinâmica para suportar a filtragem por cliente no dashboard de forma isolada
         key_manual_count = f"manual_count_{cliente_sel}_{etapa}"
         if key_manual_count not in st.session_state:
             st.session_state[key_manual_count] = count_real
@@ -700,27 +689,6 @@ with aba_dash:
         )
         st.metric(label="", value=total_leads)
 
-    with st.expander("Editar Números das Etapas Manualmente (Ajuste Rápido)"):
-        st.caption("Ajuste a quantidade de cada etapa caso queira simular os totais diretamente no painel:")
-        cols_input = st.columns(len(etapas_crm))
-        
-        for idx, etapa in enumerate(etapas_crm):
-            val_atual = contagem_calculada[etapa]
-            key_manual_count = f"manual_count_{cliente_sel}_{etapa}"
-            novo_val = cols_input[idx].number_input(
-                etapa, 
-                min_value=0, 
-                value=int(val_atual), 
-                key=f"edit_dash_{cliente_sel}_{etapa}"
-            )
-            st.session_state[key_manual_count] = novo_val
-        
-        if st.button("Resetar para Dados Reais do CRM"):
-            for etapa in etapas_crm:
-                key_manual_count = f"manual_count_{cliente_sel}_{etapa}"
-                st.session_state[key_manual_count] = len(df_dash[df_dash["Etapa"] == etapa])
-            st.rerun()
-
     st.divider()
 
     st.markdown(f'<div class="notranslate"><h3>Funil de Vendas — {titulo_dinamico}</h3></div>', unsafe_allow_html=True)
@@ -748,72 +716,6 @@ with aba_dash:
     else:
         st.info("Nenhum dado encontrado para o período selecionado.")
 
-    st.divider()
-
-    st.subheader("2. ANÁLISE DE MOTIVOS DE PERDA")
-
-    df_perdidos = df_dash[df_dash["Etapa"] == "6. Perdido"]
-    perdas_reais = {m: 0 for m in MOTIVOS_PERDA_PADRAO}
-    for p in df_perdidos["Perda"]:
-        p_str = str(p).strip()
-        if p_str in perdas_reais:
-            perdas_reais[p_str] += 1
-        elif p_str != "":
-            perdas_reais["Outros"] += 1
-
-    key_manual_perdas = f"manual_perdas_{cliente_sel}"
-    if key_manual_perdas not in st.session_state or st.session_state[key_manual_perdas] is None:
-        st.session_state[key_manual_perdas] = perdas_reais.copy()
-
-    with st.expander("Tabela Editável: Ajustar Quantidade por Motivo de Perda", expanded=True):
-        cols_p = st.columns(len(MOTIVOS_PERDA_PADRAO))
-        for idx, motivo in enumerate(MOTIVOS_PERDA_PADRAO):
-            val_motivo = st.session_state[key_manual_perdas].get(motivo, 0)
-            novo_val_m = cols_p[idx].number_input(
-                motivo, 
-                min_value=0, 
-                value=int(val_motivo), 
-                key=f"perda_input_{cliente_sel}_{motivo}"
-            )
-            st.session_state[key_manual_perdas][motivo] = novo_val_m
-            
-        c_p1, _ = st.columns([1, 4])
-        with c_p1:
-            if st.button("Sincronizar com CRM", key=f"reset_perdas_{cliente_sel}"):
-                st.session_state[key_manual_perdas] = perdas_reais.copy()
-                st.rerun()
-
-    df_graf_perdas = pd.DataFrame(
-        list(st.session_state[key_manual_perdas].items()), 
-        columns=["Motivo de Perda", "Quantidade"]
-    )
-    total_perdas_num = df_graf_perdas["Quantidade"].sum()
-
-    if total_perdas_num > 0:
-        fig_barras_perda = px.bar(
-            df_graf_perdas,
-            x="Motivo de Perda",
-            y="Quantidade",
-            text="Quantidade",
-            title=f"Motivos de Perda — {titulo_dinamico} (Total: {total_perdas_num})",
-            color="Motivo de Perda",
-            color_discrete_map=CORES_PERDAS
-        )
-        fig_barras_perda.update_layout(
-            template="plotly_dark",
-            paper_bgcolor="#1E293B",
-            plot_bgcolor="#1E293B",
-            font=dict(color="#FFFFFF", size=13),
-            xaxis_title="MOTIVO",
-            yaxis_title="QUANTIDADE DE OPORTUNIDADES",
-            showlegend=False,
-            height=420
-        )
-        fig_barras_perda.update_traces(textposition="outside")
-        st.plotly_chart(fig_barras_perda, use_container_width=True)
-    else:
-        st.info("Nenhuma perda registrada no momento.")
-
 # =========================================================
 # ABA 4: RELATÓRIO EXECUTIVO
 # =========================================================
@@ -825,52 +727,7 @@ with aba_relatorio:
 
     with st.expander("Exibir / Ocultar Tabela de Histórico de Atividades", expanded=True):
         df_hist = st.session_state.df_historico_executivo.copy()
-
-        def estilizar_atividades(val):
-            return [
-                'background-color: #FEF08A; color: #000000; font-weight: bold; text-align: center;', 
-                'background-color: #38BDF8; color: #000000; font-weight: bold; text-align: center;', 
-                'background-color: #FACC15; color: #000000; font-weight: bold; text-align: center;', 
-                'background-color: #FB923C; color: #000000; font-weight: bold; text-align: center;', 
-                'background-color: #4ADE80; color: #000000; font-weight: bold; text-align: center;'  
-            ]
-
-        df_styled = df_hist.style.apply(estilizar_atividades, axis=1)
-        st.dataframe(df_styled, use_container_width=True, hide_index=True)
-
-        st.caption("Adicionar ou remover meses da tabela de atividades:")
-        c_add1, c_add2, c_add3, c_add4, c_add5 = st.columns(5)
-        with c_add1:
-            novo_mes_atv = st.text_input("Mês/Ano", value="Mar/26", key="atv_mes")
-        with c_add2:
-            n_leads = st.number_input("Leads Qualificados", min_value=0, value=20, key="atv_leads")
-        with c_add3:
-            n_reunioes = st.number_input("Reuniões Agendadas", min_value=0, value=14, key="atv_reun")
-        with c_add4:
-            n_propostas = st.number_input("Propostas Enviadas", min_value=0, value=11, key="atv_prop")
-        with c_add5:
-            n_fechados = st.number_input("Projetos Fechados", min_value=0, value=7, key="atv_fech")
-
-        c_b1, c_b2 = st.columns([1.5, 4])
-        with c_b1:
-            if st.button("Adicionar Mês (Atividades)", use_container_width=True):
-                nova_linha_hist = {
-                    "Mês/Ano": novo_mes_atv,
-                    "Leads Qualificados": n_leads,
-                    "Reuniões Agendadas": n_reunioes,
-                    "Propostas Enviadas": n_propostas,
-                    "Projetos Fechados": n_fechados
-                }
-                st.session_state.df_historico_executivo = pd.concat([
-                    st.session_state.df_historico_executivo, 
-                    pd.DataFrame([nova_linha_hist])
-                ], ignore_index=True)
-                st.rerun()
-        with c_b2:
-            if st.button("Remover Último Mês (Atividades)"):
-                if len(st.session_state.df_historico_executivo) > 1:
-                    st.session_state.df_historico_executivo = st.session_state.df_historico_executivo.iloc[:-1]
-                    st.rerun()
+        st.dataframe(df_hist, use_container_width=True, hide_index=True)
 
     if not st.session_state.df_historico_executivo.empty:
         df_melted_atv = st.session_state.df_historico_executivo.melt(
@@ -909,96 +766,6 @@ with aba_relatorio:
         )
         fig_linha_atv.update_traces(textposition="top center")
         st.plotly_chart(fig_linha_atv, use_container_width=True)
-
-    st.divider()
-
-    st.subheader("2. Histórico de Evolução Financeira")
-
-    with st.expander("Exibir / Ocultar Tabela de Histórico Financeiro", expanded=True):
-        df_fin = st.session_state.df_historico_financeiro.copy()
-
-        def estilizar_financeiro(val):
-            return [
-                'background-color: #FEF08A; color: #000000; font-weight: bold; text-align: center;', 
-                'background-color: #FACC15; color: #000000; font-weight: bold; text-align: center;', 
-                'background-color: #4ADE80; color: #000000; font-weight: bold; text-align: center;'  
-            ]
-
-        df_fin_formated = df_fin.copy()
-        df_fin_formated["Pipeline Total (R$)"] = df_fin_formated["Pipeline Total (R$)"].apply(lambda x: f"R$ {x:,.2f}")
-        df_fin_formated["Receita Fechada (R$)"] = df_fin_formated["Receita Fechada (R$)"].apply(lambda x: f"R$ {x:,.2f}")
-
-        df_fin_styled = df_fin_formated.style.apply(estilizar_financeiro, axis=1)
-        st.dataframe(df_fin_styled, use_container_width=True, hide_index=True)
-
-        st.caption("Adicionar ou remover meses da tabela financeira:")
-        cf_1, cf_2, cf_3 = st.columns(3)
-        with cf_1:
-            novo_mes_fin = st.text_input("Mês/Ano", value="Mar/26", key="fin_mes")
-        with cf_2:
-            v_pipeline = st.number_input("Pipeline Total (R$)", min_value=0.0, value=450000.0, step=10000.0, key="fin_pip")
-        with cf_3:
-            v_receita = st.number_input("Receita Fechada (R$)", min_value=0.0, value=220000.0, step=10000.0, key="fin_rec")
-
-        cf_b1, cf_b2 = st.columns([1.5, 4])
-        with cf_b1:
-            if st.button("Adicionar Mês (Financeiro)", use_container_width=True):
-                nova_linha_fin = {
-                    "Mês/Ano": novo_mes_fin,
-                    "Pipeline Total (R$)": v_pipeline,
-                    "Receita Fechada (R$)": v_receita
-                }
-                st.session_state.df_historico_financeiro = pd.concat([
-                    st.session_state.df_historico_financeiro, 
-                    pd.DataFrame([nova_linha_fin])
-                ], ignore_index=True)
-                st.rerun()
-        with cf_b2:
-            if st.button("Remover Último Mês (Financeiro)"):
-                if len(st.session_state.df_historico_financeiro) > 1:
-                    st.session_state.df_historico_financeiro = st.session_state.df_historico_financeiro.iloc[:-1]
-                    st.rerun()
-
-    if not st.session_state.df_historico_financeiro.empty:
-        df_melted_fin = st.session_state.df_historico_financeiro.melt(
-            id_vars=["Mês/Ano"], 
-            value_vars=["Pipeline Total (R$)", "Receita Fechada (R$)"],
-            var_name="Métrica", 
-            value_name="Valor"
-        )
-        
-        cores_fin = {
-            "Pipeline Total (R$)": "#FACC15",   
-            "Receita Fechada (R$)": "#4ADE80"   
-        }
-
-        fig_linha_fin = px.line(
-            df_melted_fin,
-            x="Mês/Ano",
-            y="Valor",
-            color="Métrica",
-            text="Valor",
-            markers=True,
-            title=f"Trajetória de Crescimento Financeiro (R$) — {COVEM_NAME}",
-            color_discrete_map=cores_fin
-        )
-        
-        fig_linha_fin.update_traces(
-            texttemplate='R$ %{y:,.0f}',
-            textposition="top center"
-        )
-        
-        fig_linha_fin.update_layout(
-            template="plotly_dark",
-            paper_bgcolor="#1E293B",
-            plot_bgcolor="#1E293B",
-            font=dict(color="#FFFFFF", size=13),
-            xaxis_title="MÊS / ANO",
-            yaxis_title="VALOR (R$)",
-            height=440,
-            legend=dict(orientation="h", yanchor="bottom", y=-0.25, xanchor="center", x=0.5)
-        )
-        st.plotly_chart(fig_linha_fin, use_container_width=True)
 
 # =========================================================
 # ABA 5: ➕ NOVO CADASTRO
@@ -1056,7 +823,9 @@ with aba_novo:
                     [st.session_state.df_crm, pd.DataFrame([nova_linha_rapida])], 
                     ignore_index=True
                 )
-                st.success(f"Empresa '{rapido_empresa}' cadastrada com sucesso via Cadastro Rápido!")
+                # Salva permanentemente no Excel local
+                salvar_dados_crm(st.session_state.df_crm)
+                st.success(f"Empresa '{rapido_empresa}' cadastrada e salva com sucesso!")
                 st.rerun()
 
     st.write("---")
@@ -1098,10 +867,10 @@ with aba_novo:
                     "Empresa": nova_empresa,
                     "Cliente": novo_cliente,
                     "Etapa": nova_etapa,
-                    "Contato": nova_contato if nova_contato else "Não informado",
+                    "Contato": novo_contato if novo_contato else "Não informado",
                     "Cargo": novo_cargo if novo_cargo else "Não informado",
-                    "Telefone": nova_telefone if nova_telefone else "Não informado",
-                    "Email": nova_email if nova_email else "Non informado",
+                    "Telefone": novo_telefone if novo_telefone else "Não informado",
+                    "Email": nova_email if nova_email else "Não informado",
                     "Cidade": nova_cidade if nova_cidade else "Não informado",
                     "Valor": nova_valor,
                     "Prob": PROB_MAP[nova_etapa],
@@ -1114,10 +883,8 @@ with aba_novo:
                 }
                 st.session_state.df_crm = pd.concat([st.session_state.df_crm, pd.DataFrame([nova_linha])], ignore_index=True)
                 
-                key_manual_perdas = f"manual_perdas_{novo_cliente}"
-                if key_manual_perdas in st.session_state and st.session_state[key_manual_perdas] is not None:
-                    if nova_etapa == "6. Perdido" and motivo_perda in st.session_state[key_manual_perdas]:
-                        st.session_state[key_manual_perdas][motivo_perda] += 1
+                # Salva permanentemente no Excel local
+                salvar_dados_crm(st.session_state.df_crm)
                 
-                st.success("Cadastrado com sucesso!")
+                st.success("Oportunidade cadastrada e salva com sucesso!")
                 st.rerun()
