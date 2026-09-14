@@ -484,7 +484,7 @@ with aba_tarefas:
         st.info("Nenhuma tarefa pendente.")
 
 # =========================================================
-# 4. ABA 2: FUNIL DE VENDAS (COM ALTERAÇÃO DE ETAPA E MODAL DE EDIÇÃO)
+# 4. ABA 2: FUNIL DE VENDAS
 # =========================================================
 with aba_crm:
     st.subheader(f"Funil de Vendas — {titulo_dinamico}")
@@ -528,12 +528,13 @@ with aba_crm:
                         unsafe_allow_html=True
                     )
                     
-                    # 1. Movimentação rápida de Etapa direto no card
+                    # 1. Movimentação rápida de Etapa direto no card (Sem o título "Mover Etapa:")
                     nova_etapa_card = st.selectbox(
                         "Mover Etapa:", 
                         options=etapas, 
                         index=etapas.index(row["Etapa"]), 
-                        key=f"mov_etapa_{cliente_id}"
+                        key=f"mov_etapa_{cliente_id}",
+                        label_visibility="collapsed"
                     )
                     
                     if nova_etapa_card != row["Etapa"]:
@@ -545,8 +546,8 @@ with aba_crm:
                         st.success(f"Movido para {nova_etapa_card}!")
                         st.rerun()
 
-                    # 2. Botão para Abrir Ficha Completa de Edição
-                    if st.button("✏️ Editar Ficha Completa", key=f"btn_edit_{cliente_id}", use_container_width=True):
+                    # 2. Botão para Abrir Ficha Completa de Edição (Apenas com o texto "EDITAR")
+                    if st.button("EDITAR", key=f"btn_edit_{cliente_id}", use_container_width=True):
                         st.session_state[f"modal_edit_{cliente_id}"] = True
 
                     # 3. Janela / Expander de Edição Completa do Cliente
