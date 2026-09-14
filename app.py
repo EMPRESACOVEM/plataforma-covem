@@ -468,7 +468,6 @@ with aba_tarefas:
 
     st.markdown("#### Lista Geral de Tarefas")
     if not st.session_state.df_tarefas.empty:
-        # Seção simplificada com seletor e botão de lixeira lado a lado
         with st.container():
             col_sel, col_btn = st.columns([3, 1])
             with col_sel:
@@ -856,7 +855,7 @@ with aba_novo:
             novo_contato = st.text_input("Contato / Nome")
             novo_cargo = st.text_input("Cargo")
             novo_telefone = st.text_input("Telefone de Contato *")
-            novo_email = st.text_input("E-mail Comercial")
+            nova_email = st.text_input("E-mail Comercial")
             
         with col_f2:
             nova_cidade = st.text_input("Cidade / Estado")
