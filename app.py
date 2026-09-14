@@ -469,6 +469,18 @@ with aba_tarefas:
     st.markdown("#### Lista Geral de Tarefas")
     if not st.session_state.df_tarefas.empty:
         st.dataframe(st.session_state.df_tarefas, use_container_width=True)
+        
+        # Seção para Excluir Tarefas
+        with st.expander("🗑️ Gerenciar / Excluir Tarefas"):
+            tarefas_disponiveis = st.session_state.df_tarefas["Titulo"].tolist()
+            tarefa_para_excluir = st.selectbox("Selecione a tarefa que deseja excluir:", options=tarefas_disponiveis)
+            
+            if st.button("Excluir Tarefa Selecionada", use_container_width=True):
+                st.session_state.df_tarefas = st.session_state.df_tarefas[
+                    st.session_state.df_tarefas["Titulo"] != tarefa_para_excluir
+                ].reset_index(drop=True)
+                st.success(f"Tarefa '{tarefa_para_excluir}' excluída com sucesso!")
+                st.rerun()
     else:
         st.info("Nenhuma tarefa pendente.")
 
@@ -867,7 +879,7 @@ with aba_novo:
                     "Contato": novo_contato if novo_contato else "Não informado",
                     "Cargo": novo_cargo if novo_cargo else "Não informado",
                     "Telefone": novo_telefone if novo_telefone else "Não informado",
-                    "Email": nova_email if nova_email else "Não informado",
+                    "Email": novo_email if novo_email else "Não informado",
                     "Cidade": nova_cidade if nova_cidade else "Não informado",
                     "Valor": nova_valor,
                     "Prob": PROB_MAP[nova_etapa],
