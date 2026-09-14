@@ -25,22 +25,22 @@ COVEM_NAME = "GRUPO COVEM"
 CARTEIRAS_COVEM = ["BraClean", "QV Energia Solar", "Elleven"]
 
 # ---------------------------------------------------------
-# PALETA COVEM & ESTILIZAÇÃO CSS (Identidade Visual Ciano/Azul COVEM)
+# PALETA COVEM & ESTILIZAÇÃO CSS (TONS PASTÉIS)
 # ---------------------------------------------------------
 DEFAULT_COLORS = {
-    "1. Contatado": "#EC4899",         # Rosa
-    "2. Conversando": "#EAB308",        # Amarelo
-    "3. Reunião Agendada": "#00A3FF",  # Azul Ciano COVEM
-    "4. Proposta Enviada": "#3B82F6",  # Azul
-    "5. Fechado": "#22C55E",           # Verde
-    "6. Perdido": "#EF4444"            # Vermelho
+    "1. Contatado": "#F472B6",         # Rosa Pastel suave
+    "2. Conversando": "#FDE047",        # Amarelo Pastel suave
+    "3. Reunião Agendada": "#FDBA74",  # Laranja Pastel suave
+    "4. Proposta Enviada": "#93C5FD",  # Azul Pastel suave
+    "5. Fechado": "#86EFAC",           # Verde Pastel suave
+    "6. Perdido": "#FCA5A5"            # Vermelho Pastel suave
 }
 
 CORES_PERDAS = {
-    "Preço / Orçamento": "#EF4444",             # Vermelho
-    "Concorrência": "#00A3FF",                  # Azul Ciano COVEM
-    "Sem Resposta / Sumiu": "#EAB308",          # Amarelo
-    "Produto / Serviço não Atende": "#3B82F6",  # Azul
+    "Preço / Orçamento": "#FCA5A5",             # Vermelho Pastel
+    "Concorrência": "#FDBA74",                  # Laranja Pastel
+    "Sem Resposta / Sumiu": "#FDE047",          # Amarelo Pastel
+    "Produto / Serviço não Atende": "#93C5FD",  # Azul Pastel
     "Outros": "#D1D5DB"                         # Cinza Claro
 }
 
@@ -50,22 +50,14 @@ if 'funnel_colors' not in st.session_state:
 st.markdown("""
     <style>
         /* Importação da Fonte Inter */
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
         html, body, [class*="css"] {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
-            background-color: #0B0F19 !important;
-            color: #F1F5F9 !important;
         }
 
         .notranslate, [data-testid="stSidebar"], [data-baseweb="select"] {
             translate: no !important;
-        }
-
-        /* Ajuste do Fundo da Sidebar para combinar com o tema COVEM */
-        [data-testid="stSidebar"] {
-            background-color: #111827 !important;
-            border-right: 1px solid #1F2937;
         }
 
         h1, h2, h3, h4 {
@@ -74,35 +66,15 @@ st.markdown("""
             letter-spacing: -0.4px !important;
         }
 
-        /* Título Principal Executivo Centralizado e Sofisticado */
-        .title-covem-container {
-            text-align: center;
-            width: 100%;
-            margin-top: -15px;
-            margin-bottom: 25px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid #1F2937;
-        }
-
+        /* Título Principal Executivo */
         .title-covem {
             font-family: 'Inter', sans-serif;
-            font-size: 44px;
-            font-weight: 900;
-            letter-spacing: 2px;
-            color: #F8FAFC;
-            text-transform: uppercase;
-            margin: 0;
-            text-shadow: 0 2px 10px rgba(0, 163, 255, 0.15);
-        }
-
-        .subtitle-covem {
-            font-family: 'Inter', sans-serif;
-            font-size: 14px;
-            font-weight: 500;
-            color: #94A3B8;
-            letter-spacing: 1.5px;
-            text-transform: uppercase;
-            margin-top: 5px;
+            font-size: 38px;
+            font-weight: 800;
+            letter-spacing: -0.8px;
+            color: #F1F5F9;
+            margin-bottom: 8px;
+            margin-top: -10px;
         }
 
         /* Subtítulos */
@@ -116,7 +88,7 @@ st.markdown("""
             margin-bottom: 12px;
         }
 
-        /* Badges de Follow-up e Alertas com identidade Ciano/Vermelho/Amarelo */
+        /* Badges de Follow-up e Alertas */
         .badge-atrasada {
             background-color: #4A2024;
             color: #FCA5A5;
@@ -157,7 +129,7 @@ st.markdown("""
         }
 
         .phone-highlight {
-            color: #00A3FF;
+            color: #38BDF8;
             font-weight: 600;
         }
 
@@ -165,11 +137,12 @@ st.markdown("""
             gap: 0.15rem !important;
         }
 
+        /* Força os números dos cards/métricas para a cor branca */
         div[data-testid="stMetricValue"] {
             font-family: 'Inter', sans-serif !important;
             font-size: 22px !important;
             font-weight: 700 !important;
-            color: #00A3FF !important;
+            color: #FFFFFF !important;
         }
 
         div[data-testid="stMetricLabel"] {
@@ -300,20 +273,10 @@ def calcular_status_followup(data_str):
         return "sem_data", "Sem Follow-up", "⚪"
 
 # ---------------------------------------------------------
-# BARRA LATERAL (COM A LOGO DA COVEM NO TOPO)
+# BARRA LATERAL (FILTROS E CONFIGURAÇÕES)
 # ---------------------------------------------------------
-logo_path = BASE_DIR / "covem logo vert.png"
-
-if logo_path.exists():
-    st.sidebar.image(str(logo_path), use_container_width=True)
-else:
-    st.sidebar.markdown("<h2 style='text-align: center; color: #00A3FF; margin-bottom: 0px;'>GRUPO COVEM</h2>", unsafe_allow_html=True)
-
-st.sidebar.divider()
-
 opcoes_filtro = ["TODOS"] + CARTEIRAS_COVEM
 
-# Seletor de clientes posicionado logo abaixo da logo na barra lateral
 cliente_sel = st.sidebar.selectbox("Clientes COVEM:", opcoes_filtro)
 
 if cliente_sel != "TODOS":
@@ -328,7 +291,7 @@ st.sidebar.divider()
 with st.sidebar.expander("Personalizar Cores das Etapas", expanded=False):
     st.caption("Altere as cores das etapas do funil:")
     for etapa_nome in PROB_MAP.keys():
-        cor_atual = st.session_state.funnel_colors.get(etapa_nome, "#00A3FF")
+        cor_atual = st.session_state.funnel_colors.get(etapa_nome, "#3B82F6")
         nova_cor = st.color_picker(f"Cor: {etapa_nome}", cor_atual, key=f"picker_{etapa_nome}")
         st.session_state.funnel_colors[etapa_nome] = nova_cor
 
@@ -348,17 +311,11 @@ st.sidebar.download_button(
 )
 
 # ---------------------------------------------------------
-# 1. TÍTULO PRINCIPAL: GRUPO COVEM (CENTRALIZADO E SOFISTICADO)
+# 1. TÍTULO PRINCIPAL: GRUPO COVEM (NO TOPO)
 # ---------------------------------------------------------
-st.markdown(
-    f"""
-    <div class="title-covem-container">
-        <div class="title-covem">{COVEM_NAME}</div>
-        <div class="subtitle-covem">Plataforma Executiva de Gestão Comercial e Operacional</div>
-    </div>
-    """, 
-    unsafe_allow_html=True
-)
+st.markdown(f'<div class="title-covem">{COVEM_NAME}</div>', unsafe_allow_html=True)
+st.caption("Plataforma Executiva de Gestão Comercial e Operacional")
+st.divider()
 
 # ---------------------------------------------------------
 # FUNÇÃO DE RENDERIZAÇÃO DA AGENDA DA SEMANA
@@ -467,7 +424,7 @@ def criar_link_google_agenda(empresa, contato, nota_followup, data_str):
         return "#"
 
 # =========================================================
-# ABA 1: GERENCIADOR DE TAREFAS
+# 3. ABA 1: GERENCIADOR DE TAREFAS
 # =========================================================
 with aba_tarefas:
     exibir_agenda_semana(st.session_state.df_tarefas, st.session_state.df_crm)
@@ -525,7 +482,7 @@ with aba_tarefas:
         st.info("Nenhuma tarefa pendente.")
 
 # =========================================================
-# ABA 2: FUNIL DE VENDAS
+# 4. ABA 2: FUNIL DE VENDAS
 # =========================================================
 with aba_crm:
     st.subheader(f"Funil de Vendas — {titulo_dinamico}")
@@ -534,13 +491,13 @@ with aba_crm:
     cols = st.columns(len(etapas))
     
     for idx, etapa in enumerate(etapas):
-        cor_header = st.session_state.funnel_colors.get(etapa, "#00A3FF")
+        cor_header = st.session_state.funnel_colors.get(etapa, "#3B82F6")
         
         with cols[idx]:
             st.markdown(
                 f"""
                 <div style="background-color: {cor_header}; padding: 6px; border-radius: 6px; text-align: center; margin-bottom: 8px;">
-                    <b style="color: #FFFFFF; font-size: 12px;">{etapa}</b>
+                    <b style="color: #1E293B; font-size: 12px;">{etapa}</b>
                 </div>
                 """, 
                 unsafe_allow_html=True
@@ -611,14 +568,14 @@ with aba_dash:
     cols_m = st.columns(len(etapas_crm) + 1)
     
     for i, etapa in enumerate(etapas_crm):
-        cor_header = st.session_state.funnel_colors.get(etapa, "#00A3FF")
+        cor_header = st.session_state.funnel_colors.get(etapa, "#3B82F6")
         qtd = contagem_calculada[etapa]
         
         with cols_m[i]:
             st.markdown(
                 f"""
                 <div style="background-color: {cor_header}; padding: 4px; border-radius: 4px; text-align: center; margin-bottom: 4px;">
-                    <b style="color: #FFFFFF; font-size: 11px;">{etapa}</b>
+                    <b style="color: #1E293B; font-size: 11px;">{etapa}</b>
                 </div>
                 """, 
                 unsafe_allow_html=True
@@ -761,7 +718,7 @@ with aba_relatorio:
         def estilizar_atividades(val):
             return [
                 'background-color: #FEF08A; color: #000000; font-weight: bold; text-align: center;', 
-                'background-color: #00A3FF; color: #000000; font-weight: bold; text-align: center;', 
+                'background-color: #38BDF8; color: #000000; font-weight: bold; text-align: center;', 
                 'background-color: #FACC15; color: #000000; font-weight: bold; text-align: center;', 
                 'background-color: #FB923C; color: #000000; font-weight: bold; text-align: center;', 
                 'background-color: #4ADE80; color: #000000; font-weight: bold; text-align: center;'  
@@ -813,7 +770,7 @@ with aba_relatorio:
         )
         
         cores_atv = {
-            "Leads Qualificados": "#00A3FF",   
+            "Leads Qualificados": "#38BDF8",   
             "Reuniões Agendadas": "#FACC15",   
             "Propostas Enviadas": "#FB923C",   
             "Projetos Fechados": "#4ADE80"    
@@ -852,7 +809,7 @@ with aba_relatorio:
         def estilizar_financeiro(val):
             return [
                 'background-color: #FEF08A; color: #000000; font-weight: bold; text-align: center;', 
-                'background-color: #00A3FF; color: #000000; font-weight: bold; text-align: center;', 
+                'background-color: #FACC15; color: #000000; font-weight: bold; text-align: center;', 
                 'background-color: #4ADE80; color: #000000; font-weight: bold; text-align: center;'  
             ]
 
@@ -900,7 +857,7 @@ with aba_relatorio:
         )
         
         cores_fin = {
-            "Pipeline Total (R$)": "#00A3FF",   
+            "Pipeline Total (R$)": "#FACC15",   
             "Receita Fechada (R$)": "#4ADE80"   
         }
 
@@ -1030,12 +987,12 @@ with aba_novo:
                     "Empresa": nova_empresa,
                     "Cliente": novo_cliente,
                     "Etapa": nova_etapa,
-                    "Contato": novo_contato if novo_contato else "Não informado",
+                    "Contato": nova_contato if nova_contato else "Não informado",
                     "Cargo": novo_cargo if novo_cargo else "Não informado",
-                    "Telefone": novo_telefone if novo_telefone else "Não informado",
+                    "Telefone": nova_telefone if nova_telefone else "Não informado",
                     "Email": novo_email if novo_email else "Não informado",
                     "Cidade": nova_cidade if nova_cidade else "Não informado",
-                    "Valor": novo_valor,
+                    "Valor": nova_valor,
                     "Prob": PROB_MAP[nova_etapa],
                     "Vendedor": novo_vendedor if novo_vendedor else "Não informado",
                     "Perda": motivo_perda if "Perdido" in nova_etapa else "",
