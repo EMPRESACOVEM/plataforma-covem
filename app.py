@@ -484,10 +484,11 @@ with aba_tarefas:
         st.info("Nenhuma tarefa pendente.")
 
 # =========================================================
-# 4. ABA 2: FUNIL DE VENDAS
+# 4. ABA 2: FUNIL DE VENDAS (COM ALTERAÇÃO DE ETAPA E MODAL DE EDIÇÃO)
 # =========================================================
 with aba_crm:
     st.subheader(f"Funil de Vendas — {titulo_dinamico}")
+    st.caption("Dica: Use o seletor em cada card para mover rapidamente o cliente de etapa, ou clique no botão de edição para abrir a ficha completa.")
 
     etapas = list(PROB_MAP.keys())
     cols = st.columns(len(etapas))
@@ -509,6 +510,7 @@ with aba_crm:
             
             for _, row in sub_df.iterrows():
                 st_code, st_label, st_icon = calcular_status_followup(row.get("Followup_Data", ""))
+                cliente_id = row['id']
                 
                 with st.expander(f"{st_icon} {row['Empresa']}"):
                     dt_f_exib = row.get('Followup_Data', '')
@@ -516,15 +518,84 @@ with aba_crm:
                     
                     st.markdown(
                         f"""
-                        <div style="line-height: 1.25; margin-bottom: 2px;">
+                        <div style="line-height: 1.25; margin-bottom: 6px;">
                             <span style="font-size: 13px;"><b>{st_icon} {row['Empresa']}</b></span><br>
-                            <span style="font-size: 12px; color: #94A3B8;">{row['Contato']}</span><br>
+                            <span style="font-size: 12px; color: #94A3B8;">Contato: {row['Contato']}</span><br>
                             <span class="phone-highlight" style="font-size: 12px;">{row.get('Telefone', 'Não informado')}</span><br>
-                            <span style="font-size: 11px; color: #CBD5E1;">Follow-up: {dt_f_str} ({st_label})</span>
+                            <span style="font-size: 11px; color: #CBD5E1;">Follow-up: {dt_f_str}</span>
                         </div>
                         """,
                         unsafe_allow_html=True
                     )
+                    
+                    # 1. Movimentação rápida de Etapa direto no card
+                    nova_etapa_card = st.selectbox(
+                        "Mover Etapa:", 
+                        options=etapas, 
+                        index=etapas.index(row["Etapa"]), 
+                        key=f"mov_etapa_{cliente_id}"
+                    )
+                    
+                    if nova_etapa_card != row["Etapa"]:
+                        idx_df = st.session_state.df_crm[st.session_state.df_crm["id"] == cliente_id].index
+                        st.session_state.df_crm.loc[idx_df, "Etapa"] = nova_etapa_card
+                        st.session_state.df_crm.loc[idx_df, "Prob"] = PROB_MAP[nova_etapa_card]
+                        if nova_etapa_card == "6. Perdido":
+                            st.session_state.df_crm.loc[idx_df, "Perda"] = "Outros"
+                        st.success(f"Movido para {nova_etapa_card}!")
+                        st.rerun()
+
+                    # 2. Botão para Abrir Ficha Completa de Edição
+                    if st.button("✏️ Editar Ficha Completa", key=f"btn_edit_{cliente_id}", use_container_width=True):
+                        st.session_state[f"modal_edit_{cliente_id}"] = True
+
+                    # 3. Janela / Expander de Edição Completa do Cliente
+                    if st.session_state.get(f"modal_edit_{cliente_id}", False):
+                        st.markdown("---")
+                        st.markdown(f"**Editando: {row['Empresa']}**")
+                        
+                        with st.form(key=f"form_full_edit_{cliente_id}"):
+                            edit_empresa = st.text_input("Empresa", value=row["Empresa"])
+                            edit_contato = st.text_input("Contato", value=row["Contato"])
+                            edit_cargo = st.text_input("Cargo", value=row["Cargo"])
+                            edit_tel = st.text_input("Telefone", value=row["Telefone"])
+                            edit_email = st.text_input("E-mail", value=row["Email"])
+                            edit_cidade = st.text_input("Cidade", value=row["Cidade"])
+                            edit_valor = st.number_input("Valor (R$)", value=float(row["Valor"]), step=1000.0)
+                            edit_vendedor = st.text_input("Vendedor", value=row["Vendedor"])
+                            
+                            dt_parse = dt.strptime(str(row["Followup_Data"]), "%Y-%m-%d").date() if row["Followup_Data"] else date.today()
+                            edit_fu_data = st.date_input("Data de Follow-up", value=dt_parse)
+                            edit_fu_nota = st.text_area("Nota / Ação de Follow-up", value=row["Followup_Nota"])
+                            edit_hist = st.text_area("Histórico do Cliente", value=row["Historico"])
+                            
+                            col_salvar, col_fechar = st.columns(2)
+                            with col_salvar:
+                                btn_salvar_alt = st.form_submit_button("Salvar Alterações", use_container_width=True)
+                            with col_fechar:
+                                btn_fechar_modal = st.form_submit_button("Fechar Ficha", use_container_width=True)
+                                
+                            if btn_salvar_alt:
+                                idx_df = st.session_state.df_crm[st.session_state.df_crm["id"] == cliente_id].index
+                                st.session_state.df_crm.loc[idx_df, "Empresa"] = edit_empresa
+                                st.session_state.df_crm.loc[idx_df, "Contato"] = edit_contato
+                                st.session_state.df_crm.loc[idx_df, "Cargo"] = edit_cargo
+                                st.session_state.df_crm.loc[idx_df, "Telefone"] = edit_tel
+                                st.session_state.df_crm.loc[idx_df, "Email"] = edit_email
+                                st.session_state.df_crm.loc[idx_df, "Cidade"] = edit_cidade
+                                st.session_state.df_crm.loc[idx_df, "Valor"] = edit_valor
+                                st.session_state.df_crm.loc[idx_df, "Vendedor"] = edit_vendedor
+                                st.session_state.df_crm.loc[idx_df, "Followup_Data"] = str(edit_fu_data)
+                                st.session_state.df_crm.loc[idx_df, "Followup_Nota"] = edit_fu_nota
+                                st.session_state.df_crm.loc[idx_df, "Historico"] = edit_hist
+                                
+                                st.session_state[f"modal_edit_{cliente_id}"] = False
+                                st.success("Atualizado com sucesso!")
+                                st.rerun()
+                                
+                            if btn_fechar_modal:
+                                st.session_state[f"modal_edit_{cliente_id}"] = False
+                                st.rerun()
 
 # =========================================================
 # ABA 3: DASHBOARD
@@ -958,7 +1029,7 @@ with aba_novo:
         col_f1, col_f2 = st.columns(2)
         
         with col_f1:
-            nova_empresa = st.text_icon = st.text_input("Nome da Empresa / Cliente *")
+            nova_empresa = st.text_input("Nome da Empresa / Cliente *")
             novo_cliente = st.selectbox("Marca / Carteira *", CARTEIRAS_COVEM)
             novo_contato = st.text_input("Contato / Nome")
             novo_cargo = st.text_input("Cargo")
@@ -989,10 +1060,10 @@ with aba_novo:
                     "Empresa": nova_empresa,
                     "Cliente": novo_cliente,
                     "Etapa": nova_etapa,
-                    "Contato": novo_contato if novo_contato else "Não informado",
+                    "Contato": nova_contato if nova_contato else "Não informado",
                     "Cargo": novo_cargo if novo_cargo else "Não informado",
-                    "Telefone": novo_telefone if novo_telefone else "Não informado",
-                    "Email": novo_email if novo_email else "Não informado",
+                    "Telefone": nova_telefone if nova_telefone else "Não informado",
+                    "Email": nova_email if nova_email else "Não informado",
                     "Cidade": nova_cidade if nova_cidade else "Não informado",
                     "Valor": nova_valor,
                     "Prob": PROB_MAP[nova_etapa],
