@@ -248,9 +248,6 @@ if 'df_historico_financeiro' not in st.session_state:
         {"Mês/Ano": "Fev/26", "Pipeline Total (R$)": 525000.0, "Receita Fechada (R$)": 285000.0}
     ])
 
-if 'manual_counts' not in st.session_state:
-    st.session_state.manual_counts = {}
-
 if 'manual_perdas' not in st.session_state:
     st.session_state.manual_perdas = None
 
@@ -660,11 +657,11 @@ with aba_dash:
     st.divider()
 
     etapas_crm = list(PROB_MAP.keys())
-    contagem_calculada = {}
     
+    # Cálculo automático e sincronizado em tempo real com o CRM
+    contagem_calculada = {}
     for etapa in etapas_crm:
-        count_real = len(df_dash[df_dash["Etapa"] == etapa])
-        contagem_calculada[etapa] = st.session_state.manual_counts.get(etapa, count_real)
+        contagem_calculada[etapa] = len(df_dash[df_dash["Etapa"] == etapa])
         
     total_leads = sum(contagem_calculada.values())
 
@@ -695,24 +692,6 @@ with aba_dash:
             unsafe_allow_html=True
         )
         st.metric(label="", value=total_leads)
-
-    with st.expander("Editar Números das Etapas Manualmente (Ajuste Rápido)"):
-        st.caption("Ajuste a quantidade de cada etapa caso queira simular os totais diretamente no painel:")
-        cols_input = st.columns(len(etapas_crm))
-        
-        for idx, etapa in enumerate(etapas_crm):
-            val_atual = contagem_calculada[etapa]
-            novo_val = cols_input[idx].number_input(
-                etapa, 
-                min_value=0, 
-                value=int(val_atual), 
-                key=f"edit_dash_{etapa}"
-            )
-            st.session_state.manual_counts[etapa] = novo_val
-        
-        if st.button("Resetar para Dados Reais do CRM"):
-            st.session_state.manual_counts = {}
-            st.rerun()
 
     st.divider()
 
@@ -754,29 +733,8 @@ with aba_dash:
         elif p_str != "":
             perdas_reais["Outros"] += 1
 
-    if st.session_state.manual_perdas is None:
-        st.session_state.manual_perdas = perdas_reais.copy()
-
-    with st.expander("Tabela Editável: Ajustar Quantidade por Motivo de Perda", expanded=True):
-        cols_p = st.columns(len(MOTIVOS_PERDA_PADRAO))
-        for idx, motivo in enumerate(MOTIVOS_PERDA_PADRAO):
-            val_motivo = st.session_state.manual_perdas.get(motivo, 0)
-            novo_val_m = cols_p[idx].number_input(
-                motivo, 
-                min_value=0, 
-                value=int(val_motivo), 
-                key=f"perda_input_{motivo}"
-            )
-            st.session_state.manual_perdas[motivo] = novo_val_m
-            
-        c_p1, _ = st.columns([1, 4])
-        with c_p1:
-            if st.button("Sincronizar com CRM", key="reset_perdas"):
-                st.session_state.manual_perdas = perdas_reais.copy()
-                st.rerun()
-
     df_graf_perdas = pd.DataFrame(
-        list(st.session_state.manual_perdas.items()), 
+        list(perdas_reais.items()), 
         columns=["Motivo de Perda", "Quantidade"]
     )
     total_perdas_num = df_graf_perdas["Quantidade"].sum()
@@ -1105,9 +1063,6 @@ with aba_novo:
                     "Historico": f"Cadastrado em {dt.now().strftime('%d/%m/%Y')}"
                 }
                 st.session_state.df_crm = pd.concat([st.session_state.df_crm, pd.DataFrame([nova_linha])], ignore_index=True)
-                
-                if nova_etapa == "6. Perdido" and motivo_perda in st.session_state.manual_perdas:
-                    st.session_state.manual_perdas[motivo_perda] += 1
                 
                 st.success("Cadastrado com sucesso!")
                 st.rerun()
