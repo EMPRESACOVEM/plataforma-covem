@@ -66,7 +66,7 @@ st.markdown("""
             letter-spacing: -0.4px !important;
         }
 
-        /* Título Principal Executivo (GRUPO COVEM NO TOPO) */
+        /* Título Principal Executivo */
         .title-covem {
             font-family: 'Inter', sans-serif;
             font-size: 38px;
@@ -126,15 +126,6 @@ st.markdown("""
             display: inline-block;
             text-align: center;
             width: 100%;
-        }
-
-        .bloco-detalhes-retangular {
-            background-color: #0F172A;
-            border: 1px solid #334155;
-            border-radius: 8px;
-            padding: 18px 22px;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
         }
 
         .phone-highlight {
@@ -253,12 +244,6 @@ if 'df_historico_financeiro' not in st.session_state:
         {"Mês/Ano": "Fev/26", "Pipeline Total (R$)": 525000.0, "Receita Fechada (R$)": 285000.0}
     ])
 
-if 'cliente_selecionado_id' not in st.session_state:
-    st.session_state.cliente_selecionado_id = None
-
-if 'modo_edicao' not in st.session_state:
-    st.session_state.modo_edicao = False
-
 if 'manual_counts' not in st.session_state:
     st.session_state.manual_counts = {}
 
@@ -272,18 +257,18 @@ df = st.session_state.df_crm
 # ---------------------------------------------------------
 def calcular_status_followup(data_str):
     if not data_str or pd.isna(data_str) or str(data_str).strip() == "":
-        return "sem_data", "Sem Follow-up", "⚪", "badge-sucesso"
+        return "sem_data", "Sem Follow-up", "⚪"
     try:
         dt_follow = dt.strptime(str(data_str), "%Y-%m-%d").date()
         hoje = date.today()
         if dt_follow < hoje:
-            return "atrasado", "Atrasado", "🔴", "badge-atrasada"
+            return "atrasado", "Atrasado", "🔴"
         elif dt_follow == hoje:
-            return "hoje", "Atenção (Hoje)", "🟡", "badge-hoje"
+            return "hoje", "Atenção (Hoje)", "🟡"
         else:
-            return "em_dia", "Em Dia", "🟢", "badge-sucesso"
+            return "em_dia", "Em Dia", "🟢"
     except:
-        return "sem_data", "Sem Follow-up", "⚪", "badge-sucesso"
+        return "sem_data", "Sem Follow-up", "⚪"
 
 # ---------------------------------------------------------
 # BARRA LATERAL (FILTROS E CONFIGURAÇÕES)
@@ -340,7 +325,6 @@ def exibir_agenda_semana(df_tarefas, df_crm):
     
     tab_alertas_tarefas, tab_alertas_crm = st.tabs(["Tarefas", "Follow-ups (CRM)"])
 
-    # --- ABA 1: TAREFAS (Atrasadas e para Hoje) ---
     with tab_alertas_tarefas:
         if df_tarefas.empty or "Data_Vencimento" not in df_tarefas.columns:
             st.info("Nenhuma tarefa cadastrada.")
@@ -373,7 +357,6 @@ def exibir_agenda_semana(df_tarefas, df_crm):
                     else:
                         st.write("Nenhuma tarefa para hoje.")
 
-    # --- ABA 2: FOLLOW-UPS (Atrasados e para Hoje) ---
     with tab_alertas_crm:
         if df_crm.empty:
             st.info("Nenhum cliente no CRM.")
@@ -382,7 +365,7 @@ def exibir_agenda_semana(df_tarefas, df_crm):
             
             status_list = []
             for _, r in crm_temp.iterrows():
-                st_code, st_label, st_icon, _ = calcular_status_followup(r.get("Followup_Data", ""))
+                st_code, st_label, st_icon = calcular_status_followup(r.get("Followup_Data", ""))
                 status_list.append(st_code)
             crm_temp["status_fu"] = status_list
 
@@ -416,7 +399,7 @@ def exibir_agenda_semana(df_tarefas, df_crm):
 exibir_agenda_semana(st.session_state.df_tarefas, st.session_state.df_crm)
 
 # ---------------------------------------------------------
-# NAVEGAÇÃO POR ABAS (FUNIL -> TAREFAS -> DASH -> RELATÓRIO -> CADASTRO)
+# NAVEGAÇÃO POR ABAS
 # ---------------------------------------------------------
 aba_crm, aba_tarefas, aba_dash, aba_relatorio, aba_novo = st.tabs([
     "Funil de Vendas", 
@@ -443,209 +426,12 @@ def criar_link_google_agenda(empresa, contato, nota_followup, data_str):
         return "#"
 
 # =========================================================
-# 3. ABA 1: FUNIL DE VENDAS (CRM)
+# 3. ABA 1: FUNIL DE VENDAS (COM EXPANDER EM CADA CLIENTE)
 # =========================================================
 with aba_crm:
     st.subheader(f"Funil de Vendas — {titulo_dinamico}")
-    
-    # FICHA DETALHADA / MODAL DO CLIENTE AO CLICAR NO CARD
-    if st.session_state.cliente_selecionado_id is not None:
-        cliente_dado = df[df["id"] == st.session_state.cliente_selecionado_id]
-        
-        if not cliente_dado.empty:
-            c = cliente_dado.iloc[0]
-            idx_cliente = st.session_state.df_crm.index[st.session_state.df_crm["id"] == c["id"]].tolist()[0]
-            cliente_nome_atual = c['Empresa']
-            
-            st_code, st_label, st_icon, css_classe_badge = calcular_status_followup(c.get("Followup_Data", ""))
-            
-            col_titulo, col_acoes_top = st.columns([3, 2])
-            with col_titulo:
-                st.markdown(f"### Ficha de Informações: **{cliente_nome_atual}**")
-            with col_acoes_top:
-                c_btn_ed, c_btn_cx = st.columns([2, 1])
-                with c_btn_ed:
-                    if not st.session_state.modo_edicao:
-                        if st.button("Editar Dados", key="btn_ativar_edicao", use_container_width=True):
-                            st.session_state.modo_edicao = True
-                            st.rerun()
-                    else:
-                        if st.button("Cancelar Edição", key="btn_cancelar_edicao", use_container_width=True):
-                            st.session_state.modo_edicao = False
-                            st.rerun()
-                with c_btn_cx:
-                    if st.button("Fechar", help="Fechar ficha"):
-                        st.session_state.cliente_selecionado_id = None
-                        st.session_state.modo_edicao = False
-                        st.rerun()
+    st.caption("Clique no nome do cliente nas colunas abaixo para abrir a aba de informações detalhadas e status de follow-up.")
 
-            with st.container():
-                st.markdown('<div class="bloco-detalhes-retangular">', unsafe_allow_html=True)
-                
-                # Bloco de Informações Principais do Cliente Selecionado com Status Colorido de Follow-up
-                col_info1, col_info2, col_info3 = st.columns(3)
-                with col_info1:
-                    st.markdown(f"**🏢 Empresa:** {c['Empresa']}")
-                with col_info2:
-                    st.markdown(f"**👤 Responsável:** {c['Contato']}")
-                with col_info3:
-                    st.markdown(f"**📞 Telefone:** <span class='phone-highlight'>{c.get('Telefone', 'Não informado')}</span>", unsafe_allow_html=True)
-
-                st.markdown("<br>", unsafe_allow_html=True)
-                
-                dt_f_exib = c.get('Followup_Data', '')
-                dt_f_str = dt.strptime(str(dt_f_exib), "%Y-%m-%d").strftime("%d/%m/%Y") if dt_f_exib else "Não agendado"
-                
-                # Exibição do Follow-up com cores (Vermelho atrasado, Amarelo atenção/hoje, Verde em dia)
-                st.markdown(f'<div class="{css_classe_badge}">{st_icon} Follow-up: {dt_f_str} ({st_label})</div>', unsafe_allow_html=True)
-
-                st.divider()
-
-                if not st.session_state.modo_edicao:
-                    aba_historico_f, aba_tarefas_f, aba_perda_f = st.tabs(
-                        ["Histórico Geral & Follow-up", "Tarefas Associadas", "Registrar Perda"]
-                    )
-
-                    with aba_historico_f:
-                        col1, col2, col3 = st.columns([1.5, 1.5, 1.5])
-                        with col1:
-                            st.markdown(f"**Cargo:** {c.get('Cargo', 'Não informado')}")
-                            st.markdown(f"**E-mail:** {c.get('Email', 'Não informado')}")
-                            st.markdown(f"**Cidade:** {c.get('Cidade', 'Não informado')}")
-                        with col2:
-                            st.markdown(f'<div class="notranslate"><b>Carteira:</b> {c["Cliente"]}</div>', unsafe_allow_html=True)
-                            st.markdown(f"**Valor Oportunidade:** R$ {c['Valor']:,.2f}")
-                        with col3:
-                            etapas_list = list(PROB_MAP.keys())
-                            idx_etapa = etapas_list.index(c['Etapa']) if c['Etapa'] in etapas_list else 0
-                            nova_etapa = st.selectbox("Etapa no Funil:", options=etapas_list, index=idx_etapa, key=f"etapa_vis_{c['id']}")
-                            if nova_etapa != c['Etapa']:
-                                st.session_state.df_crm.loc[idx_cliente, "Etapa"] = nova_etapa
-                                st.session_state.df_crm.loc[idx_cliente, "Prob"] = PROB_MAP[nova_etapa]
-                                st.rerun()
-
-                        st.divider()
-                        st.write("**Histórico de Interações:**")
-                        st.info(c.get("Historico", "Nenhum histórico registrado."))
-
-                        col_nota, col_dt_f = st.columns([2.5, 1.5])
-                        with col_nota:
-                            nova_nota = st.text_area("Lembrete / Nota de Follow-up:", value=str(c.get("Followup_Nota", "")), height=70, key=f"nota_vis_{c['id']}")
-                        with col_dt_f:
-                            dt_val = date.today()
-                            if c["Followup_Data"]:
-                                try:
-                                    dt_val = dt.strptime(str(c["Followup_Data"]), "%Y-%m-%d").date()
-                                except:
-                                    pass
-                            nova_dt = st.date_input("Data do Próximo Follow-up:", value=dt_val, key=f"dt_vis_{c['id']}")
-                            b1, b2 = st.columns(2)
-                            with b1:
-                                if st.button("Salvar Follow-up", key=f"salvar_nota_{c['id']}", use_container_width=True):
-                                    st.session_state.df_crm.loc[idx_cliente, "Followup_Data"] = str(nova_dt)
-                                    st.session_state.df_crm.loc[idx_cliente, "Followup_Nota"] = nova_nota
-                                    st.success("Salvo!")
-                                    st.rerun()
-                            with b2:
-                                if nova_nota.strip():
-                                    link_gcal = criar_link_google_agenda(c["Empresa"], c["Contato"], nova_nota, str(nova_dt))
-                                    st.markdown(f"[Agenda Google]({link_gcal})")
-
-                    with aba_tarefas_f:
-                        st.subheader(f"Tarefas Agendadas para {cliente_nome_atual}")
-                        if not st.session_state.df_tarefas.empty:
-                            tarefas_cliente = st.session_state.df_tarefas[
-                                st.session_state.df_tarefas["Cliente"] == cliente_nome_atual
-                            ]
-                            if not tarefas_cliente.empty:
-                                st.dataframe(
-                                    tarefas_cliente[["Titulo", "Data_Vencimento", "Prioridade", "Status"]],
-                                    use_container_width=True,
-                                )
-                            else:
-                                st.info("Não há tarefas específicas associadas a este cliente.")
-                        else:
-                            st.info("Nenhuma tarefa cadastrada na plataforma.")
-
-                    with aba_perda_f:
-                        st.subheader("Registrar Oportunidade Perdida")
-                        st.warning("Preencha as informações abaixo para salvar a justificativa de perda no histórico.")
-
-                        with st.form(key=f"form_perda_{cliente_nome_atual}"):
-                            motivo_perda = st.selectbox(
-                                "Motivo Principal da Perda",
-                                options=[
-                                    "Preço / Orçamento fora do esperado",
-                                    "Prazo de entrega incompatível",
-                                    "Fechou com Concorrente",
-                                    "Falta de escopo técnico / Solução não atende",
-                                    "Projeto Cancelado pelo Cliente",
-                                    "Sem retorno / Lead esfriou",
-                                    "Outros",
-                                ],
-                            )
-                            obs_tecnica = st.text_area(
-                                "Observação Técnica do Vendedor / Feedback do Cliente",
-                                placeholder="Ex: O cliente optou pelo concorrente por conta do prazo de entrega.",
-                            )
-
-                            btn_salvar_perda = st.form_submit_button("Confirmar Perda do Negócio")
-
-                            if btn_salvar_perda:
-                                st.session_state.df_crm.loc[idx_cliente, "Etapa"] = "6. Perdido"
-                                st.session_state.df_crm.loc[idx_cliente, "Prob"] = 0.00
-                                st.session_state.df_crm.loc[idx_cliente, "Perda"] = motivo_perda
-                                
-                                historico_antigo = str(c.get("Historico", ""))
-                                novo_hist = f"{historico_antigo}\n[{date.today().strftime('%d/%m/%Y')}] Perda registrada ({motivo_perda}): {obs_tecnica}".strip()
-                                st.session_state.df_crm.loc[idx_cliente, "Historico"] = novo_hist
-                                
-                                st.error(f"Oportunidade de '{cliente_nome_atual}' marcada como PERDIDA. Histórico atualizado.")
-                                st.rerun()
-
-                else:
-                    st.markdown("#### Editar Informações do Cliente")
-                    with st.form(key=f"form_edicao_{c['id']}"):
-                        e_col1, e_col2, e_col3 = st.columns(3)
-                        
-                        with e_col1:
-                            edit_empresa = st.text_input("Nome da Empresa", value=c['Empresa'])
-                            edit_contato = st.text_input("Nome do Funcionário / Contato", value=c['Contato'])
-                            edit_cargo = st.text_input("Cargo", value=c.get('Cargo', ''))
-                        
-                        with e_col2:
-                            edit_telefone = st.text_input("Telefone / WhatsApp", value=c.get('Telefone', ''))
-                            edit_email = st.text_input("E-mail Comercial", value=c.get('Email', ''))
-                            edit_cidade = st.text_input("Cidade / Estado", value=c.get('Cidade', ''))
-
-                        with e_col3:
-                            idx_cart = CARTEIRAS_COVEM.index(c['Cliente']) if c['Cliente'] in CARTEIRAS_COVEM else 0
-                            edit_carteira = st.selectbox("Carteira", CARTEIRAS_COVEM, index=idx_cart)
-                            edit_valor = st.number_input("Valor (R$)", value=float(c['Valor']), step=1000.0, format="%.2f")
-                            edit_vendedor = st.text_input("Vendedor / Responsável", value=c.get('Vendedor', ''))
-
-                        st.divider()
-                        btn_salvar_edicao = st.form_submit_button("Salvar Alterações e Atualizar CRM", use_container_width=True)
-
-                        if btn_salvar_edicao:
-                            st.session_state.df_crm.loc[idx_cliente, "Empresa"] = edit_empresa
-                            st.session_state.df_crm.loc[idx_cliente, "Contato"] = edit_contato
-                            st.session_state.df_crm.loc[idx_cliente, "Cargo"] = edit_cargo
-                            st.session_state.df_crm.loc[idx_cliente, "Telefone"] = edit_telefone
-                            st.session_state.df_crm.loc[idx_cliente, "Email"] = edit_email
-                            st.session_state.df_crm.loc[idx_cliente, "Cidade"] = edit_cidade
-                            st.session_state.df_crm.loc[idx_cliente, "Cliente"] = edit_carteira
-                            st.session_state.df_crm.loc[idx_cliente, "Valor"] = edit_valor
-                            st.session_state.df_crm.loc[idx_cliente, "Vendedor"] = edit_vendedor
-                            
-                            st.session_state.modo_edicao = False
-                            st.success("Dados atualizados com sucesso!")
-                            st.rerun()
-
-                st.markdown('</div>', unsafe_allow_html=True)
-                st.divider()
-
-    # COLUNAS DO FUNIL DE VENDAS
     etapas = list(PROB_MAP.keys())
     cols = st.columns(len(etapas))
     
@@ -665,16 +451,22 @@ with aba_crm:
             sub_df = df_filtered[df_filtered["Etapa"] == etapa]
             
             for _, row in sub_df.iterrows():
-                st_code, st_label, st_icon, _ = calcular_status_followup(row.get("Followup_Data", ""))
-                btn_label = f"{st_icon} {row['Empresa']}\n({st_label})"
+                st_code, st_label, st_icon = calcular_status_followup(row.get("Followup_Data", ""))
                 
-                if st.button(btn_label, key=f"btn_card_{row['id']}", use_container_width=True):
-                    st.session_state.cliente_selecionado_id = row['id']
-                    st.session_state.modo_edicao = False
-                    st.rerun()
+                # Cada cliente abre um expander individual exatamente igual aos alertas da agenda
+                with st.expander(f"{st_icon} {row['Empresa']}"):
+                    st.markdown(f"**🏢 Empresa:** {row['Empresa']}")
+                    st.markdown(f"**👤 Responsável:** {row['Contato']}")
+                    st.markdown(f"**📞 Telefone:** <span class='phone-highlight'>{row.get('Telefone', 'Não informado')}</span>", unsafe_allow_html=True)
+                    
+                    dt_f_exib = row.get('Followup_Data', '')
+                    dt_f_str = dt.strptime(str(dt_f_exib), "%Y-%m-%d").strftime("%d/%m/%Y") if dt_f_exib else "Não agendado"
+                    
+                    # Status do Follow-up com cores (Vermelho, Amarelo, Verde)
+                    st.markdown(f"**Follow-up:** {st_icon} {dt_f_str} ({st_label})")
 
 # =========================================================
-# 4. ABA 2: GERENCIADOR DE TAREFAS (ABAIXO DO FUNIL DE VENDAS)
+# 4. ABA 2: GERENCIADOR DE TAREFAS
 # =========================================================
 with aba_tarefas:
     st.subheader("Gerenciador de Tarefas")
@@ -1155,9 +947,6 @@ with aba_novo:
 
     st.write("---")
 
-    # ---------------------------------------------------------
-    # CADASTRO COMPLETO DE OPORTUNIDADE
-    # ---------------------------------------------------------
     st.subheader("Cadastrar Oportunidade Completa")
     
     with st.form("form_oportunidade", clear_on_submit=True):
