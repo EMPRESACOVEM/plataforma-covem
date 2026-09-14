@@ -248,6 +248,9 @@ if 'df_historico_financeiro' not in st.session_state:
         {"Mês/Ano": "Fev/26", "Pipeline Total (R$)": 525000.0, "Receita Fechada (R$)": 285000.0}
     ])
 
+if 'manual_counts' not in st.session_state:
+    st.session_state.manual_counts = {}
+
 if 'manual_perdas' not in st.session_state:
     st.session_state.manual_perdas = None
 
@@ -628,7 +631,7 @@ with aba_crm:
 # ABA 3: DASHBOARD
 # =========================================================
 with aba_dash:
-    st.markdown(f'<div class="notranslate"><h3>1. DISTRIBUIÇÃO DO FUNIL DE VENDAS ({COVEM_NAME})</h3></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="notranslate"><h3>1. DISTRIBUIÇÃO DO FUNIL DE VENDAS ({titulo_dinamico})</h3></div>', unsafe_allow_html=True)
     
     col_f1, _ = st.columns([2, 2])
     with col_f1:
@@ -657,11 +660,15 @@ with aba_dash:
     st.divider()
 
     etapas_crm = list(PROB_MAP.keys())
-    
-    # Cálculo automático e sincronizado em tempo real com o CRM
     contagem_calculada = {}
+    
     for etapa in etapas_crm:
-        contagem_calculada[etapa] = len(df_dash[df_dash["Etapa"] == etapa])
+        count_real = len(df_dash[df_dash["Etapa"] == etapa])
+        # Chave dinâmica para suportar a filtragem por cliente no dashboard de forma isolada
+        key_manual_count = f"manual_count_{cliente_sel}_{etapa}"
+        if key_manual_count not in st.session_state:
+            st.session_state[key_manual_count] = count_real
+        contagem_calculada[etapa] = st.session_state[key_manual_count]
         
     total_leads = sum(contagem_calculada.values())
 
@@ -693,9 +700,30 @@ with aba_dash:
         )
         st.metric(label="", value=total_leads)
 
+    with st.expander("Editar Números das Etapas Manualmente (Ajuste Rápido)"):
+        st.caption("Ajuste a quantidade de cada etapa caso queira simular os totais diretamente no painel:")
+        cols_input = st.columns(len(etapas_crm))
+        
+        for idx, etapa in enumerate(etapas_crm):
+            val_atual = contagem_calculada[etapa]
+            key_manual_count = f"manual_count_{cliente_sel}_{etapa}"
+            novo_val = cols_input[idx].number_input(
+                etapa, 
+                min_value=0, 
+                value=int(val_atual), 
+                key=f"edit_dash_{cliente_sel}_{etapa}"
+            )
+            st.session_state[key_manual_count] = novo_val
+        
+        if st.button("Resetar para Dados Reais do CRM"):
+            for etapa in etapas_crm:
+                key_manual_count = f"manual_count_{cliente_sel}_{etapa}"
+                st.session_state[key_manual_count] = len(df_dash[df_dash["Etapa"] == etapa])
+            st.rerun()
+
     st.divider()
 
-    st.markdown(f'<div class="notranslate"><h3>Funil de Vendas — {COVEM_NAME}</h3></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="notranslate"><h3>Funil de Vendas — {titulo_dinamico}</h3></div>', unsafe_allow_html=True)
     df_pizza = pd.DataFrame(list(contagem_calculada.items()), columns=["Etapa", "Quantidade"])
     df_pizza_valida = df_pizza[df_pizza["Quantidade"] > 0]
 
@@ -733,8 +761,30 @@ with aba_dash:
         elif p_str != "":
             perdas_reais["Outros"] += 1
 
+    key_manual_perdas = f"manual_perdas_{cliente_sel}"
+    if key_manual_perdas not in st.session_state or st.session_state[key_manual_perdas] is None:
+        st.session_state[key_manual_perdas] = perdas_reais.copy()
+
+    with st.expander("Tabela Editável: Ajustar Quantidade por Motivo de Perda", expanded=True):
+        cols_p = st.columns(len(MOTIVOS_PERDA_PADRAO))
+        for idx, motivo in enumerate(MOTIVOS_PERDA_PADRAO):
+            val_motivo = st.session_state[key_manual_perdas].get(motivo, 0)
+            novo_val_m = cols_p[idx].number_input(
+                motivo, 
+                min_value=0, 
+                value=int(val_motivo), 
+                key=f"perda_input_{cliente_sel}_{motivo}"
+            )
+            st.session_state[key_manual_perdas][motivo] = novo_val_m
+            
+        c_p1, _ = st.columns([1, 4])
+        with c_p1:
+            if st.button("Sincronizar com CRM", key=f"reset_perdas_{cliente_sel}"):
+                st.session_state[key_manual_perdas] = perdas_reais.copy()
+                st.rerun()
+
     df_graf_perdas = pd.DataFrame(
-        list(perdas_reais.items()), 
+        list(st.session_state[key_manual_perdas].items()), 
         columns=["Motivo de Perda", "Quantidade"]
     )
     total_perdas_num = df_graf_perdas["Quantidade"].sum()
@@ -745,7 +795,7 @@ with aba_dash:
             x="Motivo de Perda",
             y="Quantidade",
             text="Quantidade",
-            title=f"Motivos de Perda — {COVEM_NAME} (Total: {total_perdas_num})",
+            title=f"Motivos de Perda — {titulo_dinamico} (Total: {total_perdas_num})",
             color="Motivo de Perda",
             color_discrete_map=CORES_PERDAS
         )
@@ -1051,7 +1101,7 @@ with aba_novo:
                     "Contato": nova_contato if nova_contato else "Não informado",
                     "Cargo": novo_cargo if novo_cargo else "Não informado",
                     "Telefone": nova_telefone if nova_telefone else "Não informado",
-                    "Email": nova_email if nova_email else "Não informado",
+                    "Email": nova_email if nova_email else "Non informado",
                     "Cidade": nova_cidade if nova_cidade else "Não informado",
                     "Valor": nova_valor,
                     "Prob": PROB_MAP[nova_etapa],
@@ -1063,6 +1113,11 @@ with aba_novo:
                     "Historico": f"Cadastrado em {dt.now().strftime('%d/%m/%Y')}"
                 }
                 st.session_state.df_crm = pd.concat([st.session_state.df_crm, pd.DataFrame([nova_linha])], ignore_index=True)
+                
+                key_manual_perdas = f"manual_perdas_{novo_cliente}"
+                if key_manual_perdas in st.session_state and st.session_state[key_manual_perdas] is not None:
+                    if nova_etapa == "6. Perdido" and motivo_perda in st.session_state[key_manual_perdas]:
+                        st.session_state[key_manual_perdas][motivo_perda] += 1
                 
                 st.success("Cadastrado com sucesso!")
                 st.rerun()
