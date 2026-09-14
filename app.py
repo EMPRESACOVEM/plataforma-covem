@@ -116,44 +116,29 @@ st.markdown("""
             margin-bottom: 12px;
         }
 
-        /* Badges de Follow-up e Alertas com identidade Ciano/Vermelho/Amarelo */
-        .badge-atrasada {
-            background-color: #4A2024;
-            color: #FCA5A5;
-            border: 1px solid #EF4444;
-            padding: 8px 16px;
+        /* Badges Unificadas com Fundo Azul Ciano COVEM e Detalhes de Alerta */
+        .badge-covem-base {
+            background-color: rgba(0, 163, 255, 0.12);
+            border: 1px solid #00A3FF;
+            padding: 10px 16px;
             border-radius: 6px;
             font-size: 13px;
             font-weight: 600;
             display: inline-block;
             text-align: center;
             width: 100%;
+        }
+
+        .badge-atrasada {
+            color: #FCA5A5;
         }
 
         .badge-hoje {
-            background-color: #3F2E04;
             color: #FDE047;
-            border: 1px solid #EAB308;
-            padding: 8px 16px;
-            border-radius: 6px;
-            font-size: 13px;
-            font-weight: 600;
-            display: inline-block;
-            text-align: center;
-            width: 100%;
         }
 
         .badge-sucesso {
-            background-color: #143622;
             color: #86EFAC;
-            border: 1px solid #22C55E;
-            padding: 8px 16px;
-            border-radius: 6px;
-            font-size: 13px;
-            font-weight: 600;
-            display: inline-block;
-            text-align: center;
-            width: 100%;
         }
 
         .phone-highlight {
@@ -383,7 +368,7 @@ def exibir_agenda_semana(df_tarefas, df_crm):
             col_atraso, col_hoje = st.columns(2)
 
             with col_atraso:
-                st.markdown(f'<div class="badge-atrasada">🔴 {len(atrasadas)} Tarefas Atrasadas</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="badge-covem-base badge-atrasada">🔴 {len(atrasadas)} Tarefas Atrasadas</div>', unsafe_allow_html=True)
                 with st.expander("Ver Tarefas Atrasadas"):
                     if not atrasadas.empty:
                         for _, row in atrasadas.iterrows():
@@ -392,7 +377,7 @@ def exibir_agenda_semana(df_tarefas, df_crm):
                         st.write("Nenhuma tarefa atrasada.")
 
             with col_hoje:
-                st.markdown(f'<div class="badge-hoje">🟡 {len(hoje_tarefas)} Tarefas para Hoje</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="badge-covem-base badge-hoje">🟡 {len(hoje_tarefas)} Tarefas para Hoje</div>', unsafe_allow_html=True)
                 with st.expander("Ver Tarefas para Hoje"):
                     if not hoje_tarefas.empty:
                         for _, row in hoje_tarefas.iterrows():
@@ -418,7 +403,7 @@ def exibir_agenda_semana(df_tarefas, df_crm):
             col_c_atraso, col_c_hoje = st.columns(2)
 
             with col_c_atraso:
-                st.markdown(f'<div class="badge-atrasada">🔴 {len(c_atrasados)} Follow-ups Atrasados</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="badge-covem-base badge-atrasada">🔴 {len(c_atrasados)} Follow-ups Atrasados</div>', unsafe_allow_html=True)
                 with st.expander("Ver Follow-ups Atrasados"):
                     if not c_atrasados.empty:
                         for _, row in c_atrasados.iterrows():
@@ -428,7 +413,7 @@ def exibir_agenda_semana(df_tarefas, df_crm):
                         st.write("Nenhum follow-up atrasado.")
 
             with col_c_hoje:
-                st.markdown(f'<div class="badge-hoje">🟡 {len(c_hoje)} Follow-ups para Hoje</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="badge-covem-base badge-hoje">🟡 {len(c_hoje)} Follow-ups para Hoje</div>', unsafe_allow_html=True)
                 with st.expander("Ver Follow-ups para Hoje"):
                     if not c_hoje.empty:
                         for _, row in c_hoje.iterrows():
