@@ -25,7 +25,7 @@ COVEM_NAME = "GRUPO COVEM"
 CARTEIRAS_COVEM = ["BraClean", "QV Energia Solar", "Elleven"]
 
 # ---------------------------------------------------------
-# PALETA COVEM & ESTILIZAÇÃO CSS (NOVAS CORES PADRÃO)
+# PALETA COVEM & ESTILIZAÇÃO CSS
 # ---------------------------------------------------------
 DEFAULT_COLORS = {
     "1. Contatado": "#EC4899",         # Rosa
@@ -333,14 +333,14 @@ st.caption("Plataforma Executiva de Gestão Comercial e Operacional")
 st.divider()
 
 # ---------------------------------------------------------
-# 2. CENTRAL DE ALERTAS (TAREFAS + FOLLOW-UPS DE CLIENTES)
+# 2. AGENDA DA SEMANA (TAREFAS + FOLLOW-UPS DE CLIENTES)
 # ---------------------------------------------------------
-def exibir_central_alertas(df_tarefas, df_crm):
-    st.markdown('<div class="section-header">Central de Alertas</div>', unsafe_allow_html=True)
+def exibir_agenda_semana(df_tarefas, df_crm):
+    st.markdown('<div class="section-header">Agenda da Semana</div>', unsafe_allow_html=True)
     
-    tab_alertas_tarefas, tab_alertas_crm = st.tabs(["Alertas de Tarefas", "Alertas de Follow-up (CRM/Funil)"])
+    tab_alertas_tarefas, tab_alertas_crm = st.tabs(["Tarefas", "Follow-ups (CRM)"])
 
-    # --- ABA 1: ALERTAS DE TAREFAS ---
+    # --- ABA 1: TAREFAS (Atrasadas e para Hoje) ---
     with tab_alertas_tarefas:
         if df_tarefas.empty or "Data_Vencimento" not in df_tarefas.columns:
             st.info("Nenhuma tarefa cadastrada.")
@@ -353,38 +353,33 @@ def exibir_central_alertas(df_tarefas, df_crm):
             atrasadas = pendentes[pendentes["Data_Vencimento"] < hoje]
             hoje_tarefas = pendentes[pendentes["Data_Vencimento"] == hoje]
 
-            col_atraso, col_hoje, col_ok = st.columns(3)
+            col_atraso, col_hoje = st.columns(2)
 
             with col_atraso:
-                if not atrasadas.empty:
-                    st.markdown(f'<div class="badge-atrasada">🔴 {len(atrasadas)} Tarefas Atrasadas</div>', unsafe_allow_html=True)
-                    with st.expander("Averiguar Atrasadas"):
+                st.markdown(f'<div class="badge-atrasada">🔴 {len(atrasadas)} Tarefas Atrasadas</div>', unsafe_allow_html=True)
+                with st.expander("Ver Tarefas Atrasadas"):
+                    if not atrasadas.empty:
                         for _, row in atrasadas.iterrows():
-                            st.write(f"• **{row['Titulo']}** | Cliente: `{row.get('Cliente', 'N/A')}` | Venceu: {row['Data_Vencimento'].strftime('%d/%m/%Y')}")
-                else:
-                    st.markdown('<div class="badge-sucesso">🟢 Nenhuma tarefa atrasada</div>', unsafe_allow_html=True)
+                            st.write(f"• **{row['Titulo']}** | Cliente: `{row.get('Cliente', 'N/A')}` | Vencimento: {row['Data_Vencimento'].strftime('%d/%m/%Y')}")
+                    else:
+                        st.write("Nenhuma tarefa atrasada.")
 
             with col_hoje:
-                if not hoje_tarefas.empty:
-                    st.markdown(f'<div class="badge-hoje">🟡 {len(hoje_tarefas)} Tarefas para Hoje</div>', unsafe_allow_html=True)
-                    with st.expander("Averiguar Hoje"):
+                st.markdown(f'<div class="badge-hoje">🟡 {len(hoje_tarefas)} Tarefas para Hoje</div>', unsafe_allow_html=True)
+                with st.expander("Ver Tarefas para Hoje"):
+                    if not hoje_tarefas.empty:
                         for _, row in hoje_tarefas.iterrows():
                             st.write(f"• **{row['Titulo']}** | Cliente: `{row.get('Cliente', 'N/A')}`")
-                else:
-                    st.markdown('<div class="badge-sucesso">🟢 Sem tarefas para hoje</div>', unsafe_allow_html=True)
-            
-            with col_ok:
-                total_em_dia = len(pendentes) - len(atrasadas) - len(hoje_tarefas)
-                st.markdown(f'<div class="badge-sucesso">🟢 {total_em_dia} Tarefas em Dia</div>', unsafe_allow_html=True)
+                    else:
+                        st.write("Nenhuma tarefa para hoje.")
 
-    # --- ABA 2: ALERTAS DE CLIENTES / CRM ---
+    # --- ABA 2: FOLLOW-UPS (Atrasados e para Hoje) ---
     with tab_alertas_crm:
         if df_crm.empty:
             st.info("Nenhum cliente no CRM.")
         else:
             crm_temp = df_crm.copy()
             
-            # Calcular status para cada cliente
             status_list = []
             for _, r in crm_temp.iterrows():
                 st_code, st_label, st_icon = calcular_status_followup(r.get("Followup_Data", ""))
@@ -393,61 +388,32 @@ def exibir_central_alertas(df_tarefas, df_crm):
 
             c_atrasados = crm_temp[crm_temp["status_fu"] == "atrasado"]
             c_hoje = crm_temp[crm_temp["status_fu"] == "hoje"]
-            c_em_dia = crm_temp[crm_temp["status_fu"] == "em_dia"]
 
-            col_c_atraso, col_c_hoje, col_c_dia = st.columns(3)
+            col_c_atraso, col_c_hoje = st.columns(2)
 
             with col_c_atraso:
                 st.markdown(f'<div class="badge-atrasada">🔴 {len(c_atrasados)} Follow-ups Atrasados</div>', unsafe_allow_html=True)
-                with st.expander("Averiguar Clientes Atrasados"):
+                with st.expander("Ver Follow-ups Atrasados"):
                     if not c_atrasados.empty:
                         for _, row in c_atrasados.iterrows():
                             dt_f_br = dt.strptime(str(row['Followup_Data']), "%Y-%m-%d").strftime("%d/%m/%Y") if row['Followup_Data'] else "Sem Data"
-                            st.markdown(f"""
-                            **Empresa:** {row['Empresa']}  
-                            **Responsável:** {row['Contato']} ({row.get('Cargo', 'Não inf.')})  
-                            **Telefone:** {row.get('Telefone', 'Não inf.')}  
-                            **Próximo Follow-up:** 🔴 {dt_f_br}  
-                            ---
-                            """)
+                            st.write(f"• **{row['Empresa']}** | Contato: `{row['Contato']}` | Data: {dt_f_br}")
                     else:
-                        st.write("Nenhum cliente com follow-up atrasado.")
+                        st.write("Nenhum follow-up atrasado.")
 
             with col_c_hoje:
                 st.markdown(f'<div class="badge-hoje">🟡 {len(c_hoje)} Follow-ups para Hoje</div>', unsafe_allow_html=True)
-                with st.expander("Averiguar Clientes Hoje"):
+                with st.expander("Ver Follow-ups para Hoje"):
                     if not c_hoje.empty:
                         for _, row in c_hoje.iterrows():
                             dt_f_br = dt.strptime(str(row['Followup_Data']), "%Y-%m-%d").strftime("%d/%m/%Y") if row['Followup_Data'] else "Sem Data"
-                            st.markdown(f"""
-                            **Empresa:** {row['Empresa']}  
-                            **Responsável:** {row['Contato']} ({row.get('Cargo', 'Não inf.')})  
-                            **Telefone:** {row.get('Telefone', 'Não inf.')}  
-                            **Próximo Follow-up:** 🟡 {dt_f_br}  
-                            ---
-                            """)
+                            st.write(f"• **{row['Empresa']}** | Contato: `{row['Contato']}`")
                     else:
-                        st.write("Nenhum cliente com follow-up agendado para hoje.")
-
-            with col_c_dia:
-                st.markdown(f'<div class="badge-sucesso">🟢 {len(c_em_dia)} Follow-ups Em Dia</div>', unsafe_allow_html=True)
-                with st.expander("Averiguar Clientes Em Dia"):
-                    if not c_em_dia.empty:
-                        for _, row in c_em_dia.iterrows():
-                            dt_f_br = dt.strptime(str(row['Followup_Data']), "%Y-%m-%d").strftime("%d/%m/%Y") if row['Followup_Data'] else "Sem Data"
-                            st.markdown(f"""
-                            **Empresa:** {row['Empresa']}  
-                            **Responsável:** {row['Contato']} ({row.get('Cargo', 'Não inf.')})  
-                            **Telefone:** {row.get('Telefone', 'Não inf.')}  
-                            **Próximo Follow-up:** 🟢 {dt_f_br}  
-                            ---
-                            """)
-                    else:
-                        st.write("Nenhum cliente com follow-up futuro.")
+                        st.write("Nenhum follow-up para hoje.")
 
     st.divider()
 
-exibir_central_alertas(st.session_state.df_tarefas, st.session_state.df_crm)
+exibir_agenda_semana(st.session_state.df_tarefas, st.session_state.df_crm)
 
 # ---------------------------------------------------------
 # NAVEGAÇÃO POR ABAS (FUNIL -> TAREFAS -> DASH -> RELATÓRIO -> CADASTRO)
@@ -491,7 +457,6 @@ with aba_crm:
             idx_cliente = st.session_state.df_crm.index[st.session_state.df_crm["id"] == c["id"]].tolist()[0]
             cliente_nome_atual = c['Empresa']
             
-            # Status do Follow-up com Cor Indicadora
             st_code, st_label, st_icon = calcular_status_followup(c.get("Followup_Data", ""))
             
             col_titulo, col_acoes_top = st.columns([3, 2])
@@ -517,7 +482,6 @@ with aba_crm:
             with st.container():
                 st.markdown('<div class="bloco-detalhes-retangular">', unsafe_allow_html=True)
                 
-                # INFORMAÇÕES CHAVE EM DESTAQUE (Nome Empresa, Responsável, Cargo, Telefone, Follow-up)
                 col_info1, col_info2, col_info3 = st.columns(3)
                 with col_info1:
                     st.markdown(f"**🏢 Nome da Empresa:** {c['Empresa']}")
