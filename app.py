@@ -1,3 +1,4 @@
+import streamlit as str_module
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -28,33 +29,31 @@ COVEM_NAME = "GRUPO COVEM"
 CARTEIRAS_COVEM = ["BraClean", "QV Energia Solar", "Elleven"]
 
 # ---------------------------------------------------------
-# PALETA COVEM & ESTILIZAÇÃO CSS
+# PALETA COVEM & ESTILIZAÇÃO CSS AVANÇADA
 # ---------------------------------------------------------
 DEFAULT_COLORS = {
-    "1. Contatado": "#F472B6",         # Rosa Pastel suave
-    "2. Conversando": "#FDE047",        # Amarelo Pastel suave
-    "3. Reunião Agendada": "#FDBA74",  # Laranja Pastel suave
-    "4. Proposta Enviada": "#93C5FD",  # Azul Pastel suave
-    "5. Fechado": "#86EFAC",           # Verde Pastel suave
-    "6. Perdido": "#FCA5A5"            # Vermelho Pastel suave
+    "1. Contatado": "#F472B6",         
+    "2. Conversando": "#FDE047",        
+    "3. Reunião Agendada": "#FDBA74",  
+    "4. Proposta Enviada": "#93C5FD",  
+    "5. Fechado": "#86EFAC",           
+    "6. Perdido": "#FCA5A5"            
 }
 
 CORES_PERDAS = {
-    "Preço / Orçamento": "#FCA5A5",             # Vermelho Pastel
-    "Concorrência": "#FDBA74",                  # Laranja Pastel
-    "Sem Resposta / Sumiu": "#FDE047",          # Amarelo Pastel
-    "Produto / Serviço não Atende": "#93C5FD",  # Azul Pastel
-    "Outros": "#D1D5DB"                         # Cinza Claro
+    "Preço / Orçamento": "#FCA5A5",             
+    "Concorrência": "#FDBA74",                  
+    "Sem Resposta / Sumiu": "#FDE047",          
+    "Produto / Serviço não Atende": "#93C5FD",  
+    "Outros": "#D1D5DB"                         
 }
 
 if 'funnel_colors' not in st.session_state:
     st.session_state.funnel_colors = DEFAULT_COLORS.copy()
 
-# Inicializa o estado da aba ativa se não existir
 if 'menu_ativo' not in st.session_state:
     st.session_state.menu_ativo = "Gerenciamento de Tarefas"
 
-# Inicializa o estado da sub-aba em Tarefas se não existir
 if 'sub_menu_tarefas' not in st.session_state:
     st.session_state.sub_menu_tarefas = "Tarefas"
 
@@ -292,9 +291,6 @@ if 'cliente_editando_id' not in st.session_state:
 
 df = st.session_state.df_crm
 
-# ---------------------------------------------------------
-# FUNÇÃO DE LÓGICA DE CORES DO FOLLOW-UP
-# ---------------------------------------------------------
 def calcular_status_followup(data_str):
     if not data_str or pd.isna(data_str) or str(data_str).strip() in ["", "nan", "NaT", "None"]:
         return "sem_data", "Sem Follow-up", '<span style="height: 10px; width: 10px; background-color: #94A3B8; border-radius: 50%; display: inline-block;" title="Sem Data"></span>'
@@ -312,7 +308,7 @@ def calcular_status_followup(data_str):
         return "sem_data", "Sem Follow-up", '<span style="height: 10px; width: 10px; background-color: #94A3B8; border-radius: 50%; display: inline-block;" title="Sem Data"></span>'
 
 # ---------------------------------------------------------
-# BARRA LATERAL (FILTROS E CONFIGURAÇÕES)
+# BARRA LATERAL
 # ---------------------------------------------------------
 opcoes_filtro = ["TODOS"] + CARTEIRAS_COVEM
 cliente_sel = st.sidebar.selectbox("Clientes COVEM:", opcoes_filtro)
@@ -349,14 +345,14 @@ st.sidebar.download_button(
 )
 
 # ---------------------------------------------------------
-# 1. TÍTULO PRINCIPAL: GRUPO COVEM
+# 1. TÍTULO PRINCIPAL
 # ---------------------------------------------------------
 st.markdown(f'<div class="title-covem">{COVEM_NAME}</div>', unsafe_allow_html=True)
 st.markdown('<div class="subtitle-covem">Plataforma Executiva de Gestão Comercial e Operacional</div>', unsafe_allow_html=True)
 st.divider()
 
 # ---------------------------------------------------------
-# MENU HORIZONTAL EM CARDS (COM DESTAQUE EM AZUL CIANO PARA A ABA ATIVA)
+# MENU HORIZONTAL EM CARDS (COM DESTAQUE ATIVO CORRETO)
 # ---------------------------------------------------------
 abas_disponiveis = [
     "Gerenciamento de Tarefas",
@@ -372,13 +368,12 @@ for i, nome_aba in enumerate(abas_disponiveis):
     with cols_menu[i]:
         is_active = (st.session_state.menu_ativo == nome_aba)
         
-        # Injeta estilo dinâmico direto via botão/HTML ou usa variação de cor
+        # Estilização precisa via seletor de atributo key/label do Streamlit
         if is_active:
-            # Fundo azul ciano claro / destacado para indicar a tela aberta
             st.markdown(
                 f"""
                 <style>
-                div[data-testid="column"]:nth-of-type({i+1}) div.stButton > button {{
+                div[data-testid="column"]:nth-of-type({i+1}) button[kind="secondary"] {{
                     background-color: #0284C7 !important;
                     color: #FFFFFF !important;
                     border: 2px solid #38BDF8 !important;
@@ -394,20 +389,17 @@ for i, nome_aba in enumerate(abas_disponiveis):
             st.rerun()
 
 st.markdown("<div style='margin-bottom: 20px;'></div>", unsafe_allow_html=True)
-
-# Recupera qual aba está ativa para renderizar o conteúdo correspondente
 aba_selecionada = st.session_state.menu_ativo
 
 # ---------------------------------------------------------
-# FUNÇÃO DE RENDERIZAÇÃO DA AGENDA DA SEMANA (COM MINI-CARDS)
+# FUNÇÃO DE RENDERIZAÇÃO DA AGENDA DA SEMANA (MINI-CARDS COMPACTOS)
 # ---------------------------------------------------------
 def exibir_agenda_semana(df_tarefas, df_crm):
     st.markdown('<div class="section-header-covem">Agenda da Semana</div>', unsafe_allow_html=True)
     st.markdown('<div style="margin-top: 14px;"></div>', unsafe_allow_html=True)
     
-    # Mini-cards horizontais para alternar entre Tarefas e Follow-ups
-    sub_abas = ["Tarefas", "Follow-ups (CRM)"]
-    c_sub1, c_sub2 = st.columns(2)
+    # Sub-abas compactas centralizadas em colunas menores
+    _, c_sub1, c_sub2, _ = st.columns([1, 2, 2, 1])
     
     with c_sub1:
         is_sub_active_1 = (st.session_state.sub_menu_tarefas == "Tarefas")
@@ -415,7 +407,7 @@ def exibir_agenda_semana(df_tarefas, df_crm):
             st.markdown(
                 """
                 <style>
-                div[data-testid="column"]:nth-of-type(1) div.stButton > button {
+                button[key="sub_btn_tarefas"] {
                     background-color: #0284C7 !important;
                     color: #FFFFFF !important;
                     border: 2px solid #38BDF8 !important;
@@ -435,7 +427,7 @@ def exibir_agenda_semana(df_tarefas, df_crm):
             st.markdown(
                 """
                 <style>
-                div[data-testid="column"]:nth-of-type(2) div.stButton > button {
+                button[key="sub_btn_followups"] {
                     background-color: #0284C7 !important;
                     color: #FFFFFF !important;
                     border: 2px solid #38BDF8 !important;
@@ -449,7 +441,7 @@ def exibir_agenda_semana(df_tarefas, df_crm):
             st.session_state.sub_menu_tarefas = "Follow-ups (CRM)"
             st.rerun()
 
-    st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='margin-top: 12px;'></div>", unsafe_allow_html=True)
 
     if st.session_state.sub_menu_tarefas == "Tarefas":
         if df_tarefas.empty or "Data_Vencimento" not in df_tarefas.columns:
@@ -525,11 +517,7 @@ def exibir_agenda_semana(df_tarefas, df_crm):
     st.divider()
 
 # =========================================================
-# RENDERIZAÇÃO DA ABA ATIVA ESCOLHIDA NO MENU
-# =========================================================
-
-# =========================================================
-# ABA 1: GERENCIADOR DE TAREFAS & CALENDÁRIO FUTURO
+# ABA 1: GERENCIAMENTO DE TAREFAS
 # =========================================================
 if aba_selecionada == "Gerenciamento de Tarefas":
     exibir_agenda_semana(st.session_state.df_tarefas, st.session_state.df_crm)
@@ -554,26 +542,18 @@ if aba_selecionada == "Gerenciamento de Tarefas":
                     horizontal=True,
                     label_visibility="collapsed"
                 )
-                
                 complemento_titulo = st.text_input("Detalhes adicionais (Opcional)", placeholder="Ex: Falar com o gerente sobre o orçamento")
                 descricao = st.text_area("Descrição / Observações")
 
             with col2:
-                cliente_vinculado = st.selectbox(
-                    "Vincular ao Cliente / Oportunidade", options=lista_clientes
-                )
-                data_vencimento = st.date_input(
-                    "Data de Vencimento", min_value=datetime.date.today()
-                )
-                prioridade = st.selectbox(
-                    "Prioridade", options=["Baixa", "Média", "Alta", "Urgente"]
-                )
+                cliente_vinculado = st.selectbox("Vincular ao Cliente / Oportunidade", options=lista_clientes)
+                data_vencimento = st.date_input("Data de Vencimento", min_value=datetime.date.today())
+                prioridade = st.selectbox("Prioridade", options=["Baixa", "Média", "Alta", "Urgente"])
 
             submit_tarefa = st.form_submit_button("Salvar Tarefa", use_container_width=True)
 
             if submit_tarefa:
                 titulo_final = f"{acao_selecionada}" + (f" - {complemento_titulo}" if complemento_titulo else "")
-                
                 nova_linha_tarefa = {
                     "Titulo": titulo_final,
                     "Descricao": descricao,
@@ -583,10 +563,7 @@ if aba_selecionada == "Gerenciamento de Tarefas":
                     "Status": "Pendente",
                     "Data_Criacao": str(datetime.date.today()),
                 }
-                st.session_state.df_tarefas = pd.concat(
-                    [st.session_state.df_tarefas, pd.DataFrame([nova_linha_tarefa])],
-                    ignore_index=True
-                )
+                st.session_state.df_tarefas = pd.concat([st.session_state.df_tarefas, pd.DataFrame([nova_linha_tarefa])], ignore_index=True)
                 salvar_dados_tarefas(st.session_state.df_tarefas)
                 st.success("Tarefa criada com sucesso!")
                 st.rerun()
@@ -597,16 +574,10 @@ if aba_selecionada == "Gerenciamento de Tarefas":
             col_sel, col_btn = st.columns([3, 1])
             with col_sel:
                 tarefas_opcoes = st.session_state.df_tarefas["Titulo"].tolist()
-                tarefa_escolhida_exclusao = st.selectbox(
-                    "Selecione a tarefa para excluir:", 
-                    options=tarefas_opcoes, 
-                    label_visibility="collapsed"
-                )
+                tarefa_escolhida_exclusao = st.selectbox("Selecione a tarefa para excluir:", options=tarefas_opcoes, label_visibility="collapsed")
             with col_btn:
                 if st.button("Excluir Tarefa", use_container_width=True):
-                    st.session_state.df_tarefas = st.session_state.df_tarefas[
-                        st.session_state.df_tarefas["Titulo"] != tarefa_escolhida_exclusao
-                    ].reset_index(drop=True)
+                    st.session_state.df_tarefas = st.session_state.df_tarefas[st.session_state.df_tarefas["Titulo"] != tarefa_escolhida_exclusao].reset_index(drop=True)
                     salvar_dados_tarefas(st.session_state.df_tarefas)
                     st.success("Tarefa excluída com sucesso!")
                     st.rerun()
@@ -616,42 +587,22 @@ if aba_selecionada == "Gerenciamento de Tarefas":
         st.info("Nenhuma tarefa pendente.")
 
     st.divider()
-
     st.subheader("Calendário de Tarefas e Follow-ups Futuros")
     st.caption("Visualize em formato de tabela cronológica todas as entregas, reuniões e interações planejadas para os próximos dias.")
 
-    col_h1, col_h2 = st.columns([2, 2])
-    with col_h1:
-        horizonte = st.selectbox(
-            "Horizonte de Visualização:",
-            ["Próximos 7 Dias", "Próximos 15 Dias", "Próximos 30 Dias", "Todos os Registros Futuros"]
-        )
+    horizonte = st.selectbox("Horizonte de Visualização:", ["Próximos 7 Dias", "Próximos 15 Dias", "Próximos 30 Dias", "Todos os Registros Futuros"])
 
     hoje = date.today()
-    if horizonte == "Próximos 7 Dias":
-        limite_data = hoje + timedelta(days=7)
-    elif horizonte == "Próximos 15 Dias":
-        limite_data = hoje + timedelta(days=15)
-    elif horizonte == "Próximos 30 Dias":
-        limite_data = hoje + timedelta(days=30)
-    else:
-        limite_data = hoje + timedelta(days=365)
+    limite_data = hoje + timedelta(days=7 if "7" in horizonte else (15 if "15" in horizonte else (30 if "30" in horizonte else 365)))
 
     eventos_futuros = []
-
     if not st.session_state.df_tarefas.empty:
         for _, t in st.session_state.df_tarefas.iterrows():
             if pd.notna(t.get("Data_Vencimento")):
                 try:
                     dt_v = dt.strptime(str(t["Data_Vencimento"])[:10], "%Y-%m-%d").date()
                     if hoje <= dt_v <= limite_data:
-                        eventos_futuros.append({
-                            "Data": dt_v,
-                            "Tipo": "Tarefa",
-                            "Título / Ação": t["Titulo"],
-                            "Vinculado a": t.get("Cliente", "Geral"),
-                            "Prioridade / Status": f"Prioridade: {t.get('Prioridade', 'Normal')}"
-                        })
+                        eventos_futuros.append({"Data": dt_v, "Tipo": "Tarefa", "Título / Ação": t["Titulo"], "Vinculado a": t.get("Cliente", "Geral"), "Prioridade / Status": f"Prioridade: {t.get('Prioridade', 'Normal')}"})
                 except:
                     pass
 
@@ -662,19 +613,12 @@ if aba_selecionada == "Gerenciamento de Tarefas":
                 try:
                     dt_f = dt.strptime(str(f_dat)[:10], "%Y-%m-%d").date()
                     if hoje <= dt_f <= limite_data:
-                        eventos_futuros.append({
-                            "Data": dt_f,
-                            "Tipo": "Follow-up CRM",
-                            "Título / Ação": c.get("Followup_Nota", "Contato Comercial"),
-                            "Vinculado a": f"Empresa: {c['Empresa']} ({c['Contato']})",
-                            "Prioridade / Status": f"Etapa: {c['Etapa']}"
-                        })
+                        eventos_futuros.append({"Data": dt_f, "Tipo": "Follow-up CRM", "Título / Ação": c.get("Followup_Nota", "Contato Comercial"), "Vinculado a": f"Empresa: {c['Empresa']} ({c['Contato']})", "Prioridade / Status": f"Etapa: {c['Etapa']}"})
                 except:
                     pass
 
     if eventos_futuros:
-        df_futuro = pd.DataFrame(eventos_futuros)
-        df_futuro = df_futuro.sort_values(by="Data", ascending=True)
+        df_futuro = pd.DataFrame(eventos_futuros).sort_values(by="Data", ascending=True)
         df_futuro["Data_Formatada"] = pd.to_datetime(df_futuro["Data"]).dt.strftime("%d/%m/%Y")
 
         with st.expander(f"Ver compromissos no período ({len(df_futuro)} encontrados)", expanded=False):
@@ -682,14 +626,8 @@ if aba_selecionada == "Gerenciamento de Tarefas":
             c_m1.metric("Total de Ações no Período", len(df_futuro))
             c_m2.metric("Tarefas Pendentes", len(df_futuro[df_futuro["Tipo"] == "Tarefa"]))
             c_m3.metric("Follow-ups de CRM", len(df_futuro[df_futuro["Tipo"] == "Follow-up CRM"]))
-
             st.divider()
-
-            st.dataframe(
-                df_futuro[["Data_Formatada", "Tipo", "Título / Ação", "Vinculado a", "Prioridade / Status"]],
-                use_container_width=True,
-                hide_index=True
-            )
+            st.dataframe(df_futuro[["Data_Formatada", "Tipo", "Título / Ação", "Vinculado a", "Prioridade / Status"]], use_container_width=True, hide_index=True)
     else:
         st.info("Nenhuma tarefa ou follow-up agendado para este horizonte de tempo.")
 
@@ -706,14 +644,10 @@ elif aba_selecionada == "Funil de Vendas":
         
         if not filtro_reg.empty:
             row_edit = filtro_reg.iloc[0]
-            
-            st.markdown(
-                f"""
+            st.markdown(f"""
                 <div style="background-color: #0F172A; border: 2px solid #38BDF8; padding: 25px; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 4px 12px rgba(56, 189, 248, 0.15);">
                     <h3 style="color: #38BDF8; margin-top: 0; margin-bottom: 20px; font-weight: 700;">Ficha Completa & Linha do Tempo: {row_edit['Empresa']}</h3>
-                """,
-                unsafe_allow_html=True
-            )
+            """, unsafe_allow_html=True)
             
             with st.form(key=f"form_full_edit_horizontal_{cliente_edit_id}"):
                 hc1, hc2, hc3 = st.columns(3)
@@ -728,22 +662,15 @@ elif aba_selecionada == "Funil de Vendas":
                 with hc3:
                     edit_valor = st.number_input("Valor (R$)", value=float(row_edit["Valor"]), step=1000.0)
                     edit_vendedor = st.text_input("Vendedor", value=row_edit["Vendedor"])
-                    
                     try:
                         dt_parse = dt.strptime(str(row_edit["Followup_Data"]).strip()[:10], "%Y-%m-%d").date() if row_edit["Followup_Data"] and str(row_edit["Followup_Data"]).strip() not in ["nan", "NaT", ""] else date.today()
                     except:
                         dt_parse = date.today()
-                        
                     edit_fu_data = st.date_input("Próxima Data de Follow-up", value=dt_parse)
                 
                 edit_fu_nota = st.text_input("Resumo / Nota do Follow-up", value=row_edit["Followup_Nota"])
-                
                 edit_perda = row_edit.get("Perda", "")
-                edit_motivo_perda = st.selectbox(
-                    "Motivo de Perda (Se aplicável)", 
-                    options=[""] + MOTIVOS_PERDA_PADRAO,
-                    index=(MOTIVOS_PERDA_PADRAO.index(edit_perda) + 1) if edit_perda in MOTIVOS_PERDA_PADRAO else 0
-                )
+                edit_motivo_perda = st.selectbox("Motivo de Perda (Se aplicável)", options=[""] + MOTIVOS_PERDA_PADRAO, index=(MOTIVOS_PERDA_PADRAO.index(edit_perda) + 1) if edit_perda in MOTIVOS_PERDA_PADRAO else 0)
                 
                 st.divider()
                 st.markdown("**Adicionar Nota Rápida na Linha do Tempo:**")
@@ -756,7 +683,6 @@ elif aba_selecionada == "Funil de Vendas":
 
                 st.markdown("**Histórico de Interações (Linha do Tempo):**")
                 historico_atual = str(row_edit["Historico"]) if pd.notna(row_edit["Historico"]) else ""
-                
                 if historico_atual.strip():
                     for linha_hist in historico_atual.split("\n"):
                         if linha_hist.strip():
@@ -778,12 +704,7 @@ elif aba_selecionada == "Funil de Vendas":
                 if adicionar_timeline_btn and nova_nota_timeline.strip():
                     timestamp_atual = dt.now().strftime("%d/%m/%Y %H:%M")
                     novo_registro_timeline = f"[{timestamp_atual}] {nova_nota_timeline.strip()}"
-                    
-                    if historico_atual.strip():
-                        historico_atualizado = novo_registro_timeline + "\n" + historico_atual
-                    else:
-                        historico_atualizado = novo_registro_timeline
-                        
+                    historico_atualizado = novo_registro_timeline + ("\n" + historico_atual if historico_atual.strip() else "")
                     st.session_state.df_crm.loc[idx_df, "Historico"] = historico_atualizado
                     salvar_dados_crm(st.session_state.df_crm)
                     st.success("Nota adicionada na linha do tempo com sucesso!")
@@ -801,7 +722,6 @@ elif aba_selecionada == "Funil de Vendas":
                     st.session_state.df_crm.loc[idx_df, "Followup_Data"] = str(edit_fu_data)
                     st.session_state.df_crm.loc[idx_df, "Followup_Nota"] = edit_fu_nota
                     st.session_state.df_crm.loc[idx_df, "Perda"] = edit_motivo_perda
-                    
                     salvar_dados_crm(st.session_state.df_crm)
                     st.session_state.cliente_editando_id = None
                     st.success("Alterações salvas com sucesso!")
@@ -826,38 +746,28 @@ elif aba_selecionada == "Funil de Vendas":
     
     for idx, etapa in enumerate(etapas):
         cor_header = st.session_state.funnel_colors.get(etapa, "#3B82F6")
-        
         with cols[idx]:
-            st.markdown(
-                f"""
+            st.markdown(f"""
                 <div style="background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%); border: 1px solid #334155; border-top: 4px solid {cor_header}; padding: 8px; border-radius: 6px; text-align: center; margin-bottom: 16px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
                     <b style="color: #F8FAFC; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">{etapa}</b>
                 </div>
-                """, 
-                unsafe_allow_html=True
-            )
+            """, unsafe_allow_html=True)
             
             sub_df = df_filtered[df_filtered["Etapa"] == etapa]
-            
             for _, row in sub_df.iterrows():
                 st_code, st_label, st_icon = calcular_status_followup(row.get("Followup_Data", ""))
                 cliente_id = row['id']
                 
-                st.markdown(f"""
-                    <div style="border-left: 4px solid {cor_header}; background-color: #111C31; border-top: 1px solid #1E293B; border-right: 1px solid #1E293B; border-bottom: 1px solid #1E293B; border-radius: 4px; margin-bottom: 6px; padding: 2px;">
-                """, unsafe_allow_html=True)
-                
+                st.markdown(f'<div style="border-left: 4px solid {cor_header}; background-color: #111C31; border: 1px solid #1E293B; border-radius: 4px; margin-bottom: 6px; padding: 2px;">', unsafe_allow_html=True)
                 with st.expander(f"{row['Empresa']}"):
                     dt_f_exib = row.get('Followup_Data', '')
-                    
                     try:
                         raw_val = str(dt_f_exib).strip()[:10]
                         dt_f_str = dt.strptime(raw_val, "%Y-%m-%d").strftime("%d/%m/%Y") if raw_val and raw_val not in ["nan", "NaT", ""] else "Não agendado"
                     except:
                         dt_f_str = "Não agendado"
                     
-                    st.markdown(
-                        f"""
+                    st.markdown(f"""
                         <div style="line-height: 1.4; margin-bottom: 8px;">
                             <span style="font-size: 13px;"><b>{row['Empresa']}</b></span><br>
                             <span style="font-size: 12px; color: #94A3B8;">Contato: {row['Contato']}</span><br>
@@ -865,25 +775,15 @@ elif aba_selecionada == "Funil de Vendas":
                             <hr style="margin: 6px 0; border-color: #334155;">
                             <span style="font-size: 12px; color: #E2E8F0;"><b>Follow-up:</b> {st_icon} {dt_f_str}</span>
                         </div>
-                        """,
-                        unsafe_allow_html=True
-                    )
+                    """, unsafe_allow_html=True)
                     
-                    nova_etapa_card = st.selectbox(
-                        "Mover Etapa:", 
-                        options=etapas, 
-                        index=etapas.index(row["Etapa"]), 
-                        key=f"mov_etapa_{cliente_id}",
-                        label_visibility="collapsed"
-                    )
-                    
+                    nova_etapa_card = st.selectbox("Mover Etapa:", options=etapas, index=etapas.index(row["Etapa"]), key=f"mov_etapa_{cliente_id}", label_visibility="collapsed")
                     if nova_etapa_card != row["Etapa"]:
                         idx_df = st.session_state.df_crm[st.session_state.df_crm["id"] == cliente_id].index
                         st.session_state.df_crm.loc[idx_df, "Etapa"] = nova_etapa_card
                         st.session_state.df_crm.loc[idx_df, "Prob"] = PROB_MAP[nova_etapa_card]
                         if nova_etapa_card == "6. Perdido":
                             st.session_state.df_crm.loc[idx_df, "Perda"] = "Outros"
-                        
                         salvar_dados_crm(st.session_state.df_crm)
                         st.success(f"Movido para {nova_etapa_card}!")
                         st.rerun()
@@ -892,7 +792,6 @@ elif aba_selecionada == "Funil de Vendas":
                     if st.button("EDITAR", key=f"btn_edit_{cliente_id}", use_container_width=True):
                         st.session_state.cliente_editando_id = cliente_id
                         st.rerun()
-                
                 st.markdown("</div>", unsafe_allow_html=True)
 
 # =========================================================
@@ -900,22 +799,14 @@ elif aba_selecionada == "Funil de Vendas":
 # =========================================================
 elif aba_selecionada == "Dashboard":
     st.markdown(f'<div class="notranslate"><h3>1. DISTRIBUIÇÃO DO FUNIL DE VENDAS ({titulo_dinamico})</h3></div>', unsafe_allow_html=True)
-    
-    col_f1, _ = st.columns([2, 2])
-    with col_f1:
-        periodo_sel = st.selectbox(
-            "Visualizar Período:", 
-            ["Todos os Registros", "Esta Semana", "15 Dias", "1 Mês", "2 Meses", "3 Meses"]
-        )
+    periodo_sel = st.selectbox("Visualizar Período:", ["Todos os Registros", "Esta Semana", "15 Dias", "1 Mês", "2 Meses", "3 Meses"])
     
     df_dash = df_filtered.copy()
     if "Data_Cadastro" in df_dash.columns:
         df_dash["Data_Cadastro"] = pd.to_datetime(df_dash["Data_Cadastro"], errors='coerce')
         hoje = pd.Timestamp.now()
-        
         if periodo_sel == "Esta Semana":
-            inicio = hoje - pd.Timedelta(days=hoje.weekday())
-            df_dash = df_dash[df_dash["Data_Cadastro"] >= inicio]
+            df_dash = df_dash[df_dash["Data_Cadastro"] >= hoje - pd.Timedelta(days=hoje.weekday())]
         elif periodo_sel == "15 Dias":
             df_dash = df_dash[df_dash["Data_Cadastro"] >= hoje - pd.Timedelta(days=15)]
         elif periodo_sel == "1 Mês":
@@ -926,97 +817,46 @@ elif aba_selecionada == "Dashboard":
             df_dash = df_dash[df_dash["Data_Cadastro"] >= hoje - pd.Timedelta(days=90)]
 
     st.divider()
-
     etapas_crm = list(PROB_MAP.keys())
-    contagem_calculada = {}
-    
-    for etapa in etapas_crm:
-        count_real = len(df_dash[df_dash["Etapa"] == etapa])
-        contagem_calculada[etapa] = count_real
-        
+    contagem_calculada = {etapa: len(df_dash[df_dash["Etapa"] == etapa]) for etapa in etapas_crm}
     total_leads = sum(contagem_calculada.values())
     cols_m = st.columns(len(etapas_crm) + 1)
     
     for i, etapa in enumerate(etapas_crm):
         cor_header = st.session_state.funnel_colors.get(etapa, "#3B82F6")
-        qtd = contagem_calculada[etapa]
-        
         with cols_m[i]:
-            st.markdown(
-                f"""
-                <div style="background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%); border: 1px solid #334155; border-top: 4px solid {cor_header}; padding: 10px; border-radius: 8px; text-align: center; margin-bottom: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-                    <b style="color: #F8FAFC; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">{etapa}</b>
-                </div>
-                """, 
-                unsafe_allow_html=True
-            )
-            st.metric(label="", value=qtd)
+            st.markdown(f'<div style="background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%); border: 1px solid #334155; border-top: 4px solid {cor_header}; padding: 10px; border-radius: 8px; text-align: center; margin-bottom: 8px;"><b style="color: #F8FAFC; font-size: 11px; text-transform: uppercase;">{etapa}</b></div>', unsafe_allow_html=True)
+            st.metric(label="", value=contagem_calculada[etapa])
 
     with cols_m[-1]:
-        st.markdown(
-            """
-            <div style="background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%); border: 1px solid #334155; border-top: 4px solid #FFFFFF; padding: 10px; border-radius: 8px; text-align: center; margin-bottom: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-                <b style="color: #F8FAFC; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">TOTAL</b>
-            </div>
-            """, 
-            unsafe_allow_html=True
-        )
+        st.markdown('<div style="background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%); border: 1px solid #334155; border-top: 4px solid #FFFFFF; padding: 10px; border-radius: 8px; text-align: center; margin-bottom: 8px;"><b style="color: #F8FAFC; font-size: 11px; text-transform: uppercase;">TOTAL</b></div>', unsafe_allow_html=True)
         st.metric(label="", value=total_leads)
 
     st.divider()
-
     st.markdown(f'<div class="notranslate"><h3>Funil de Vendas — {titulo_dinamico}</h3></div>', unsafe_allow_html=True)
     df_pizza = pd.DataFrame(list(contagem_calculada.items()), columns=["Etapa", "Quantidade"])
     df_pizza_valida = df_pizza[df_pizza["Quantidade"] > 0]
 
     if not df_pizza_valida.empty:
-        fig_pizza = px.pie(
-            df_pizza_valida, 
-            values="Quantidade", 
-            names="Etapa",
-            color="Etapa",
-            color_discrete_map=st.session_state.funnel_colors,
-            hole=0.0
-        )
-        fig_pizza.update_layout(
-            template="plotly_dark",
-            paper_bgcolor="#1E293B",
-            plot_bgcolor="#1E293B",
-            font=dict(color="#FFFFFF", size=13),
-            height=440
-        )
+        fig_pizza = px.pie(df_pizza_valida, values="Quantidade", names="Etapa", color="Etapa", color_discrete_map=st.session_state.funnel_colors, hole=0.0)
+        fig_pizza.update_layout(template="plotly_dark", paper_bgcolor="#1E293B", plot_bgcolor="#1E293B", font=dict(color="#FFFFFF", size=13), height=440)
         fig_pizza.update_traces(textinfo="percent+value")
         st.plotly_chart(fig_pizza, use_container_width=True)
     else:
         st.info("Nenhum dado encontrado para o período selecionado.")
 
     st.divider()
-
     st.markdown(f'<div class="notranslate"><h3>Motivos de Perda de Vendas — {titulo_dinamico}</h3></div>', unsafe_allow_html=True)
     df_perdidos = df_dash[df_dash["Etapa"] == "6. Perdido"]
-    
     if not df_perdidos.empty and "Perda" in df_perdidos.columns:
         df_motivos = df_perdidos[df_perdidos["Perda"].str.strip() != ""].groupby("Perda").size().reset_index(name="Quantidade")
         if not df_motivos.empty:
-            fig_perda = px.pie(
-                df_motivos,
-                values="Quantidade",
-                names="Perda",
-                color="Perda",
-                color_discrete_map=CORES_PERDAS,
-                hole=0.4
-            )
-            fig_perda.update_layout(
-                template="plotly_dark",
-                paper_bgcolor="#1E293B",
-                plot_bgcolor="#1E293B",
-                font=dict(color="#FFFFFF", size=13),
-                height=380
-            )
+            fig_perda = px.pie(df_motivos, values="Quantidade", names="Perda", color="Perda", color_discrete_map=CORES_PERDAS, hole=0.4)
+            fig_perda.update_layout(template="plotly_dark", paper_bgcolor="#1E293B", plot_bgcolor="#1E293B", font=dict(color="#FFFFFF", size=13), height=380)
             fig_perda.update_traces(textinfo="percent+value")
             st.plotly_chart(fig_perda, use_container_width=True)
         else:
-            st.info("Nenhum motivo de perda especificado para os leads perdidos.")
+            st.info("Nenhum motivo de perda especificado.")
     else:
         st.info("Nenhum lead registrado na etapa '6. Perdido' no momento.")
 
@@ -1026,12 +866,10 @@ elif aba_selecionada == "Dashboard":
 elif aba_selecionada == "Relatório Executivo":
     st.title("Relatório Executivo")
     st.caption("Acompanhamento histórico de atividades operacionais e evolução financeira.")
-
     st.subheader("Historico de Atividades")
 
     df_historico_salvo = carregar_dados_historico()
     df_crm_base = df_filtered.copy()
-
     mes_atual_str = dt.now().strftime("%b/%y").capitalize()
     meses_map = {"Jan": "Jan", "Feb": "Fev", "Mar": "Mar", "Apr": "Abr", "May": "Mai", "Jun": "Jun", "Jul": "Jul", "Aug": "Ago", "Sep": "Set", "Oct": "Out", "Nov": "Nov", "Dec": "Dez"}
     for eng, pt in meses_map.items():
@@ -1044,113 +882,43 @@ elif aba_selecionada == "Relatório Executivo":
             df_crm_base["Mês/Ano"] = df_crm_base["Mês/Ano"].str.replace(eng, pt, regex=False)
 
         sub_m = df_crm_base[df_crm_base["Mês/Ano"] == mes_atual_str]
-        
         leads_q = len(sub_m[sub_m["Etapa"].isin(["1. Contatado", "2. Conversando", "3. Reunião Agendada", "4. Proposta Enviada", "5. Fechado"])])
         reunioes = len(sub_m[sub_m["Etapa"] == "3. Reunião Agendada"])
         propostas = len(sub_m[sub_m["Etapa"] == "4. Proposta Enviada"])
         fechados = len(sub_m[sub_m["Etapa"] == "5. Fechado"])
 
         if df_historico_salvo.empty:
-            df_historico_salvo = pd.DataFrame([{
-                "Mês/Ano": mes_atual_str,
-                "Leads Qualificados": leads_q,
-                "Reuniões Agendadas": reunioes,
-                "Propostas Enviadas": propostas,
-                "Projetos Fechados": fechados
-            }])
+            df_historico_salvo = pd.DataFrame([{"Mês/Ano": mes_atual_str, "Leads Qualificados": leads_q, "Reuniões Agendadas": reunioes, "Propostas Enviadas": propostas, "Projetos Fechados": fechados}])
         else:
             if mes_atual_str in df_historico_salvo["Mês/Ano"].values:
                 idx = df_historico_salvo[df_historico_salvo["Mês/Ano"] == mes_atual_str].index[0]
-                df_historico_salvo.loc[idx, "Leads Qualificados"] = leads_q
-                df_historico_salvo.loc[idx, "Reuniões Agendadas"] = reunioes
-                df_historico_salvo.loc[idx, "Propostas Enviadas"] = propostas
-                df_historico_salvo.loc[idx, "Projetos Fechados"] = fechados
+                df_historico_salvo.loc[idx, ["Leads Qualificados", "Reuniões Agendadas", "Propostas Enviadas", "Projetos Fechados"]] = [leads_q, reunioes, propostas, fechados]
             else:
-                nova_linha_hist = pd.DataFrame([{
-                    "Mês/Ano": mes_atual_str,
-                    "Leads Qualificados": leads_q,
-                    "Reuniões Agendadas": reunioes,
-                    "Propostas Enviadas": propostas,
-                    "Projetos Fechados": fechados
-                }])
-                df_historico_salvo = pd.concat([df_historico_salvo, nova_linha_hist], ignore_index=True)
-        
+                df_historico_salvo = pd.concat([df_historico_salvo, pd.DataFrame([{"Mês/Ano": mes_atual_str, "Leads Qualificados": leads_q, "Reuniões Agendadas": reunioes, "Propostas Enviadas": propostas, "Projetos Fechados": fechados}])], ignore_index=True)
         salvar_dados_historico(df_historico_salvo)
 
     with st.expander("Exibir / Ocultar Tabela de Histórico de Atividades", expanded=True):
         if not df_historico_salvo.empty:
-            def colorir_tabela_historico(val, col_name):
-                if col_name == "Mês/Ano":
-                    return "background-color: #FDE047; color: #1E293B; font-weight: bold;"
-                elif col_name == "Leads Qualificados":
-                    return "background-color: #F472B6; color: #1E293B; font-weight: bold;"
-                elif col_name == "Reuniões Agendadas":
-                    return "background-color: #FDBA74; color: #1E293B; font-weight: bold;"
-                elif col_name == "Propostas Enviadas":
-                    return "background-color: #93C5FD; color: #1E293B; font-weight: bold;"
-                elif col_name == "Projetos Fechados":
-                    return "background-color: #86EFAC; color: #1E293B; font-weight: bold;"
-                return ""
-
-            df_estilizado = df_historico_salvo.style.apply(lambda col: [colorir_tabela_historico(v, col.name) for v in col], axis=0)
-            st.dataframe(df_estilizado, use_container_width=True, hide_index=True)
+            st.dataframe(df_historico_salvo, use_container_width=True, hide_index=True)
         else:
-            st.info("Nenhum dado cadastrado para gerar o histórico de atividades.")
+            st.info("Nenhum dado cadastrado.")
 
     if not df_historico_salvo.empty:
-        df_melted_atv = df_historico_salvo.melt(
-            id_vars=["Mês/Ano"], 
-            value_vars=["Leads Qualificados", "Reuniões Agendadas", "Propostas Enviadas", "Projetos Fechados"],
-            var_name="Métrica", 
-            value_name="Quantidade"
-        )
-        
-        cores_atv = {
-            "Leads Qualificados": "#F472B6",   
-            "Reuniões Agendadas": "#FDBA74",   
-            "Propostas Enviadas": "#93C5FD",   
-            "Projetos Fechados": "#86EFAC"    
-        }
-
-        fig_linha_atv = px.line(
-            df_melted_atv,
-            x="Mês/Ano",
-            y="Quantidade",
-            color="Métrica",
-            text="Quantidade",
-            markers=True,
-            title=f"Evolução Mensal de Atividades & Prospecção — {COVEM_NAME}",
-            color_discrete_map=cores_atv
-        )
-        fig_linha_atv.update_layout(
-            template="plotly_dark",
-            paper_bgcolor="#1E293B",
-            plot_bgcolor="#1E293B",
-            font=dict(color="#FFFFFF", size=13),
-            xaxis_title="MÊS / ANO",
-            yaxis_title="QUANTIDADE",
-            height=440,
-            legend=dict(orientation="h", yanchor="bottom", y=-0.25, xanchor="center", x=0.5)
-        )
-        fig_linha_atv.update_traces(textposition="top center")
+        df_melted_atv = df_historico_salvo.melt(id_vars=["Mês/Ano"], value_vars=["Leads Qualificados", "Reuniões Agendadas", "Propostas Enviadas", "Projetos Fechados"], var_name="Métrica", value_name="Quantidade")
+        fig_linha_atv = px.line(df_melted_atv, x="Mês/Ano", y="Quantidade", color="Métrica", text="Quantidade", markers=True, title=f"Evolução Mensal de Atividades & Prospecção — {COVEM_NAME}", color_discrete_map={"Leads Qualificados": "#F472B6", "Reuniões Agendadas": "#FDBA74", "Propostas Enviadas": "#93C5FD", "Projetos Fechados": "#86EFAC"})
+        fig_linha_atv.update_layout(template="plotly_dark", paper_bgcolor="#1E293B", plot_bgcolor="#1E293B", font=dict(color="#FFFFFF", size=13), height=440)
         st.plotly_chart(fig_linha_atv, use_container_width=True)
 
     st.divider()
-
     st.subheader("Historico Financeiro")
-
     df_financeiro_salvo = carregar_dados_financeiro()
 
     if not df_crm_base.empty and "Data_Cadastro" in df_crm_base.columns:
         sub_m_prop = df_crm_base[(df_crm_base["Mês/Ano"] == mes_atual_str) & (df_crm_base["Etapa"] == "4. Proposta Enviada")]
         sub_m_fech = df_crm_base[(df_crm_base["Mês/Ano"] == mes_atual_str) & (df_crm_base["Etapa"] == "5. Fechado")]
 
-        val_prop = float(sub_m_prop["Valor"].sum()) if not sub_m_prop.empty else 0.0
-        qtd_prop = int(len(sub_m_prop))
-
-        val_fech = float(sub_m_fech["Valor"].sum()) if not sub_m_fech.empty else 0.0
-        qtd_fech = int(len(sub_m_fech))
-
+        val_prop, qtd_prop = float(sub_m_prop["Valor"].sum()) if not sub_m_prop.empty else 0.0, int(len(sub_m_prop))
+        val_fech, qtd_fech = float(sub_m_fech["Valor"].sum()) if not sub_m_fech.empty else 0.0, int(len(sub_m_fech))
         total_mes = val_prop + val_fech
 
         str_prop_fmt = f"R$ {val_prop:,.2f} ({qtd_prop} un)".replace(",", "X").replace(".", ",").replace("X", ".")
@@ -1158,141 +926,50 @@ elif aba_selecionada == "Relatório Executivo":
         str_total_fmt = f"R$ {total_mes:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
         if df_financeiro_salvo.empty:
-            df_financeiro_salvo = pd.DataFrame([{
-                "Mês/Ano": mes_atual_str,
-                "Propostas Enviadas": str_prop_fmt,
-                "Projetos Fechados": str_fech_fmt,
-                "Total": str_total_fmt
-            }])
+            df_financeiro_salvo = pd.DataFrame([{"Mês/Ano": mes_atual_str, "Propostas Enviadas": str_prop_fmt, "Projetos Fechados": str_fech_fmt, "Total": str_total_fmt}])
         else:
             if mes_atual_str in df_financeiro_salvo["Mês/Ano"].values:
                 idx = df_financeiro_salvo[df_financeiro_salvo["Mês/Ano"] == mes_atual_str].index[0]
-                df_financeiro_salvo.loc[idx, "Propostas Enviadas"] = str_prop_fmt
-                df_financeiro_salvo.loc[idx, "Projetos Fechados"] = str_fech_fmt
-                df_financeiro_salvo.loc[idx, "Total"] = str_total_fmt
+                df_financeiro_salvo.loc[idx, ["Propostas Enviadas", "Projetos Fechados", "Total"]] = [str_prop_fmt, str_fech_fmt, str_total_fmt]
             else:
-                nova_linha_fin = pd.DataFrame([{
-                    "Mês/Ano": mes_atual_str,
-                    "Propostas Enviadas": str_prop_fmt,
-                    "Projetos Fechados": str_fech_fmt,
-                    "Total": str_total_fmt
-                }])
-                df_financeiro_salvo = pd.concat([df_financeiro_salvo, nova_linha_fin], ignore_index=True)
-
+                df_financeiro_salvo = pd.concat([df_financeiro_salvo, pd.DataFrame([{"Mês/Ano": mes_atual_str, "Propostas Enviadas": str_prop_fmt, "Projetos Fechados": str_fech_fmt, "Total": str_total_fmt}])], ignore_index=True)
         salvar_dados_financeiro(df_financeiro_salvo)
 
     with st.expander("Exibir / Ocultar Tabela de Histórico Financeiro", expanded=True):
         if not df_financeiro_salvo.empty:
-            def colorir_tabela_financeiro(val, col_name):
-                if col_name == "Mês/Ano":
-                    return "background-color: #FDE047; color: #1E293B; font-weight: bold;"
-                elif col_name == "Propostas Enviadas":
-                    return "background-color: #93C5FD; color: #1E293B; font-weight: bold;"
-                elif col_name == "Projetos Fechados":
-                    return "background-color: #86EFAC; color: #1E293B; font-weight: bold;"
-                elif col_name == "Total":
-                    return "background-color: #F1F5F9; color: #1E293B; font-weight: bold;"
-                return ""
-
-            df_fin_estilizado = df_financeiro_salvo.style.apply(lambda col: [colorir_tabela_financeiro(v, col.name) for v in col], axis=0)
-            st.dataframe(df_fin_estilizado, use_container_width=True, hide_index=True)
+            st.dataframe(df_financeiro_salvo, use_container_width=True, hide_index=True)
         else:
-            st.info("Nenhum dado cadastrado para gerar o histórico financeiro.")
-
-    if not df_crm_base.empty and "Data_Cadastro" in df_crm_base.columns:
-        df_graf_fin = df_crm_base[df_crm_base["Etapa"].isin(["4. Proposta Enviada", "5. Fechado"])].copy()
-        if not df_graf_fin.empty:
-            df_graf_fin["Tipo"] = df_graf_fin["Etapa"].apply(lambda x: "Propostas Enviadas" if "Proposta" in x else "Projetos Fechados")
-            df_agrupado_fin = df_graf_fin.groupby(["Mês/Ano", "Tipo"])["Valor"].sum().reset_index()
-
-            cores_fin_graf = {
-                "Propostas Enviadas": "#93C5FD",
-                "Projetos Fechados": "#86EFAC"
-            }
-
-            fig_linha_fin = px.line(
-                df_agrupado_fin,
-                x="Mês/Ano",
-                y="Valor",
-                color="Tipo",
-                text="Valor",
-                markers=True,
-                title=f"Evolução Financeira Mensal (R$) — {COVEM_NAME}",
-                color_discrete_map=cores_fin_graf
-            )
-            fig_linha_fin.update_layout(
-                template="plotly_dark",
-                paper_bgcolor="#1E293B",
-                plot_bgcolor="#1E293B",
-                font=dict(color="#FFFFFF", size=13),
-                xaxis_title="MÊS / ANO",
-                yaxis_title="VALOR (R$)",
-                height=440,
-                legend=dict(orientation="h", yanchor="bottom", y=-0.25, xanchor="center", x=0.5)
-            )
-            fig_linha_fin.update_traces(texttemplate='R$ %{text:,.2f}', textposition="top center")
-            st.plotly_chart(fig_linha_fin, use_container_width=True)
-        else:
-            st.info("Nenhum valor em propostas ou projetos fechados para exibir no gráfico financeiro.")
+            st.info("Nenhum dado financeiro.")
 
 # =========================================================
 # ABA 5: + NOVO CADASTRO
 # =========================================================
 elif aba_selecionada == "+ Novo Cadastro":
     st.subheader("+ Novo Cadastro Rápido")
-    st.caption("Cadastre rapidamente uma nova empresa informando apenas os dados fundamentais.")
-
     with st.form("form_cadastro_rapido", clear_on_submit=True):
         col_r1, col_r2 = st.columns(2)
-
         with col_r1:
             rapido_empresa = st.text_input("Nome da Empresa *")
             rapido_telefone = st.text_input("Telefone *")
-
         with col_r2:
-            rapido_carteira = st.selectbox("Carteira *", CARTEIRAS_COVEM, key="rapido_carteira")
-            rapido_etapa = st.selectbox("Etapa da Venda *", list(PROB_MAP.keys()), key="rapido_etapa")
+            rapido_carteira = st.selectbox("Carteira *", CARTEIRAS_COVEM)
+            rapido_etapa = st.selectbox("Etapa da Venda *", list(PROB_MAP.keys()))
 
-        btn_salvar_rapido = st.form_submit_button("Cadastrar Rapidamente", use_container_width=True)
-
-        if btn_salvar_rapido:
+        if st.form_submit_button("Cadastrar Rapidamente", use_container_width=True):
             if not rapido_empresa or not rapido_telefone:
-                st.error("Por favor, preencha o Nome da Empresa e o Telefone.")
+                st.error("Preencha Nome e Telefone.")
             else:
                 novo_id = int(df["id"].max() + 1) if not df.empty and pd.notna(df["id"].max()) else 1
-                nova_linha_rapida = {
-                    "id": novo_id,
-                    "Empresa": rapido_empresa,
-                    "Cliente": rapido_carteira,
-                    "Etapa": rapido_etapa,
-                    "Contato": "Não informado",
-                    "Cargo": "Não informado",
-                    "Telefone": rapido_telefone,
-                    "Email": "Não informado",
-                    "Cidade": "Não informado",
-                    "Valor": 0.0,
-                    "Prob": PROB_MAP[rapido_etapa],
-                    "Vendedor": "Não informado",
-                    "Perda": "",
-                    "Data_Cadastro": str(date.today()),
-                    "Followup_Data": str(date.today()),
-                    "Followup_Nota": "Novo cadastro rápido efetuado.",
-                    "Historico": f"[{dt.now().strftime('%d/%m/%Y %H:%M')}] Cadastro rápido realizado."
-                }
-                st.session_state.df_crm = pd.concat(
-                    [st.session_state.df_crm, pd.DataFrame([nova_linha_rapida])], 
-                    ignore_index=True
-                )
+                nova_linha = {"id": novo_id, "Empresa": rapido_empresa, "Cliente": rapido_carteira, "Etapa": rapido_etapa, "Contato": "Não informado", "Cargo": "Não informado", "Telefone": rapido_telefone, "Email": "Não informado", "Cidade": "Não informado", "Valor": 0.0, "Prob": PROB_MAP[rapido_etapa], "Vendedor": "Não informado", "Perda": "", "Data_Cadastro": str(date.today()), "Followup_Data": str(date.today()), "Followup_Nota": "Cadastro rápido.", "Historico": f"[{dt.now().strftime('%d/%m/%Y %H:%M')}] Cadastro rápido."}
+                st.session_state.df_crm = pd.concat([st.session_state.df_crm, pd.DataFrame([nova_linha])], ignore_index=True)
                 salvar_dados_crm(st.session_state.df_crm)
-                st.success(f"Empresa '{rapido_empresa}' cadastrada e salva com sucesso!")
+                st.success("Cadastrado com sucesso!")
                 st.rerun()
 
-    st.write("---")
+    st.divider()
     st.subheader("Cadastrar Oportunidade Completa")
-    
     with st.form("form_oportunidade", clear_on_submit=True):
         col_f1, col_f2 = st.columns(2)
-        
         with col_f1:
             nova_empresa = st.text_input("Nome da Empresa / Cliente *")
             novo_cliente = st.selectbox("Marca / Carteira *", CARTEIRAS_COVEM)
@@ -1300,7 +977,6 @@ elif aba_selecionada == "+ Novo Cadastro":
             novo_cargo = st.text_input("Cargo")
             novo_telefone = st.text_input("Telefone de Contato *")
             nova_email = st.text_input("E-mail Comercial")
-            
         with col_f2:
             nova_cidade = st.text_input("Cidade / Estado")
             novo_vendedor = st.text_input("Vendedor / Responsável")
@@ -1309,37 +985,16 @@ elif aba_selecionada == "+ Novo Cadastro":
             motivo_perda = st.selectbox("Motivo de Perda (Se for '6. Perdido')", [""] + MOTIVOS_PERDA_PADRAO)
             
         st.divider()
-        st.markdown("**Dados Iniciais de Follow-up:**")
         f_data_ini = st.date_input("Data do Primeiro Follow-up", value=date.today())
         f_nota_ini = st.text_input("Lembrete / Ação de Follow-up")
 
-        btn_salvar = st.form_submit_button("Salvar Oportunidade Completa")
-        
-        if btn_salvar:
+        if st.form_submit_button("Salvar Oportunidade Completa"):
             if not nova_empresa:
                 st.error("Preencha o Nome da Empresa.")
             else:
                 novo_id = int(df["id"].max() + 1) if not df.empty and pd.notna(df["id"].max()) else 1
-                nova_linha = {
-                    "id": novo_id,
-                    "Empresa": nova_empresa,
-                    "Cliente": novo_cliente,
-                    "Etapa": nova_etapa,
-                    "Contato": novo_contato if novo_contato else "Não informado",
-                    "Cargo": novo_cargo if novo_cargo else "Não informado",
-                    "Telefone": nova_telefone if nova_telefone else "Não informado",
-                    "Email": nova_email if nova_email else "Não informado",
-                    "Cidade": nova_cidade if nova_cidade else "Not informado",
-                    "Valor": nova_valor,
-                    "Prob": PROB_MAP[nova_etapa],
-                    "Vendedor": novo_vendedor if novo_vendedor else "Não informado",
-                    "Perda": motivo_perda if "Perdido" in nova_etapa else "",
-                    "Data_Cadastro": str(date.today()),
-                    "Followup_Data": str(f_data_ini) if f_nota_ini else "",
-                    "Followup_Nota": f_nota_ini,
-                    "Historico": f"[{dt.now().strftime('%d/%m/%Y %H:%M')}] Oportunidade cadastrada."
-                }
+                nova_linha = {"id": novo_id, "Empresa": nova_empresa, "Cliente": novo_cliente, "Etapa": nova_etapa, "Contato": novo_contato or "Não informado", "Cargo": novo_cargo or "Não informado", "Telefone": novo_telefone or "Não informado", "Email": nova_email or "Não informado", "Cidade": nova_cidade or "Não informado", "Valor": nova_valor, "Prob": PROB_MAP[nova_etapa], "Vendedor": novo_vendedor or "Não informado", "Perda": motivo_perda if "Perdido" in nova_etapa else "", "Data_Cadastro": str(date.today()), "Followup_Data": str(f_data_ini) if f_nota_ini else "", "Followup_Nota": f_nota_ini, "Historico": f"[{dt.now().strftime('%d/%m/%Y %H:%M')}] Oportunidade cadastrada."}
                 st.session_state.df_crm = pd.concat([st.session_state.df_crm, pd.DataFrame([nova_linha])], ignore_index=True)
                 salvar_dados_crm(st.session_state.df_crm)
-                st.success("Oportunidade cadastrada e salva com sucesso!")
+                st.success("Oportunidade cadastrada com sucesso!")
                 st.rerun()
