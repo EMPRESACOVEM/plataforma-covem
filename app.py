@@ -54,6 +54,10 @@ if 'funnel_colors' not in st.session_state:
 if 'menu_ativo' not in st.session_state:
     st.session_state.menu_ativo = "Gerenciamento de Tarefas"
 
+# Inicializa o estado da sub-aba em Tarefas se não existir
+if 'sub_menu_tarefas' not in st.session_state:
+    st.session_state.sub_menu_tarefas = "Tarefas"
+
 st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
@@ -352,7 +356,7 @@ st.markdown('<div class="subtitle-covem">Plataforma Executiva de Gestão Comerci
 st.divider()
 
 # ---------------------------------------------------------
-# MENU HORIZONTAL EM CARDS (CAIXINHAS LIMPAS)
+# MENU HORIZONTAL EM CARDS (COM DESTAQUE EM AZUL CIANO PARA A ABA ATIVA)
 # ---------------------------------------------------------
 abas_disponiveis = [
     "Gerenciamento de Tarefas",
@@ -366,13 +370,25 @@ cols_menu = st.columns(len(abas_disponiveis))
 
 for i, nome_aba in enumerate(abas_disponiveis):
     with cols_menu[i]:
-        # Destaca visualmente o card se ele estiver ativo
         is_active = (st.session_state.menu_ativo == nome_aba)
-        border_color = "#38BDF8" if is_active else "#334155"
-        bg_color = "#1E293B" if is_active else "#0F172A"
-        text_color = "#FFFFFF" if is_active else "#CBD5E1"
         
-        # Botão estilizado como card horizontal
+        # Injeta estilo dinâmico direto via botão/HTML ou usa variação de cor
+        if is_active:
+            # Fundo azul ciano claro / destacado para indicar a tela aberta
+            st.markdown(
+                f"""
+                <style>
+                div[data-testid="column"]:nth-of-type({i+1}) div.stButton > button {{
+                    background-color: #0284C7 !important;
+                    color: #FFFFFF !important;
+                    border: 2px solid #38BDF8 !important;
+                    font-weight: 700 !important;
+                }}
+                </style>
+                """,
+                unsafe_allow_html=True
+            )
+        
         if st.button(nome_aba, key=f"menu_card_{i}", use_container_width=True):
             st.session_state.menu_ativo = nome_aba
             st.rerun()
@@ -383,15 +399,59 @@ st.markdown("<div style='margin-bottom: 20px;'></div>", unsafe_allow_html=True)
 aba_selecionada = st.session_state.menu_ativo
 
 # ---------------------------------------------------------
-# FUNÇÃO DE RENDERIZAÇÃO DA AGENDA DA SEMANA
+# FUNÇÃO DE RENDERIZAÇÃO DA AGENDA DA SEMANA (COM MINI-CARDS)
 # ---------------------------------------------------------
 def exibir_agenda_semana(df_tarefas, df_crm):
     st.markdown('<div class="section-header-covem">Agenda da Semana</div>', unsafe_allow_html=True)
     st.markdown('<div style="margin-top: 14px;"></div>', unsafe_allow_html=True)
     
-    tab_alertas_tarefas, tab_alertas_crm = st.tabs(["Tarefas", "Follow-ups (CRM)"])
+    # Mini-cards horizontais para alternar entre Tarefas e Follow-ups
+    sub_abas = ["Tarefas", "Follow-ups (CRM)"]
+    c_sub1, c_sub2 = st.columns(2)
+    
+    with c_sub1:
+        is_sub_active_1 = (st.session_state.sub_menu_tarefas == "Tarefas")
+        if is_sub_active_1:
+            st.markdown(
+                """
+                <style>
+                div[data-testid="column"]:nth-of-type(1) div.stButton > button {
+                    background-color: #0284C7 !important;
+                    color: #FFFFFF !important;
+                    border: 2px solid #38BDF8 !important;
+                    font-weight: 700 !important;
+                }
+                </style>
+                """,
+                unsafe_allow_html=True
+            )
+        if st.button("Tarefas", key="sub_btn_tarefas", use_container_width=True):
+            st.session_state.sub_menu_tarefas = "Tarefas"
+            st.rerun()
+            
+    with c_sub2:
+        is_sub_active_2 = (st.session_state.sub_menu_tarefas == "Follow-ups (CRM)")
+        if is_sub_active_2:
+            st.markdown(
+                """
+                <style>
+                div[data-testid="column"]:nth-of-type(2) div.stButton > button {
+                    background-color: #0284C7 !important;
+                    color: #FFFFFF !important;
+                    border: 2px solid #38BDF8 !important;
+                    font-weight: 700 !important;
+                }
+                </style>
+                """,
+                unsafe_allow_html=True
+            )
+        if st.button("Follow-ups (CRM)", key="sub_btn_followups", use_container_width=True):
+            st.session_state.sub_menu_tarefas = "Follow-ups (CRM)"
+            st.rerun()
 
-    with tab_alertas_tarefas:
+    st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
+
+    if st.session_state.sub_menu_tarefas == "Tarefas":
         if df_tarefas.empty or "Data_Vencimento" not in df_tarefas.columns:
             st.info("Nenhuma tarefa cadastrada.")
         else:
@@ -423,7 +483,7 @@ def exibir_agenda_semana(df_tarefas, df_crm):
                     else:
                         st.write("Nenhuma tarefa para hoje.")
 
-    with tab_alertas_crm:
+    else:
         if df_crm.empty:
             st.info("Nenhum cliente no CRM.")
         else:
