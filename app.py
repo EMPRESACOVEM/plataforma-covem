@@ -729,7 +729,7 @@ with aba_crm:
         cor_header = st.session_state.funnel_colors.get(etapa, "#3B82F6")
         
         with cols[idx]:
-            # Cabeçalho da etapa com cor dinâmica e margem inferior aumentada para dar respiro ao primeiro card
+            # Cabeçalho da etapa
             st.markdown(
                 f"""
                 <div style="background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%); border: 1px solid #334155; border-top: 4px solid {cor_header}; padding: 8px; border-radius: 6px; text-align: center; margin-bottom: 16px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
@@ -745,8 +745,9 @@ with aba_crm:
                 st_code, st_label, st_icon = calcular_status_followup(row.get("Followup_Data", ""))
                 cliente_id = row['id']
                 
+                # Card do cliente com bordinha lateral da cor da etapa e fundo levemente tingido com a cor da etapa
                 st.markdown(f"""
-                    <div style="border-left: 3px solid {cor_header}; border-radius: 4px; margin-bottom: 4px;">
+                    <div style="border-left: 4px solid {cor_header}; background-color: #111C31; border-top: 1px solid #1E293B; border-right: 1px solid #1E293B; border-bottom: 1px solid #1E293B; border-radius: 4px; margin-bottom: 6px; padding: 2px;">
                 """, unsafe_allow_html=True)
                 
                 with st.expander(f"{row['Empresa']}"):
@@ -1227,7 +1228,7 @@ with aba_novo:
                     "Empresa": nova_empresa,
                     "Cliente": novo_cliente,
                     "Etapa": nova_etapa,
-                    "Contato": novo_contato if novo_contato else "Não informado",
+                    "Contato": nova_contato if nova_contato else "Não informado",
                     "Cargo": novo_cargo if novo_cargo else "Não informado",
                     "Telefone": nova_telefone if nova_telefone else "Não informado",
                     "Email": nova_email if nova_email else "Não informado",
