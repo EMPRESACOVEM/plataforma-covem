@@ -283,7 +283,7 @@ def calcular_status_followup(data_str):
         return "sem_data", "Sem Follow-up", '<span style="height: 10px; width: 10px; background-color: #94A3B8; border-radius: 50%; display: inline-block;" title="Sem Data"></span>'
 
 # ---------------------------------------------------------
-# BARRA LATERAL (FILTROS, NOTIFICAÇÕES E CONFIGURAÇÕES)
+# BARRA LATERAL (FILTROS E CONFIGURAÇÕES)
 # ---------------------------------------------------------
 opcoes_filtro = ["TODOS"] + CARTEIRAS_COVEM
 cliente_sel = st.sidebar.selectbox("Clientes COVEM:", opcoes_filtro)
@@ -294,36 +294,6 @@ if cliente_sel != "TODOS":
 else:
     df_filtered = df
     titulo_dinamico = COVEM_NAME
-
-# Cálculo em tempo real das notificações para a barra lateral
-if not df_filtered.empty:
-    atrasados_sidebar_count = 0
-    hoje_sidebar_count = 0
-    for _, r in df_filtered.iterrows():
-        st_code, _, _ = calcular_status_followup(r.get("Followup_Data", ""))
-        if st_code == "atrasado":
-            atrasados_sidebar_count += 1
-        elif st_code == "hoje":
-            hoje_sidebar_count += 1
-else:
-    atrasados_sidebar_count = 0
-    hoje_sidebar_count = 0
-
-st.sidebar.divider()
-st.sidebar.markdown("**Painel de Alertas**")
-st.sidebar.markdown(
-    f"""
-    <div style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px;">
-        <div style="background-color: #4A2024; color: #FCA5A5; border: 1px solid #EF4444; padding: 6px 10px; border-radius: 6px; font-size: 12px; font-weight: 600;">
-            <span style="height: 10px; width: 10px; background-color: #EF4444; border-radius: 50%; display: inline-block; margin-right: 6px;"></span> {atrasados_sidebar_count} Follow-ups Atrasados
-        </div>
-        <div style="background-color: #3F2E04; color: #FDE047; border: 1px solid #EAB308; padding: 6px 10px; border-radius: 6px; font-size: 12px; font-weight: 600;">
-            <span style="height: 10px; width: 10px; background-color: #EAB308; border-radius: 50%; display: inline-block; margin-right: 6px;"></span> {hoje_sidebar_count} Follow-ups para Hoje
-        </div>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
 
 st.sidebar.divider()
 
@@ -764,6 +734,11 @@ with aba_crm:
                 st_code, st_label, st_icon = calcular_status_followup(row.get("Followup_Data", ""))
                 cliente_id = row['id']
                 
+                # Envolvendo o expander com uma borda lateral delicada correspondente à cor da etapa atual
+                st.markdown(f"""
+                    <div style="border-left: 3px solid {cor_header}; border-radius: 4px; margin-bottom: 8px;">
+                """, unsafe_allow_html=True)
+                
                 with st.expander(f"{row['Empresa']}"):
                     dt_f_exib = row.get('Followup_Data', '')
                     
@@ -807,6 +782,8 @@ with aba_crm:
                     if st.button("EDITAR", key=f"btn_edit_{cliente_id}", use_container_width=True):
                         st.session_state.cliente_editando_id = cliente_id
                         st.rerun()
+                
+                st.markdown("</div>", unsafe_allow_html=True)
 
 # =========================================================
 # ABA 3: DASHBOARD
@@ -845,10 +822,7 @@ with aba_dash:
     
     for etapa in etapas_crm:
         count_real = len(df_dash[df_dash["Etapa"] == etapa])
-        key_manual_count = f"manual_count_{cliente_sel}_{etapa}"
-        if key_manual_count not in st.session_state:
-            st.session_state[key_manual_count] = count_real
-        contagem_calculada[etapa] = st.session_state[key_manual_count]
+        contagem_calculada[etapa] = count_real
         
     total_leads = sum(contagem_calculada.values())
     cols_m = st.columns(len(etapas_crm) + 1)
@@ -858,7 +832,6 @@ with aba_dash:
         qtd = contagem_calculada[etapa]
         
         with cols_m[i]:
-            # Card de título estilizado no Dashboard
             st.markdown(
                 f"""
                 <div style="background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%); border: 1px solid #334155; border-top: 4px solid {cor_header}; padding: 10px; border-radius: 8px; text-align: center; margin-bottom: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
@@ -1058,7 +1031,7 @@ with aba_relatorio:
     st.divider()
 
     # ---------------------------------------------------------
-    # SEÇÃO 2: HISTÓRICO FINANCEIRO ( COM GRÁFICO DE LINHAS)
+    # SEÇÃO 2: HISTÓRICO FINANCEIRO
     # ---------------------------------------------------------
     st.subheader("Historico Financeiro")
 
@@ -1122,7 +1095,6 @@ with aba_relatorio:
         else:
             st.info("Nenhum dado cadastrado para gerar o histórico financeiro.")
 
-    # Gráfico de Linhas Financeiro Reativado e Conectado
     if not df_crm_base.empty and "Data_Cadastro" in df_crm_base.columns:
         df_graf_fin = df_crm_base[df_crm_base["Etapa"].isin(["4. Proposta Enviada", "5. Fechado"])].copy()
         if not df_graf_fin.empty:
