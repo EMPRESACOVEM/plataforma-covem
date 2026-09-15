@@ -658,7 +658,6 @@ with aba_crm:
                 
                 edit_fu_nota = st.text_input("Resumo / Nota do Follow-up", value=row_edit["Followup_Nota"])
                 
-                # Motivo de Perda caso a etapa atual seja Perdido
                 edit_perda = row_edit.get("Perda", "")
                 edit_motivo_perda = st.selectbox(
                     "Motivo de Perda (Se aplicável)", 
@@ -908,7 +907,6 @@ with aba_dash:
 
     st.divider()
 
-    # Gráfico de Motivos de Perda (Integrado e Sincronizado)
     st.markdown(f'<div class="notranslate"><h3>Motivos de Perda de Vendas — {titulo_dinamico}</h3></div>', unsafe_allow_html=True)
     df_perdidos = df_dash[df_dash["Etapa"] == "6. Perdido"]
     
@@ -952,15 +950,16 @@ with aba_relatorio:
     df_historico_salvo = carregar_dados_historico()
     df_crm_base = df_filtered.copy()
 
+    mes_atual_str = dt.now().strftime("%b/%y").capitalize()
+    meses_map = {"Jan": "Jan", "Feb": "Fev", "Mar": "Mar", "Apr": "Abr", "May": "Mai", "Jun": "Jun", "Jul": "Jul", "Aug": "Ago", "Sep": "Set", "Oct": "Out", "Nov": "Nov", "Dec": "Dez"}
+    for eng, pt in meses_map.items():
+        mes_atual_str = mes_atual_str.replace(eng, pt)
+
     if not df_crm_base.empty and "Data_Cadastro" in df_crm_base.columns:
         df_crm_base["Data_Datetime"] = pd.to_datetime(df_crm_base["Data_Cadastro"], errors="coerce")
         df_crm_base["Mês/Ano"] = df_crm_base["Data_Datetime"].dt.strftime("%b/%y").str.capitalize()
-        
-        meses_map = {"Jan": "Jan", "Feb": "Fev", "Mar": "Mar", "Apr": "Abr", "May": "Mai", "Jun": "Jun", "Jul": "Jul", "Aug": "Ago", "Sep": "Set", "Oct": "Out", "Nov": "Nov", "Dec": "Dez"}
-        df_crm_base["Mês/Ano"] = df_crm_base["Mês/Ano"].replace(meses_map, regex=True)
-
-        mes_atual_str = dt.now().strftime("%b/%y").capitalize()
-        mes_atual_str = mes_atual_str.replace("Jan", "Jan").replace("Feb", "Fev").replace("Mar", "Mar").replace("Apr", "Abr").replace("May", "Mai").replace("Jun", "Jun").replace("Jul", "Jul").replace("Aug", "Ago").replace("Sep", "Set").replace("Oct", "Out").replace("Nov", "Nov").replace("Dec", "Dez")
+        for eng, pt in meses_map.items():
+            df_crm_base["Mês/Ano"] = df_crm_base["Mês/Ano"].str.replace(eng, pt, regex=False)
 
         sub_m = df_crm_base[df_crm_base["Mês/Ano"] == mes_atual_str]
         
@@ -1000,15 +999,15 @@ with aba_relatorio:
         if not df_historico_salvo.empty:
             def colorir_tabela_historico(val, col_name):
                 if col_name == "Mês/Ano":
-                    return "background-color: #FDE047; color: #1E293B; font-weight: bold;" # Amarelo Pastel
+                    return "background-color: #FDE047; color: #1E293B; font-weight: bold;"
                 elif col_name == "Leads Qualificados":
-                    return "background-color: #F472B6; color: #1E293B; font-weight: bold;" # Rosa Pastel
+                    return "background-color: #F472B6; color: #1E293B; font-weight: bold;"
                 elif col_name == "Reuniões Agendadas":
-                    return "background-color: #FDBA74; color: #1E293B; font-weight: bold;" # Laranja Pastel
+                    return "background-color: #FDBA74; color: #1E293B; font-weight: bold;"
                 elif col_name == "Propostas Enviadas":
-                    return "background-color: #93C5FD; color: #1E293B; font-weight: bold;" # Azul Pastel
+                    return "background-color: #93C5FD; color: #1E293B; font-weight: bold;"
                 elif col_name == "Projetos Fechados":
-                    return "background-color: #86EFAC; color: #1E293B; font-weight: bold;" # Verde Pastel
+                    return "background-color: #86EFAC; color: #1E293B; font-weight: bold;"
                 return ""
 
             df_estilizado = df_historico_salvo.style.apply(lambda col: [colorir_tabela_historico(v, col.name) for v in col], axis=0)
@@ -1057,7 +1056,7 @@ with aba_relatorio:
     st.divider()
 
     # ---------------------------------------------------------
-    # SEÇÃO 2: HISTÓRICO FINANCEIRO
+    # SEÇÃO 2: HISTÓRICO FINANCEIRO ( COM GRÁFICO DE LINHAS)
     # ---------------------------------------------------------
     st.subheader("Historico Financeiro")
 
@@ -1107,13 +1106,13 @@ with aba_relatorio:
         if not df_financeiro_salvo.empty:
             def colorir_tabela_financeiro(val, col_name):
                 if col_name == "Mês/Ano":
-                    return "background-color: #FDE047; color: #1E293B; font-weight: bold;" # Amarelo Pastel
+                    return "background-color: #FDE047; color: #1E293B; font-weight: bold;"
                 elif col_name == "Propostas Enviadas":
-                    return "background-color: #93C5FD; color: #1E293B; font-weight: bold;" # Azul Pastel
+                    return "background-color: #93C5FD; color: #1E293B; font-weight: bold;"
                 elif col_name == "Projetos Fechados":
-                    return "background-color: #86EFAC; color: #1E293B; font-weight: bold;" # Verde Pastel
+                    return "background-color: #86EFAC; color: #1E293B; font-weight: bold;"
                 elif col_name == "Total":
-                    return "background-color: #F1F5F9; color: #1E293B; font-weight: bold;" # Cinza Claro Neutro
+                    return "background-color: #F1F5F9; color: #1E293B; font-weight: bold;"
                 return ""
 
             df_fin_estilizado = df_financeiro_salvo.style.apply(lambda col: [colorir_tabela_financeiro(v, col.name) for v in col], axis=0)
@@ -1121,6 +1120,7 @@ with aba_relatorio:
         else:
             st.info("Nenhum dado cadastrado para gerar o histórico financeiro.")
 
+    # Gráfico de Linhas Financeiro Reativado e Conectado
     if not df_crm_base.empty and "Data_Cadastro" in df_crm_base.columns:
         df_graf_fin = df_crm_base[df_crm_base["Etapa"].isin(["4. Proposta Enviada", "5. Fechado"])].copy()
         if not df_graf_fin.empty:
@@ -1152,8 +1152,10 @@ with aba_relatorio:
                 height=440,
                 legend=dict(orientation="h", yanchor="bottom", y=-0.25, xanchor="center", x=0.5)
             )
-            fig_linha_fin.update_traces(texttemplate='R$ %{text:,.2s}', textposition="top center")
+            fig_linha_fin.update_traces(texttemplate='R$ %{text:,.2f}', textposition="top center")
             st.plotly_chart(fig_linha_fin, use_container_width=True)
+        else:
+            st.info("Nenhum valor em propostas ou projetos fechados para exibir no gráfico financeiro.")
 
 # =========================================================
 # ABA 5: + NOVO CADASTRO
