@@ -356,7 +356,7 @@ st.markdown('<div class="subtitle-covem">Plataforma Executiva de Gestão Comerci
 st.divider()
 
 # ---------------------------------------------------------
-# MENU HORIZONTAL EM CARDS (COM DESTAQUE EM AZUL CIANO PARA A ABA ATIVA)
+# MENU HORIZONTAL EM CARDS (COR CINZA CLARINHO, QUASE DESPERCEBIDO NA ABA ATIVA)
 # ---------------------------------------------------------
 abas_disponiveis = [
     "Gerenciamento de Tarefas",
@@ -372,17 +372,15 @@ for i, nome_aba in enumerate(abas_disponiveis):
     with cols_menu[i]:
         is_active = (st.session_state.menu_ativo == nome_aba)
         
-        # Injeta estilo dinâmico direto via botão/HTML ou usa variação de cor
         if is_active:
-            # Fundo azul ciano claro / destacado para indicar a tela aberta
             st.markdown(
                 f"""
                 <style>
                 div[data-testid="column"]:nth-of-type({i+1}) div.stButton > button {{
-                    background-color: #0284C7 !important;
-                    color: #FFFFFF !important;
-                    border: 2px solid #38BDF8 !important;
-                    font-weight: 700 !important;
+                    background-color: #26334D !important;
+                    color: #94A3B8 !important;
+                    border: 1px solid #475569 !important;
+                    font-weight: 500 !important;
                 }}
                 </style>
                 """,
@@ -399,11 +397,11 @@ st.markdown("<div style='margin-bottom: 20px;'></div>", unsafe_allow_html=True)
 aba_selecionada = st.session_state.menu_ativo
 
 # ---------------------------------------------------------
-# FUNÇÃO DE RENDERIZAÇÃO DA AGENDA DA SEMANA (COM MINI-CARDS)
+# FUNÇÃO DE RENDERIZAÇÃO DA AGENDA DA SEMANA (SEM O SUBTÍTULO)
 # ---------------------------------------------------------
 def exibir_agenda_semana(df_tarefas, df_crm):
-    st.markdown('<div class="section-header-covem">Agenda da Semana</div>', unsafe_allow_html=True)
-    st.markdown('<div style="margin-top: 14px;"></div>', unsafe_allow_html=True)
+    # Subtítulo "Agenda da Semana" removido conforme solicitado
+    st.markdown('<div style="margin-top: 4px;"></div>', unsafe_allow_html=True)
     
     # Mini-cards horizontais para alternar entre Tarefas e Follow-ups
     sub_abas = ["Tarefas", "Follow-ups (CRM)"]
@@ -416,10 +414,10 @@ def exibir_agenda_semana(df_tarefas, df_crm):
                 """
                 <style>
                 div[data-testid="column"]:nth-of-type(1) div.stButton > button {
-                    background-color: #0284C7 !important;
-                    color: #FFFFFF !important;
-                    border: 2px solid #38BDF8 !important;
-                    font-weight: 700 !important;
+                    background-color: #26334D !important;
+                    color: #94A3B8 !important;
+                    border: 1px solid #475569 !important;
+                    font-weight: 500 !important;
                 }
                 </style>
                 """,
@@ -436,10 +434,10 @@ def exibir_agenda_semana(df_tarefas, df_crm):
                 """
                 <style>
                 div[data-testid="column"]:nth-of-type(2) div.stButton > button {
-                    background-color: #0284C7 !important;
-                    color: #FFFFFF !important;
-                    border: 2px solid #38BDF8 !important;
-                    font-weight: 700 !important;
+                    background-color: #26334D !important;
+                    color: #94A3B8 !important;
+                    border: 1px solid #475569 !important;
+                    font-weight: 500 !important;
                 }
                 </style>
                 """,
@@ -591,33 +589,12 @@ if aba_selecionada == "Gerenciamento de Tarefas":
                 st.success("Tarefa criada com sucesso!")
                 st.rerun()
 
-    st.markdown("#### Lista Geral de Tarefas")
-    if not st.session_state.df_tarefas.empty:
-        with st.container():
-            col_sel, col_btn = st.columns([3, 1])
-            with col_sel:
-                tarefas_opcoes = st.session_state.df_tarefas["Titulo"].tolist()
-                tarefa_escolhida_exclusao = st.selectbox(
-                    "Selecione a tarefa para excluir:", 
-                    options=tarefas_opcoes, 
-                    label_visibility="collapsed"
-                )
-            with col_btn:
-                if st.button("Excluir Tarefa", use_container_width=True):
-                    st.session_state.df_tarefas = st.session_state.df_tarefas[
-                        st.session_state.df_tarefas["Titulo"] != tarefa_escolhida_exclusao
-                    ].reset_index(drop=True)
-                    salvar_dados_tarefas(st.session_state.df_tarefas)
-                    st.success("Tarefa excluída com sucesso!")
-                    st.rerun()
-
-        st.dataframe(st.session_state.df_tarefas, use_container_width=True)
-    else:
-        st.info("Nenhuma tarefa pendente.")
+    # "Lista Geral de Tarefas" foi totalmente removida conforme solicitado
 
     st.divider()
 
-    st.subheader("Calendário de Tarefas e Follow-ups Futuros")
+    # Título renomeado para "Agenda de Tarefas e Follow ups" conforme solicitado
+    st.subheader("Agenda de Tarefas e Follow ups")
     st.caption("Visualize em formato de tabela cronológica todas as entregas, reuniões e interações planejadas para os próximos dias.")
 
     col_h1, col_h2 = st.columns([2, 2])
