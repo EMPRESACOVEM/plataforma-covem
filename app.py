@@ -158,15 +158,17 @@ st.markdown("""
             gap: 2px !important;
         }
         
+        /* Adiciona distância limpa e profissional entre os botões/badges e os expanders */
         div[data-testid="stExpander"] {
-            margin-bottom: 4px !important;
+            margin-top: 12px !important;
+            margin-bottom: 8px !important;
             border: 1px solid #334155 !important;
             background-color: #0F172A !important;
         }
 
         div[data-testid="stExpander"] details summary {
-            padding-top: 6px !important;
-            padding-bottom: 6px !important;
+            padding-top: 8px !important;
+            padding-bottom: 8px !important;
         }
 
         div[data-testid="stMetricValue"] {
@@ -376,7 +378,7 @@ def exibir_agenda_semana(df_tarefas, df_crm):
     # Título da seção com respiro inferior robusto
     st.markdown('<div class="section-header-covem">Agenda da Semana</div>', unsafe_allow_html=True)
     
-    # Espaçador visual adicional em HTML para garantir respiro impecável nas abas de ambas as visualizações
+    # Espaçador visual adicional em HTML para garantir respiro impecável nas abas
     st.markdown('<div style="margin-top: 14px;"></div>', unsafe_allow_html=True)
     
     tab_alertas_tarefas, tab_alertas_crm = st.tabs(["Tarefas", "Follow-ups (CRM)"])
