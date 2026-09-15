@@ -14,9 +14,10 @@ st.set_page_config(
     layout="wide"
 )
 
-# Caminho do diretório base e arquivo de persistência local
+# Caminho do diretório base e arquivos de persistência local
 BASE_DIR = Path(__file__).parent if "__file__" in locals() else Path.cwd()
 ARQUIVO_DADOS = BASE_DIR / "banco_crm_covem.xlsx"
+ARQUIVO_TAREFAS = BASE_DIR / "banco_tarefas_covem.xlsx"
 
 # Nome Oficial do Grupo
 COVEM_NAME = "GRUPO COVEM"
@@ -149,7 +150,7 @@ PROB_MAP = {
 MOTIVOS_PERDA_PADRAO = list(CORES_PERDAS.keys())
 
 # ---------------------------------------------------------
-# FUNÇÕES DE PERSISTÊNCIA
+# FUNÇÕES DE PERSISTÊNCIA (CRM E TAREFAS)
 # ---------------------------------------------------------
 def carregar_dados_crm():
     if ARQUIVO_DADOS.exists():
@@ -206,6 +207,25 @@ def carregar_dados_crm():
 def salvar_dados_crm(df):
     df.to_excel(ARQUIVO_DADOS, index=False)
 
+def carregar_dados_tarefas():
+    if ARQUIVO_TAREFAS.exists():
+        try:
+            df_loaded = pd.read_excel(ARQUIVO_TAREFAS)
+            for col in ["Titulo", "Descricao", "Cliente", "Data_Vencimento", "Prioridade", "Status", "Data_Criacao"]:
+                if col not in df_loaded.columns:
+                    df_loaded[col] = ""
+            return df_loaded
+        except Exception:
+            pass
+            
+    # Retorna DataFrame vazio para não recriar lixo indesejado
+    df_inicial_vazio = pd.DataFrame(columns=["Titulo", "Descricao", "Cliente", "Data_Vencimento", "Prioridade", "Status", "Data_Criacao"])
+    df_inicial_vazio.to_excel(ARQUIVO_TAREFAS, index=False)
+    return df_inicial_vazio
+
+def salvar_dados_tarefas(df):
+    df.to_excel(ARQUIVO_TAREFAS, index=False)
+
 # ---------------------------------------------------------
 # ESTADO DA SESSÃO
 # ---------------------------------------------------------
@@ -213,26 +233,7 @@ if 'df_crm' not in st.session_state:
     st.session_state.df_crm = carregar_dados_crm()
 
 if 'df_tarefas' not in st.session_state:
-    st.session_state.df_tarefas = pd.DataFrame([
-        {
-            "Titulo": "Ligar - Enviar proposta comercial",
-            "Descricao": "Elaborar minuta contratual e enviar em PDF",
-            "Cliente": "Grupo Delta",
-            "Data_Vencimento": str(date.today() - timedelta(days=1)),
-            "Prioridade": "Alta",
-            "Status": "Pendente",
-            "Data_Criacao": str(date.today() - timedelta(days=3))
-        },
-        {
-            "Titulo": "Enviar mensagem - Reunião de Alinhamento",
-            "Descricao": "Validar requisitos técnicos",
-            "Cliente": "Indústria Omega",
-            "Data_Vencimento": str(date.today()),
-            "Prioridade": "Urgente",
-            "Status": "Pendente",
-            "Data_Criacao": str(date.today() - timedelta(days=1))
-        }
-    ])
+    st.session_state.df_tarefas = carregar_dados_tarefas()
 
 if 'df_historico_executivo' not in st.session_state:
     st.session_state.df_historico_executivo = pd.DataFrame([
@@ -462,6 +463,7 @@ with aba_tarefas:
                     [st.session_state.df_tarefas, pd.DataFrame([nova_linha_tarefa])],
                     ignore_index=True
                 )
+                salvar_dados_tarefas(st.session_state.df_tarefas)
                 st.success("Tarefa criada com sucesso!")
                 st.rerun()
 
@@ -481,6 +483,7 @@ with aba_tarefas:
                     st.session_state.df_tarefas = st.session_state.df_tarefas[
                         st.session_state.df_tarefas["Titulo"] != tarefa_escolhida_exclusao
                     ].reset_index(drop=True)
+                    salvar_dados_tarefas(st.session_state.df_tarefas)
                     st.success("Tarefa excluída com sucesso!")
                     st.rerun()
 
@@ -897,7 +900,7 @@ with aba_novo:
                 nova_linha_rapida = {
                     "id": novo_id,
                     "Empresa": rapido_empresa,
-                    "Cliente": rapido_carteira,
+                    "Cliente": rap_carteira if 'rap_carteira' in locals() else rapido_carteira,
                     "Etapa": rapido_etapa,
                     "Contato": "Não informado",
                     "Cargo": "Não informado",
