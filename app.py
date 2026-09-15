@@ -283,7 +283,7 @@ def calcular_status_followup(data_str):
         return "sem_data", "Sem Follow-up", '<span style="height: 10px; width: 10px; background-color: #94A3B8; border-radius: 50%; display: inline-block;" title="Sem Data"></span>'
 
 # ---------------------------------------------------------
-# BARRA LATERAL (FILTROS, NOTIFICAÇÕES E CONFIGURAÇÕES)
+# BARRA LATERAL (FILTROS E CONFIGURAÇÕES)
 # ---------------------------------------------------------
 opcoes_filtro = ["TODOS"] + CARTEIRAS_COVEM
 cliente_sel = st.sidebar.selectbox("Clientes COVEM:", opcoes_filtro)
@@ -294,36 +294,6 @@ if cliente_sel != "TODOS":
 else:
     df_filtered = df
     titulo_dinamico = COVEM_NAME
-
-# Cálculo em tempo real das notificações para a barra lateral
-if not df_filtered.empty:
-    atrasados_sidebar_count = 0
-    hoje_sidebar_count = 0
-    for _, r in df_filtered.iterrows():
-        st_code, _, _ = calcular_status_followup(r.get("Followup_Data", ""))
-        if st_code == "atrasado":
-            atrasados_sidebar_count += 1
-        elif st_code == "hoje":
-            hoje_sidebar_count += 1
-else:
-    atrasados_sidebar_count = 0
-    hoje_sidebar_count = 0
-
-st.sidebar.divider()
-st.sidebar.markdown("**Painel de Alertas**")
-st.sidebar.markdown(
-    f"""
-    <div style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px;">
-        <div style="background-color: #4A2024; color: #FCA5A5; border: 1px solid #EF4444; padding: 6px 10px; border-radius: 6px; font-size: 12px; font-weight: 600;">
-            <span style="height: 10px; width: 10px; background-color: #EF4444; border-radius: 50%; display: inline-block; margin-right: 6px;"></span> {atrasados_sidebar_count} Follow-ups Atrasados
-        </div>
-        <div style="background-color: #3F2E04; color: #FDE047; border: 1px solid #EAB308; padding: 6px 10px; border-radius: 6px; font-size: 12px; font-weight: 600;">
-            <span style="height: 10px; width: 10px; background-color: #EAB308; border-radius: 50%; display: inline-block; margin-right: 6px;"></span> {hoje_sidebar_count} Follow-ups para Hoje
-        </div>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
 
 st.sidebar.divider()
 
@@ -1002,6 +972,7 @@ with aba_relatorio:
 
         total_mes = val_prop + val_fech
 
+        # Formatando valores monetários com a quantidade junta
         str_prop_fmt = f"R$ {val_prop:,.2f} ({qtd_prop} un)".replace(",", "X").replace(".", ",").replace("X", ".")
         str_fech_fmt = f"R$ {val_fech:,.2f} ({qtd_fech} un)".replace(",", "X").replace(".", ",").replace("X", ".")
         str_total_fmt = f"R$ {total_mes:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
@@ -1048,6 +1019,7 @@ with aba_relatorio:
         else:
             st.info("Nenhum dado cadastrado para gerar o histórico financeiro.")
 
+    # Gerador do Gráfico Financeiro em Valores (R$)
     if not df_crm_base.empty and "Data_Cadastro" in df_crm_base.columns:
         df_graf_fin = df_crm_base[df_crm_base["Etapa"].isin(["4. Proposta Enviada", "5. Fechado"])].copy()
         if not df_graf_fin.empty:
