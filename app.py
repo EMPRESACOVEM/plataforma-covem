@@ -28,7 +28,7 @@ COVEM_NAME = "GRUPO COVEM"
 CARTEIRAS_COVEM = ["BraClean", "QV Energia Solar", "Elleven"]
 
 # ---------------------------------------------------------
-# PALETA COVEM & ESTILIZAÇÃO CSS (TONS PASTÉIS)
+# PALETA COVEM & ESTILIZAÇÃO CSS (COMPACTAÇÃO MÁXIMA)
 # ---------------------------------------------------------
 DEFAULT_COLORS = {
     "1. Contatado": "#F472B6",         # Rosa Pastel suave
@@ -122,8 +122,21 @@ st.markdown("""
             font-weight: 600;
         }
 
+        /* COMPACTAÇÃO EXTREMA DE ESPAÇOS VERTICAIS DO STREAMLIT */
+        div[data-testid="stVerticalBlock"] {
+            gap: 0px !important;
+        }
+        
         div[data-testid="stVerticalBlock"] > div {
-            gap: 0.15rem !important;
+            gap: 0px !important;
+            margin-bottom: 0px !important;
+            padding-bottom: 0px !important;
+        }
+
+        div[data-testid="stExpander"] {
+            margin-bottom: 2px !important;
+            border: 1px solid #334155 !important;
+            background-color: #0F172A !important;
         }
 
         div[data-testid="stMetricValue"] {
@@ -718,10 +731,10 @@ with aba_crm:
         cor_header = st.session_state.funnel_colors.get(etapa, "#3B82F6")
         
         with cols[idx]:
-            # Card de título estilizado com fundo escuro e borda superior colorida
+            # Cabeçalho da etapa
             st.markdown(
                 f"""
-                <div style="background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%); border: 1px solid #334155; border-top: 4px solid {cor_header}; padding: 10px; border-radius: 8px; text-align: center; margin-bottom: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+                <div style="background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%); border: 1px solid #334155; border-top: 4px solid {cor_header}; padding: 8px; border-radius: 6px; text-align: center; margin-bottom: 4px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
                     <b style="color: #F8FAFC; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">{etapa}</b>
                 </div>
                 """, 
@@ -734,9 +747,8 @@ with aba_crm:
                 st_code, st_label, st_icon = calcular_status_followup(row.get("Followup_Data", ""))
                 cliente_id = row['id']
                 
-                # Envolvendo o expander com uma borda lateral delicada correspondente à cor da etapa atual
                 st.markdown(f"""
-                    <div style="border-left: 3px solid {cor_header}; border-radius: 4px; margin-bottom: 8px;">
+                    <div style="border-left: 3px solid {cor_header}; border-radius: 4px; margin-bottom: 1px;">
                 """, unsafe_allow_html=True)
                 
                 with st.expander(f"{row['Empresa']}"):
@@ -750,7 +762,7 @@ with aba_crm:
                     
                     st.markdown(
                         f"""
-                        <div style="line-height: 1.25; margin-bottom: 6px;">
+                        <div style="line-height: 1.2; margin-bottom: 4px;">
                             <span style="font-size: 13px;"><b>{row['Empresa']}</b></span><br>
                             <span style="font-size: 12px; color: #94A3B8;">Contato: {row['Contato']}</span><br>
                             <span class="phone-highlight" style="font-size: 12px;">{row.get('Telefone', 'Não informado')}</span><br>
