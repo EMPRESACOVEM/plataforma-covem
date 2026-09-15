@@ -28,7 +28,7 @@ COVEM_NAME = "GRUPO COVEM"
 CARTEIRAS_COVEM = ["BraClean", "QV Energia Solar", "Elleven"]
 
 # ---------------------------------------------------------
-# PALETA COVEM & ESTILIZAÇÃO CSS (ENTERPRISE DARK & EXPANDER REFINADO)
+# PALETA COVEM & ESTILIZAÇÃO CSS (TONS PASTÉIS)
 # ---------------------------------------------------------
 DEFAULT_COLORS = {
     "1. Contatado": "#F472B6",         # Rosa Pastel suave
@@ -91,39 +91,6 @@ st.markdown("""
             text-transform: uppercase;
         }
 
-        /* KPI Cards Estilizados com Cores de Fundo */
-        .kpi-card {
-            background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
-            border: 1px solid #334155;
-            padding: 20px;
-            border-radius: 12px;
-            text-align: center;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            margin-bottom: 10px;
-        }
-        .kpi-title {
-            font-size: 12px;
-            font-weight: 600;
-            color: #94A3B8;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 5px;
-        }
-        .kpi-value {
-            font-size: 24px;
-            font-weight: 800;
-            color: #F8FAFC;
-        }
-
-        /* Expander do Funil com pontas arredondadas e faixa lateral da etapa */
-        div[data-testid="stExpander"] {
-            background: rgba(30, 41, 59, 0.85) !important;
-            border: 1px solid rgba(255, 255, 255, 0.1) !important;
-            border-radius: 10px !important;
-            margin-bottom: 10px !important;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
-        }
-
         .badge-atrasada {
             background-color: #4A2024;
             color: #FCA5A5;
@@ -155,34 +122,20 @@ st.markdown("""
             font-weight: 600;
         }
 
-        /* Estilização Elegante de Alertas e Mensagens em Dark Mode */
-        div.stSuccess {
-            background-color: #064E3B !important;
-            color: #A7F3D0 !important;
-            border: 1px solid #059669 !important;
-            border-radius: 8px !important;
-        }
-        div.stError {
-            background-color: #7F1D1D !important;
-            color: #FECACA !important;
-            border: 1px solid #DC2626 !important;
-            border-radius: 8px !important;
-        }
-        div.stWarning {
-            background-color: #78350F !important;
-            color: #FEF08A !important;
-            border: 1px solid #D97706 !important;
-            border-radius: 8px !important;
-        }
-        div.stInfo {
-            background-color: #1E3A8A !important;
-            color: #BFDBFE !important;
-            border: 1px solid #2563EB !important;
-            border-radius: 8px !important;
-        }
-
         div[data-testid="stVerticalBlock"] > div {
             gap: 0.15rem !important;
+        }
+
+        div[data-testid="stMetricValue"] {
+            font-family: 'Inter', sans-serif !important;
+            font-size: 22px !important;
+            font-weight: 700 !important;
+            color: #FFFFFF !important;
+        }
+
+        div[data-testid="stMetricLabel"] {
+            font-family: 'Inter', sans-serif !important;
+            font-size: 12px !important;
         }
     </style>
 """, unsafe_allow_html=True)
@@ -646,12 +599,9 @@ with aba_tarefas:
 
         with st.expander(f"Ver compromissos no período ({len(df_futuro)} encontrados)", expanded=False):
             c_m1, c_m2, c_m3 = st.columns(3)
-            with c_m1:
-                st.markdown(f'<div class="kpi-card"><div class="kpi-title">Total no Período</div><div class="kpi-value">{len(df_futuro)}</div></div>', unsafe_allow_html=True)
-            with c_m2:
-                st.markdown(f'<div class="kpi-card"><div class="kpi-title">Tarefas Pendentes</div><div class="kpi-value">{len(df_futuro[df_futuro["Tipo"] == "Tarefa"])}</div></div>', unsafe_allow_html=True)
-            with c_m3:
-                st.markdown(f'<div class="kpi-card"><div class="kpi-title">Follow-ups CRM</div><div class="kpi-value">{len(df_futuro[df_futuro["Tipo"] == "Follow-up CRM"])}</div></div>', unsafe_allow_html=True)
+            c_m1.metric("Total de Ações no Período", len(df_futuro))
+            c_m2.metric("Tarefas Pendentes", len(df_futuro[df_futuro["Tipo"] == "Tarefa"]))
+            c_m3.metric("Follow-ups de CRM", len(df_futuro[df_futuro["Tipo"] == "Follow-up CRM"]))
 
             st.divider()
 
@@ -664,7 +614,7 @@ with aba_tarefas:
         st.info("Nenhuma tarefa ou follow-up agendado para este horizonte de tempo.")
 
 # =========================================================
-# ABA 2: FUNIL DE VENDAS (MANTENDO O ESQUELETO CLÁSSICO E PRÁTICO)
+# ABA 2: FUNIL DE VENDAS
 # =========================================================
 with aba_crm:
     st.subheader(f"Funil de Vendas — {titulo_dinamico}")
@@ -800,7 +750,7 @@ with aba_crm:
         with cols[idx]:
             st.markdown(
                 f"""
-                <div style="background-color: {cor_header}; padding: 6px; border-radius: 6px; text-align: center; margin-bottom: 12px;">
+                <div style="background-color: {cor_header}; padding: 6px; border-radius: 6px; text-align: center; margin-bottom: 8px;">
                     <b style="color: #1E293B; font-size: 12px;">{etapa}</b>
                 </div>
                 """, 
@@ -813,30 +763,22 @@ with aba_crm:
                 st_code, st_label, st_icon = calcular_status_followup(row.get("Followup_Data", ""))
                 cliente_id = row['id']
                 
-                dt_f_exib = row.get('Followup_Data', '')
-                try:
-                    raw_val = str(dt_f_exib).strip()[:10]
-                    dt_f_str = dt.strptime(raw_val, "%Y-%m-%d").strftime("%d/%m/%Y") if raw_val and raw_val not in ["nan", "NaT", ""] else "Não agendado"
-                except:
-                    dt_f_str = "Não agendado"
-
-                # Aplicando borda lateral com a cor da etapa e cantos arredondados no expander nativo
-                st.markdown(f"""
-                    <style>
-                        div[data-testid="stExpander"]:has(span:text("{row['Empresa']}")) {{
-                            border-left: 5px solid {cor_header} !important;
-                        }}
-                    </style>
-                """, unsafe_allow_html=True)
-
                 with st.expander(f"{row['Empresa']}"):
+                    dt_f_exib = row.get('Followup_Data', '')
+                    
+                    try:
+                        raw_val = str(dt_f_exib).strip()[:10]
+                        dt_f_str = dt.strptime(raw_val, "%Y-%m-%d").strftime("%d/%m/%Y") if raw_val and raw_val not in ["nan", "NaT", ""] else "Não agendado"
+                    except:
+                        dt_f_str = "Não agendado"
+                    
                     st.markdown(
                         f"""
-                        <div style="line-height: 1.4; margin-bottom: 8px;">
-                            <span style="font-size: 13px;"><b>Empresa:</b> {row['Empresa']}</span><br>
-                            <span style="font-size: 13px; color: #E2E8F0;"><b>Nome:</b> {row['Contato']}</span><br>
-                            <span style="font-size: 13px;"><b>Telefone:</b> <span class="phone-highlight">{row.get('Telefone', 'Não informado')}</span></span><br>
-                            <span style="font-size: 12px; color: #CBD5E1;"><b>Follow-up:</b> {st_icon} {dt_f_str}</span>
+                        <div style="line-height: 1.25; margin-bottom: 6px;">
+                            <span style="font-size: 13px;"><b>{row['Empresa']}</b></span><br>
+                            <span style="font-size: 12px; color: #94A3B8;">Contato: {row['Contato']}</span><br>
+                            <span class="phone-highlight" style="font-size: 12px;">{row.get('Telefone', 'Não informado')}</span><br>
+                            <span style="font-size: 11px; color: #CBD5E1;">Follow-up: {st_icon} {dt_f_str}</span>
                         </div>
                         """,
                         unsafe_allow_html=True
@@ -917,24 +859,24 @@ with aba_dash:
         with cols_m[i]:
             st.markdown(
                 f"""
-                <div class="kpi-card" style="border-top: 4px solid {cor_header};">
-                    <div class="kpi-title">{etapa}</div>
-                    <div class="kpi-value">{qtd}</div>
+                <div style="background-color: {cor_header}; padding: 4px; border-radius: 4px; text-align: center; margin-bottom: 4px;">
+                    <b style="color: #1E293B; font-size: 11px;">{etapa}</b>
                 </div>
-                """,
+                """, 
                 unsafe_allow_html=True
             )
+            st.metric(label="", value=qtd)
 
     with cols_m[-1]:
         st.markdown(
-            f"""
-            <div class="kpi-card" style="border-top: 4px solid #FFFFFF;">
-                <div class="kpi-title">TOTAL</div>
-                <div class="kpi-value">{total_leads}</div>
+            """
+            <div style="background-color: #0F172A; padding: 4px; border-radius: 4px; text-align: center; margin-bottom: 4px;">
+                <b style="color: #FFFFFF; font-size: 11px;">TOTAL</b>
             </div>
-            """,
+            """, 
             unsafe_allow_html=True
         )
+        st.metric(label="", value=total_leads)
 
     st.divider()
 
@@ -1114,7 +1056,7 @@ with aba_relatorio:
     st.divider()
 
     # ---------------------------------------------------------
-    # SEÇÃO 2: HISTÓRICO FINANCEIRO
+    # SEÇÃO 2: HISTÓRICO FINANCEIRO ( COM GRÁFICO DE LINHAS)
     # ---------------------------------------------------------
     st.subheader("Historico Financeiro")
 
@@ -1178,6 +1120,7 @@ with aba_relatorio:
         else:
             st.info("Nenhum dado cadastrado para gerar o histórico financeiro.")
 
+    # Gráfico de Linhas Financeiro Reativado e Conectado
     if not df_crm_base.empty and "Data_Cadastro" in df_crm_base.columns:
         df_graf_fin = df_crm_base[df_crm_base["Etapa"].isin(["4. Proposta Enviada", "5. Fechado"])].copy()
         if not df_graf_fin.empty:
@@ -1306,7 +1249,7 @@ with aba_novo:
                     "Etapa": nova_etapa,
                     "Contato": novo_contato if novo_contato else "Não informado",
                     "Cargo": novo_cargo if novo_cargo else "Não informado",
-                    "Telefone": nova_telefone if nova_telefone else "Não informado",
+                    "Telefone": novo_telefone if novo_telefone else "Não informado",
                     "Email": nova_email if nova_email else "Não informado",
                     "Cidade": nova_cidade if nova_cidade else "Não informado",
                     "Valor": nova_valor,
