@@ -734,9 +734,9 @@ with aba_crm:
                 st_code, st_label, st_icon = calcular_status_followup(row.get("Followup_Data", ""))
                 cliente_id = row['id']
                 
-                # ESPAÇAMENTO REDUZIDO AQUI (margin-bottom alterado de 8px para 2px)
+                # Envolvendo o expander com uma borda lateral delicada correspondente à cor da etapa atual
                 st.markdown(f"""
-                    <div style="border-left: 3px solid {cor_header}; border-radius: 4px; margin-bottom: 2px;">
+                    <div style="border-left: 3px solid {cor_header}; border-radius: 4px; margin-bottom: 8px;">
                 """, unsafe_allow_html=True)
                 
                 with st.expander(f"{row['Empresa']}"):
@@ -1231,7 +1231,7 @@ with aba_novo:
                     "Vendedor": novo_vendedor if novo_vendedor else "Não informado",
                     "Perda": motivo_perda if "Perdido" in nova_etapa else "",
                     "Data_Cadastro": str(date.today()),
-                    "Followup_Data": str(date_data_ini) if f_nota_ini else "",
+                    "Followup_Data": str(f_data_ini) if f_nota_ini else "",
                     "Followup_Nota": f_nota_ini,
                     "Historico": f"[{dt.now().strftime('%d/%m/%Y %H:%M')}] Oportunidade cadastrada."
                 }
