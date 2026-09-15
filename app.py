@@ -19,6 +19,7 @@ BASE_DIR = Path(__file__).parent if "__file__" in locals() else Path.cwd()
 ARQUIVO_DADOS = BASE_DIR / "banco_crm_covem.xlsx"
 ARQUIVO_TAREFAS = BASE_DIR / "banco_tarefas_covem.xlsx"
 ARQUIVO_HISTORICO = BASE_DIR / "banco_historico_covem.xlsx"
+ARQUIVO_FINANCEIRO = BASE_DIR / "banco_financeiro_covem.xlsx"
 
 # Nome Oficial do Grupo
 COVEM_NAME = "GRUPO COVEM"
@@ -151,7 +152,7 @@ PROB_MAP = {
 MOTIVOS_PERDA_PADRAO = list(CORES_PERDAS.keys())
 
 # ---------------------------------------------------------
-# FUNÇÕES DE PERSISTÊNCIA (CRM, TAREFAS E HISTÓRICO)
+# FUNÇÕES DE PERSISTÊNCIA (CRM, TAREFAS, HISTÓRICO E FINANCEIRO)
 # ---------------------------------------------------------
 def carregar_dados_crm():
     if ARQUIVO_DADOS.exists():
@@ -236,6 +237,17 @@ def carregar_dados_historico():
 
 def salvar_dados_historico(df):
     df.to_excel(ARQUIVO_HISTORICO, index=False)
+
+def carregar_dados_financeiro():
+    if ARQUIVO_FINANCEIRO.exists():
+        try:
+            return pd.read_excel(ARQUIVO_FINANCEIRO)
+        except Exception:
+            pass
+    return pd.DataFrame(columns=["Mês/Ano", "Propostas Enviadas", "Projetos Fechados", "Total"])
+
+def salvar_dados_financeiro(df):
+    df.to_excel(ARQUIVO_FINANCEIRO, index=False)
 
 # ---------------------------------------------------------
 # ESTADO DA SESSÃO
@@ -827,11 +839,13 @@ with aba_dash:
 # =========================================================
 with aba_relatorio:
     st.title("Relatório Executivo")
-    st.caption("Acompanhamento histórico de atividades operacional e evolução financeira.")
+    st.caption("Acompanhamento histórico de atividades operacionais e evolução financeira.")
 
+    # ---------------------------------------------------------
+    # SEÇÃO 1: HISTÓRICO DE ATIVIDADES
+    # ---------------------------------------------------------
     st.subheader("Historico de Atividades")
 
-    # Carrega base histórica persistida e atualiza/adiciona o mês corrente
     df_historico_salvo = carregar_dados_historico()
     df_crm_base = df_filtered.copy()
 
@@ -852,7 +866,6 @@ with aba_relatorio:
         propostas = len(sub_m[sub_m["Etapa"] == "4. Proposta Enviada"])
         fechados = len(sub_m[sub_m["Etapa"] == "5. Fechado"])
 
-        # Se o mês atual já existe no histórico persistido, atualiza os dados dele; senão, adiciona
         if df_historico_salvo.empty:
             df_historico_salvo = pd.DataFrame([{
                 "Mês/Ano": mes_atual_str,
@@ -937,6 +950,109 @@ with aba_relatorio:
         )
         fig_linha_atv.update_traces(textposition="top center")
         st.plotly_chart(fig_linha_atv, use_container_width=True)
+
+    st.divider()
+
+    # ---------------------------------------------------------
+    # SEÇÃO 2: HISTÓRICO FINANCEIRO
+    # ---------------------------------------------------------
+    st.subheader("Historico Financeiro")
+
+    df_financeiro_salvo = carregar_dados_financeiro()
+
+    if not df_crm_base.empty and "Data_Cadastro" in df_crm_base.columns:
+        sub_m_prop = df_crm_base[(df_crm_base["Mês/Ano"] == mes_atual_str) & (df_crm_base["Etapa"] == "4. Proposta Enviada")]
+        sub_m_fech = df_crm_base[(df_crm_base["Mês/Ano"] == mes_atual_str) & (df_crm_base["Etapa"] == "5. Fechado")]
+
+        val_prop = float(sub_m_prop["Valor"].sum()) if not sub_m_prop.empty else 0.0
+        qtd_prop = int(len(sub_m_prop))
+
+        val_fech = float(sub_m_fech["Valor"].sum()) if not sub_m_fech.empty else 0.0
+        qtd_fech = int(len(sub_m_fech))
+
+        total_mes = val_prop + val_fech
+
+        # Formatando valores monetários com a quantidade junta
+        str_prop_fmt = f"R$ {val_prop:,.2f} ({qtd_prop} un)".replace(",", "X").replace(".", ",").replace("X", ".")
+        str_fech_fmt = f"R$ {val_fech:,.2f} ({qtd_fech} un)".replace(",", "X").replace(".", ",").replace("X", ".")
+        str_total_fmt = f"R$ {total_mes:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+        if df_financeiro_salvo.empty:
+            df_financeiro_salvo = pd.DataFrame([{
+                "Mês/Ano": mes_atual_str,
+                "Propostas Enviadas": str_prop_fmt,
+                "Projetos Fechados": str_fech_fmt,
+                "Total": str_total_fmt
+            }])
+        else:
+            if mes_atual_str in df_financeiro_salvo["Mês/Ano"].values:
+                idx = df_financeiro_salvo[df_financeiro_salvo["Mês/Ano"] == mes_atual_str].index[0]
+                df_financeiro_salvo.loc[idx, "Propostas Enviadas"] = str_prop_fmt
+                df_financeiro_salvo.loc[idx, "Projetos Fechados"] = str_fech_fmt
+                df_financeiro_salvo.loc[idx, "Total"] = str_total_fmt
+            else:
+                nova_linha_fin = pd.DataFrame([{
+                    "Mês/Ano": mes_atual_str,
+                    "Propostas Enviadas": str_prop_fmt,
+                    "Projetos Fechados": str_fech_fmt,
+                    "Total": str_total_fmt
+                }])
+                df_financeiro_salvo = pd.concat([df_financeiro_salvo, nova_linha_fin], ignore_index=True)
+
+        salvar_dados_financeiro(df_financeiro_salvo)
+
+    with st.expander("Exibir / Ocultar Tabela de Histórico Financeiro", expanded=True):
+        if not df_financeiro_salvo.empty:
+            def colorir_tabela_financeiro(val, col_name):
+                if col_name == "Mês/Ano":
+                    return "background-color: #FDE047; color: #1E293B; font-weight: bold;" # Amarelo Pastel
+                elif col_name == "Propostas Enviadas":
+                    return "background-color: #93C5FD; color: #1E293B; font-weight: bold;" # Azul Pastel
+                elif col_name == "Projetos Fechados":
+                    return "background-color: #86EFAC; color: #1E293B; font-weight: bold;" # Verde Pastel
+                elif col_name == "Total":
+                    return "background-color: #F1F5F9; color: #1E293B; font-weight: bold;" # Cinza Claro Neutro
+                return ""
+
+            df_fin_estilizado = df_financeiro_salvo.style.apply(lambda col: [colorir_tabela_financeiro(v, col.name) for v in col], axis=0)
+            st.dataframe(df_fin_estilizado, use_container_width=True, hide_index=True)
+        else:
+            st.info("Nenhum dado cadastrado para gerar o histórico financeiro.")
+
+    # Gerador do Gráfico Financeiro em Valores (R$)
+    if not df_crm_base.empty and "Data_Cadastro" in df_crm_base.columns:
+        df_graf_fin = df_crm_base[df_crm_base["Etapa"].isin(["4. Proposta Enviada", "5. Fechado"])].copy()
+        if not df_graf_fin.empty:
+            df_graf_fin["Tipo"] = df_graf_fin["Etapa"].apply(lambda x: "Propostas Enviadas" if "Proposta" in x else "Projetos Fechados")
+            df_agrupado_fin = df_graf_fin.groupby(["Mês/Ano", "Tipo"])["Valor"].sum().reset_index()
+
+            cores_fin_graf = {
+                "Propostas Enviadas": "#93C5FD",
+                "Projetos Fechados": "#86EFAC"
+            }
+
+            fig_linha_fin = px.line(
+                df_agrupado_fin,
+                x="Mês/Ano",
+                y="Valor",
+                color="Tipo",
+                text="Valor",
+                markers=True,
+                title=f"Evolução Financeira Mensal (R$) — {COVEM_NAME}",
+                color_discrete_map=cores_fin_graf
+            )
+            fig_linha_fin.update_layout(
+                template="plotly_dark",
+                paper_bgcolor="#1E293B",
+                plot_bgcolor="#1E293B",
+                font=dict(color="#FFFFFF", size=13),
+                xaxis_title="MÊS / ANO",
+                yaxis_title="VALOR (R$)",
+                height=440,
+                legend=dict(orientation="h", yanchor="bottom", y=-0.25, xanchor="center", x=0.5)
+            )
+            fig_linha_fin.update_traces(texttemplate='R$ %{text:,.2s}', textposition="top center")
+            st.plotly_chart(fig_linha_fin, use_container_width=True)
 
 # =========================================================
 # ABA 5: + NOVO CADASTRO
