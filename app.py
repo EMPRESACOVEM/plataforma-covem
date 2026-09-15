@@ -11,7 +11,6 @@ from pathlib import Path
 # Configuração da página
 st.set_page_config(
     page_title="Plataforma Executiva GRUPO COVEM",
-    page_icon="🏢",
     layout="wide"
 )
 
@@ -250,23 +249,23 @@ if 'cliente_editando_id' not in st.session_state:
 df = st.session_state.df_crm
 
 # ---------------------------------------------------------
-# FUNÇÃO DE LÓGICA DE CORES DO FOLLOW-UP
+# FUNÇÃO DE LÓGICA DE CORES DO FOLLOW-UP (COM BOLINHAS)
 # ---------------------------------------------------------
 def calcular_status_followup(data_str):
     if not data_str or pd.isna(data_str) or str(data_str).strip() in ["", "nan", "NaT", "None"]:
-        return "sem_data", "Sem Follow-up", ""
+        return "sem_data", "Sem Follow-up", '<span style="height: 10px; width: 10px; background-color: #94A3B8; border-radius: 50%; display: inline-block;" title="Sem Data"></span>'
     try:
         limpa_data = str(data_str).strip()[:10]
         dt_follow = dt.strptime(limpa_data, "%Y-%m-%d").date()
         hoje = date.today()
         if dt_follow < hoje:
-            return "atrasado", "Atrasado", ""
+            return "atrasado", "Atrasado", '<span style="height: 10px; width: 10px; background-color: #EF4444; border-radius: 50%; display: inline-block;" title="Atrasado"></span>'
         elif dt_follow == hoje:
-            return "hoje", "Atenção (Hoje)", ""
+            return "hoje", "Atenção (Hoje)", '<span style="height: 10px; width: 10px; background-color: #EAB308; border-radius: 50%; display: inline-block;" title="Hoje"></span>'
         else:
-            return "em_dia", "Em Dia", ""
+            return "em_dia", "Em Dia", '<span style="height: 10px; width: 10px; background-color: #22C55E; border-radius: 50%; display: inline-block;" title="Em Dia"></span>'
     except:
-        return "sem_data", "Sem Follow-up", ""
+        return "sem_data", "Sem Follow-up", '<span style="height: 10px; width: 10px; background-color: #94A3B8; border-radius: 50%; display: inline-block;" title="Sem Data"></span>'
 
 # ---------------------------------------------------------
 # BARRA LATERAL (FILTROS E CONFIGURAÇÕES)
@@ -339,7 +338,7 @@ def exibir_agenda_semana(df_tarefas, df_crm):
                 with st.expander("Ver Tarefas Atrasadas"):
                     if not atrasadas.empty:
                         for _, row in atrasadas.iterrows():
-                            st.write(f"• **{row['Titulo']}** | Cliente: `{row.get('Cliente', 'N/A')}` | Vencimento: {row['Data_Vencimento'].strftime('%d/%m/%Y')}")
+                            st.write(f"- **{row['Titulo']}** | Cliente: `{row.get('Cliente', 'N/A')}` | Vencimento: {row['Data_Vencimento'].strftime('%d/%m/%Y')}")
                     else:
                         st.write("Nenhuma tarefa atrasada.")
 
@@ -348,7 +347,7 @@ def exibir_agenda_semana(df_tarefas, df_crm):
                 with st.expander("Ver Tarefas para Hoje"):
                     if not hoje_tarefas.empty:
                         for _, row in hoje_tarefas.iterrows():
-                            st.write(f"• **{row['Titulo']}** | Cliente: `{row.get('Cliente', 'N/A')}`")
+                            st.write(f"- **{row['Titulo']}** | Cliente: `{row.get('Cliente', 'N/A')}`")
                     else:
                         st.write("Nenhuma tarefa para hoje.")
 
@@ -378,7 +377,7 @@ def exibir_agenda_semana(df_tarefas, df_crm):
                                 dt_f_br = dt.strptime(raw_dt, "%Y-%m-%d").strftime("%d/%m/%Y")
                             except:
                                 dt_f_br = "Data Inválida"
-                            st.write(f"• **{row['Empresa']}** | Contato: `{row['Contato']}` | Data: {dt_f_br}")
+                            st.write(f"- **{row['Empresa']}** | Contato: `{row['Contato']}` | Data: {dt_f_br}")
                     else:
                         st.write("Nenhum follow-up atrasado.")
 
@@ -387,14 +386,14 @@ def exibir_agenda_semana(df_tarefas, df_crm):
                 with st.expander("Ver Follow-ups para Hoje"):
                     if not c_hoje.empty:
                         for _, row in c_hoje.iterrows():
-                            st.write(f"• **{row['Empresa']}** | Contato: `{row['Contato']}`")
+                            st.write(f"- **{row['Empresa']}** | Contato: `{row['Contato']}`")
                     else:
                         st.write("Nenhum follow-up para hoje.")
 
     st.divider()
 
 # ---------------------------------------------------------
-# NAVEGAÇÃO POR ABAS (CALENDÁRIO INTEGRADO AO GERENCIADOR)
+# NAVEGAÇÃO POR ABAS
 # ---------------------------------------------------------
 aba_tarefas, aba_crm, aba_dash, aba_relatorio, aba_novo = st.tabs([
     "Gerenciador de Tarefas",
@@ -418,7 +417,7 @@ with aba_tarefas:
         else ["Nenhum / Tarefa Geral"]
     )
 
-    with st.expander("+ Criar Nova Tarefa", expanded=False):
+    with st.expander("Criar Nova Tarefa", expanded=False):
         with st.form(key="form_nova_tarefa_crm", clear_on_submit=True):
             col1, col2 = st.columns([2, 1])
 
@@ -491,9 +490,6 @@ with aba_tarefas:
 
     st.divider()
 
-    # ---------------------------------------------------------
-    # SEÇÃO DE CALENDÁRIO FUTURO (ABAIXO DA LISTA DE TAREFAS)
-    # ---------------------------------------------------------
     st.subheader("Calendário de Tarefas e Follow-ups Futuros")
     st.caption("Visualize em formato de tabela cronológica todas as entregas, reuniões e interações planejadas para os próximos dias.")
 
@@ -516,7 +512,6 @@ with aba_tarefas:
 
     eventos_futuros = []
 
-    # Processar Tarefas
     if not st.session_state.df_tarefas.empty:
         for _, t in st.session_state.df_tarefas.iterrows():
             if pd.notna(t.get("Data_Vencimento")):
@@ -533,7 +528,6 @@ with aba_tarefas:
                 except:
                     pass
 
-    # Processar Follow-ups do CRM
     if not df_filtered.empty:
         for _, c in df_filtered.iterrows():
             f_dat = c.get("Followup_Data", "")
@@ -697,7 +691,7 @@ with aba_crm:
                             <span style="font-size: 13px;"><b>{row['Empresa']}</b></span><br>
                             <span style="font-size: 12px; color: #94A3B8;">Contato: {row['Contato']}</span><br>
                             <span class="phone-highlight" style="font-size: 12px;">{row.get('Telefone', 'Não informado')}</span><br>
-                            <span style="font-size: 11px; color: #CBD5E1;">Follow-up: {dt_f_str}</span>
+                            <span style="font-size: 11px; color: #CBD5E1;">Follow-up: {st_icon} {dt_f_str}</span>
                         </div>
                         """,
                         unsafe_allow_html=True
