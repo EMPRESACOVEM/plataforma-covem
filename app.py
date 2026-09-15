@@ -734,9 +734,9 @@ with aba_crm:
                 st_code, st_label, st_icon = calcular_status_followup(row.get("Followup_Data", ""))
                 cliente_id = row['id']
                 
-                # Envolvendo o expander com uma borda lateral delicada correspondente à cor da etapa atual
+                # Borda delicada em volta de todo o card correspondente à cor da etapa atual
                 st.markdown(f"""
-                    <div style="border-left: 3px solid {cor_header}; border-radius: 4px; margin-bottom: 8px;">
+                    <div style="border: 1px solid {cor_header}; border-radius: 6px; margin-bottom: 8px; padding: 2px;">
                 """, unsafe_allow_html=True)
                 
                 with st.expander(f"{row['Empresa']}"):
@@ -1223,7 +1223,7 @@ with aba_novo:
                     "Etapa": nova_etapa,
                     "Contato": novo_contato if novo_contato else "Não informado",
                     "Cargo": novo_cargo if novo_cargo else "Não informado",
-                    "Telefone": nova_telefone if nova_telefone else "Não informado",
+                    "Telefone": novo_telefone if novo_telefone else "Não informado",
                     "Email": nova_email if nova_email else "Não informado",
                     "Cidade": nova_cidade if nova_cidade else "Não informado",
                     "Valor": nova_valor,
