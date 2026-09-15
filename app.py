@@ -18,6 +18,7 @@ st.set_page_config(
 BASE_DIR = Path(__file__).parent if "__file__" in locals() else Path.cwd()
 ARQUIVO_DADOS = BASE_DIR / "banco_crm_covem.xlsx"
 ARQUIVO_TAREFAS = BASE_DIR / "banco_tarefas_covem.xlsx"
+ARQUIVO_HISTORICO = BASE_DIR / "banco_historico_covem.xlsx"
 
 # Nome Oficial do Grupo
 COVEM_NAME = "GRUPO COVEM"
@@ -150,7 +151,7 @@ PROB_MAP = {
 MOTIVOS_PERDA_PADRAO = list(CORES_PERDAS.keys())
 
 # ---------------------------------------------------------
-# FUNÇÕES DE PERSISTÊNCIA (CRM E TAREFAS)
+# FUNÇÕES DE PERSISTÊNCIA (CRM, TAREFAS E HISTÓRICO)
 # ---------------------------------------------------------
 def carregar_dados_crm():
     if ARQUIVO_DADOS.exists():
@@ -224,6 +225,17 @@ def carregar_dados_tarefas():
 
 def salvar_dados_tarefas(df):
     df.to_excel(ARQUIVO_TAREFAS, index=False)
+
+def carregar_dados_historico():
+    if ARQUIVO_HISTORICO.exists():
+        try:
+            return pd.read_excel(ARQUIVO_HISTORICO)
+        except Exception:
+            pass
+    return pd.DataFrame(columns=["Mês/Ano", "Leads Qualificados", "Reuniões Agendadas", "Propostas Enviadas", "Projetos Fechados"])
+
+def salvar_dados_historico(df):
+    df.to_excel(ARQUIVO_HISTORICO, index=False)
 
 # ---------------------------------------------------------
 # ESTADO DA SESSÃO
@@ -815,47 +827,61 @@ with aba_dash:
 # =========================================================
 with aba_relatorio:
     st.title("Relatório Executivo")
-    st.caption("Acompanhamento histórico de atividades operacionais e evolução financeira.")
+    st.caption("Acompanhamento histórico de atividades operacional e evolução financeira.")
 
     st.subheader("Historico de Atividades")
 
-    # Geração dinâmica do Histórico de Atividades baseado no Funil de Vendas
+    # Carrega base histórica persistida e atualiza/adiciona o mês corrente
+    df_historico_salvo = carregar_dados_historico()
     df_crm_base = df_filtered.copy()
+
     if not df_crm_base.empty and "Data_Cadastro" in df_crm_base.columns:
         df_crm_base["Data_Datetime"] = pd.to_datetime(df_crm_base["Data_Cadastro"], errors="coerce")
         df_crm_base["Mês/Ano"] = df_crm_base["Data_Datetime"].dt.strftime("%b/%y").str.capitalize()
         
-        # Substituição de meses para o formato em português padrão
         meses_map = {"Jan": "Jan", "Feb": "Fev", "Mar": "Mar", "Apr": "Abr", "May": "Mai", "Jun": "Jun", "Jul": "Jul", "Aug": "Ago", "Sep": "Set", "Oct": "Out", "Nov": "Nov", "Dec": "Dez"}
         df_crm_base["Mês/Ano"] = df_crm_base["Mês/Ano"].replace(meses_map, regex=True)
 
-        # Agrupamento e contagem dinâmica por etapa solicitada
-        historico_dinamico = []
-        meses_unicos = df_crm_base["Mês/Ano"].dropna().unique()
+        mes_atual_str = dt.now().strftime("%b/%y").capitalize()
+        mes_atual_str = mes_atual_str.replace("Jan", "Jan").replace("Feb", "Fev").replace("Mar", "Mar").replace("Apr", "Abr").replace("May", "Mai").replace("Jun", "Jun").replace("Jul", "Jul").replace("Aug", "Ago").replace("Sep", "Set").replace("Oct", "Out").replace("Nov", "Nov").replace("Dec", "Dez")
+
+        sub_m = df_crm_base[df_crm_base["Mês/Ano"] == mes_atual_str]
         
-        for m in meses_unicos:
-            sub_m = df_crm_base[df_crm_base["Mês/Ano"] == m]
-            
-            leads_q = len(sub_m[sub_m["Etapa"].isin(["1. Contatado", "2. Conversando", "3. Reunião Agendada", "4. Proposta Enviada", "5. Fechado"])])
-            reunioes = len(sub_m[sub_m["Etapa"] == "3. Reunião Agendada"])
-            propostas = len(sub_m[sub_m["Etapa"] == "4. Proposta Enviada"])
-            fechados = len(sub_m[sub_m["Etapa"] == "5. Fechado"])
-            
-            historico_dinamico.append({
-                "Mês/Ano": m,
+        leads_q = len(sub_m[sub_m["Etapa"].isin(["1. Contatado", "2. Conversando", "3. Reunião Agendada", "4. Proposta Enviada", "5. Fechado"])])
+        reunioes = len(sub_m[sub_m["Etapa"] == "3. Reunião Agendada"])
+        propostas = len(sub_m[sub_m["Etapa"] == "4. Proposta Enviada"])
+        fechados = len(sub_m[sub_m["Etapa"] == "5. Fechado"])
+
+        # Se o mês atual já existe no histórico persistido, atualiza os dados dele; senão, adiciona
+        if df_historico_salvo.empty:
+            df_historico_salvo = pd.DataFrame([{
+                "Mês/Ano": mes_atual_str,
                 "Leads Qualificados": leads_q,
                 "Reuniões Agendadas": reunioes,
                 "Propostas Enviadas": propostas,
                 "Projetos Fechados": fechados
-            })
+            }])
+        else:
+            if mes_atual_str in df_historico_salvo["Mês/Ano"].values:
+                idx = df_historico_salvo[df_historico_salvo["Mês/Ano"] == mes_atual_str].index[0]
+                df_historico_salvo.loc[idx, "Leads Qualificados"] = leads_q
+                df_historico_salvo.loc[idx, "Reuniões Agendadas"] = reunioes
+                df_historico_salvo.loc[idx, "Propostas Enviadas"] = propostas
+                df_historico_salvo.loc[idx, "Projetos Fechados"] = fechados
+            else:
+                nova_linha_hist = pd.DataFrame([{
+                    "Mês/Ano": mes_atual_str,
+                    "Leads Qualificados": leads_q,
+                    "Reuniões Agendadas": reunioes,
+                    "Propostas Enviadas": propostas,
+                    "Projetos Fechados": fechados
+                }])
+                df_historico_salvo = pd.concat([df_historico_salvo, nova_linha_hist], ignore_index=True)
         
-        df_historico_calculado = pd.DataFrame(historico_dinamico)
-    else:
-        df_historico_calculado = pd.DataFrame(columns=["Mês/Ano", "Leads Qualificados", "Reuniões Agendadas", "Propostas Enviadas", "Projetos Fechados"])
+        salvar_dados_historico(df_historico_salvo)
 
     with st.expander("Exibir / Ocultar Tabela de Histórico de Atividades", expanded=True):
-        if not df_historico_calculado.empty:
-            # Aplicação de cores pastéis via Estilização CSS do Pandas Styler
+        if not df_historico_salvo.empty:
             def colorir_tabela_historico(val, col_name):
                 if col_name == "Mês/Ano":
                     return "background-color: #FDE047; color: #1E293B; font-weight: bold;" # Amarelo Pastel
@@ -869,13 +895,13 @@ with aba_relatorio:
                     return "background-color: #86EFAC; color: #1E293B; font-weight: bold;" # Verde Pastel
                 return ""
 
-            df_estilizado = df_historico_calculado.style.apply(lambda col: [colorir_tabela_historico(v, col.name) for v in col], axis=0)
+            df_estilizado = df_historico_salvo.style.apply(lambda col: [colorir_tabela_historico(v, col.name) for v in col], axis=0)
             st.dataframe(df_estilizado, use_container_width=True, hide_index=True)
         else:
             st.info("Nenhum dado cadastrado para gerar o histórico de atividades.")
 
-    if not df_historico_calculado.empty:
-        df_melted_atv = df_historico_calculado.melt(
+    if not df_historico_salvo.empty:
+        df_melted_atv = df_historico_salvo.melt(
             id_vars=["Mês/Ano"], 
             value_vars=["Leads Qualificados", "Reuniões Agendadas", "Propostas Enviadas", "Projetos Fechados"],
             var_name="Métrica", 
