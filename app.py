@@ -91,28 +91,29 @@ st.markdown("""
             text-transform: uppercase;
         }
 
-        /* Espaçamento elegante para títulos de seções internas */
+        /* Título de seção com respiro inferior garantido */
         .section-header-covem {
             font-family: 'Inter', sans-serif;
             font-size: 20px;
             font-weight: 700;
             color: #F8FAFC;
             margin-top: 10px;
-            margin-bottom: 16px;
+            margin-bottom: 18px !important;
         }
 
-        /* Espaçamento e respiro nas abas (Tabs) do Streamlit */
-        .stTabs {
-            margin-top: 12px !important;
-            margin-bottom: 16px !important;
+        /* Força espaçamento robusto em todas as instâncias de abas (Tabs) */
+        div.stTabs {
+            margin-top: 16px !important;
+            margin-bottom: 20px !important;
         }
         
-        .stTabs [data-baseweb="tab-list"] {
+        div.stTabs [data-baseweb="tab-list"] {
             gap: 16px !important;
-            margin-bottom: 12px !important;
+            margin-bottom: 16px !important;
+            background-color: transparent !important;
         }
 
-        .stTabs [data-baseweb="tab"] {
+        div.stTabs [data-baseweb="tab"] {
             height: 40px !important;
             white-space: pre-wrap !important;
             background-color: transparent !important;
@@ -372,8 +373,11 @@ st.divider()
 # FUNÇÃO DE RENDERIZAÇÃO DA AGENDA DA SEMANA
 # ---------------------------------------------------------
 def exibir_agenda_semana(df_tarefas, df_crm):
-    # Título da seção com margem inferior limpa e elegante
+    # Título da seção com respiro inferior robusto
     st.markdown('<div class="section-header-covem">Agenda da Semana</div>', unsafe_allow_html=True)
+    
+    # Espaçador visual adicional em HTML para garantir respiro impecável nas abas de ambas as visualizações
+    st.markdown('<div style="margin-top: 14px;"></div>', unsafe_allow_html=True)
     
     tab_alertas_tarefas, tab_alertas_crm = st.tabs(["Tarefas", "Follow-ups (CRM)"])
 
