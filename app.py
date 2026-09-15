@@ -658,6 +658,14 @@ with aba_crm:
                 
                 edit_fu_nota = st.text_input("Resumo / Nota do Follow-up", value=row_edit["Followup_Nota"])
                 
+                # Motivo de Perda caso a etapa atual seja Perdido
+                edit_perda = row_edit.get("Perda", "")
+                edit_motivo_perda = st.selectbox(
+                    "Motivo de Perda (Se aplicável)", 
+                    options=[""] + MOTIVOS_PERDA_PADRAO,
+                    index=(MOTIVOS_PERDA_PADRAO.index(edit_perda) + 1) if edit_perda in MOTIVOS_PERDA_PADRAO else 0
+                )
+                
                 st.divider()
                 st.markdown("**Adicionar Nota Rápida na Linha do Tempo:**")
                 col_t1, col_t2 = st.columns([3, 1])
@@ -670,7 +678,6 @@ with aba_crm:
                 st.markdown("**Histórico de Interações (Linha do Tempo):**")
                 historico_atual = str(row_edit["Historico"]) if pd.notna(row_edit["Historico"]) else ""
                 
-                # Exibição visual limpa do histórico estilo timeline
                 if historico_atual.strip():
                     for linha_hist in historico_atual.split("\n"):
                         if linha_hist.strip():
@@ -687,7 +694,6 @@ with aba_crm:
                 with bcol3:
                     btn_excluir = st.form_submit_button("Excluir Cliente", use_container_width=True)
                     
-                # Processamento das ações do formulário
                 idx_df = st.session_state.df_crm[st.session_state.df_crm["id"] == cliente_edit_id].index
                 
                 if adicionar_timeline_btn and nova_nota_timeline.strip():
@@ -715,6 +721,7 @@ with aba_crm:
                     st.session_state.df_crm.loc[idx_df, "Vendedor"] = edit_vendedor
                     st.session_state.df_crm.loc[idx_df, "Followup_Data"] = str(edit_fu_data)
                     st.session_state.df_crm.loc[idx_df, "Followup_Nota"] = edit_fu_nota
+                    st.session_state.df_crm.loc[idx_df, "Perda"] = edit_motivo_perda
                     
                     salvar_dados_crm(st.session_state.df_crm)
                     st.session_state.cliente_editando_id = None
@@ -898,6 +905,37 @@ with aba_dash:
         st.plotly_chart(fig_pizza, use_container_width=True)
     else:
         st.info("Nenhum dado encontrado para o período selecionado.")
+
+    st.divider()
+
+    # Gráfico de Motivos de Perda (Integrado e Sincronizado)
+    st.markdown(f'<div class="notranslate"><h3>Motivos de Perda de Vendas — {titulo_dinamico}</h3></div>', unsafe_allow_html=True)
+    df_perdidos = df_dash[df_dash["Etapa"] == "6. Perdido"]
+    
+    if not df_perdidos.empty and "Perda" in df_perdidos.columns:
+        df_motivos = df_perdidos[df_perdidos["Perda"].str.strip() != ""].groupby("Perda").size().reset_index(name="Quantidade")
+        if not df_motivos.empty:
+            fig_perda = px.pie(
+                df_motivos,
+                values="Quantidade",
+                names="Perda",
+                color="Perda",
+                color_discrete_map=CORES_PERDAS,
+                hole=0.4
+            )
+            fig_perda.update_layout(
+                template="plotly_dark",
+                paper_bgcolor="#1E293B",
+                plot_bgcolor="#1E293B",
+                font=dict(color="#FFFFFF", size=13),
+                height=380
+            )
+            fig_perda.update_traces(textinfo="percent+value")
+            st.plotly_chart(fig_perda, use_container_width=True)
+        else:
+            st.info("Nenhum motivo de perda especificado para os leads perdidos.")
+    else:
+        st.info("Nenhum lead registrado na etapa '6. Perdido' no momento.")
 
 # =========================================================
 # ABA 4: RELATÓRIO EXECUTIVO
