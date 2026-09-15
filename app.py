@@ -28,7 +28,7 @@ COVEM_NAME = "GRUPO COVEM"
 CARTEIRAS_COVEM = ["BraClean", "QV Energia Solar", "Elleven"]
 
 # ---------------------------------------------------------
-# PALETA COVEM & ESTILIZAÇÃO CSS (CORREÇÃO DE ESPAÇAMENTO DOS CARDS)
+# PALETA COVEM & ESTILIZAÇÃO CSS (ESPAÇAMENTO E CORES NOS CARDS)
 # ---------------------------------------------------------
 DEFAULT_COLORS = {
     "1. Contatado": "#F472B6",         # Rosa Pastel suave
@@ -122,18 +122,16 @@ st.markdown("""
             font-weight: 600;
         }
 
-        /* AJUSTE EQUILIBRADO DOS CARDS DO CRM */
+        /* ESPAÇAMENTO VERTICAL PADRONIZADO E EQUILIBRADO */
         div[data-testid="stVerticalBlock"] {
-            gap: 2px !important;
+            gap: 4px !important;
         }
         
         div[data-testid="stExpander"] {
             margin-bottom: 4px !important;
             border: 1px solid #334155 !important;
-            background-color: #0F172A !important;
         }
 
-        /* Garante respiro interno no expander para legibilidade */
         div[data-testid="stExpander"] details summary {
             padding-top: 6px !important;
             padding-bottom: 6px !important;
@@ -734,7 +732,7 @@ with aba_crm:
             # Cabeçalho da etapa
             st.markdown(
                 f"""
-                <div style="background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%); border: 1px solid #334155; border-top: 4px solid {cor_header}; padding: 8px; border-radius: 6px; text-align: center; margin-bottom: 6px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
+                <div style="background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%); border: 1px solid #334155; border-top: 4px solid {cor_header}; padding: 8px; border-radius: 6px; text-align: center; margin-bottom: 4px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
                     <b style="color: #F8FAFC; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">{etapa}</b>
                 </div>
                 """, 
@@ -747,8 +745,9 @@ with aba_crm:
                 st_code, st_label, st_icon = calcular_status_followup(row.get("Followup_Data", ""))
                 cliente_id = row['id']
                 
+                # Fundo colorido sutil para cada card baseado na cor da etapa
                 st.markdown(f"""
-                    <div style="border-left: 3px solid {cor_header}; border-radius: 4px; margin-bottom: 4px;">
+                    <div style="border-left: 3px solid {cor_header}; background-color: {cor_header}12; border-radius: 4px; margin-bottom: 4px;">
                 """, unsafe_allow_html=True)
                 
                 with st.expander(f"{row['Empresa']}"):
