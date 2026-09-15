@@ -356,7 +356,7 @@ st.markdown('<div class="subtitle-covem">Plataforma Executiva de Gestão Comerci
 st.divider()
 
 # ---------------------------------------------------------
-# MENU HORIZONTAL EM CARDS (COR CINZA CLARINHO, QUASE DESPERCEBIDO NA ABA ATIVA)
+# MENU HORIZONTAL EM CARDS
 # ---------------------------------------------------------
 abas_disponiveis = [
     "Gerenciamento de Tarefas",
@@ -391,16 +391,16 @@ for i, nome_aba in enumerate(abas_disponiveis):
             st.session_state.menu_ativo = nome_aba
             st.rerun()
 
-st.markdown("<div style='margin-bottom: 20px;'></div>", unsafe_allow_html=True)
+# Espaçamento maior solicitado entre o menu principal e os dois mini-cards abaixo
+st.markdown("<div style='margin-bottom: 35px;'></div>", unsafe_allow_html=True)
 
 # Recupera qual aba está ativa para renderizar o conteúdo correspondente
 aba_selecionada = st.session_state.menu_ativo
 
 # ---------------------------------------------------------
-# FUNÇÃO DE RENDERIZAÇÃO DA AGENDA DA SEMANA (SEM O SUBTÍTULO)
+# FUNÇÃO DE RENDERIZAÇÃO DA AGENDA DA SEMANA
 # ---------------------------------------------------------
 def exibir_agenda_semana(df_tarefas, df_crm):
-    # Subtítulo "Agenda da Semana" removido conforme solicitado
     st.markdown('<div style="margin-top: 4px;"></div>', unsafe_allow_html=True)
     
     # Mini-cards horizontais para alternar entre Tarefas e Follow-ups
@@ -589,11 +589,8 @@ if aba_selecionada == "Gerenciamento de Tarefas":
                 st.success("Tarefa criada com sucesso!")
                 st.rerun()
 
-    # "Lista Geral de Tarefas" foi totalmente removida conforme solicitado
-
     st.divider()
 
-    # Título renomeado para "Agenda de Tarefas e Follow ups" conforme solicitado
     st.subheader("Agenda de Tarefas e Follow ups")
     st.caption("Visualize em formato de tabela cronológica todas as entregas, reuniões e interações planejadas para os próximos dias.")
 
