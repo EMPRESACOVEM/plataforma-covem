@@ -216,7 +216,7 @@ if 'df_crm' not in st.session_state:
 if 'df_tarefas' not in st.session_state:
     st.session_state.df_tarefas = pd.DataFrame([
         {
-            "Titulo": "📞 Ligar - Enviar proposta comercial",
+            "Titulo": "Ligar - Enviar proposta comercial",
             "Descricao": "Elaborar minuta contratual e enviar em PDF",
             "Cliente": "Grupo Delta",
             "Data_Vencimento": str(date.today() - timedelta(days=1)),
@@ -225,7 +225,7 @@ if 'df_tarefas' not in st.session_state:
             "Data_Criacao": str(date.today() - timedelta(days=3))
         },
         {
-            "Titulo": "💬 Enviar mensagem - Reunião de Alinhamento",
+            "Titulo": "Enviar mensagem - Reunião de Alinhamento",
             "Descricao": "Validar requisitos técnicos",
             "Cliente": "Indústria Omega",
             "Data_Vencimento": str(date.today()),
@@ -254,19 +254,19 @@ df = st.session_state.df_crm
 # ---------------------------------------------------------
 def calcular_status_followup(data_str):
     if not data_str or pd.isna(data_str) or str(data_str).strip() in ["", "nan", "NaT", "None"]:
-        return "sem_data", "Sem Follow-up", "⚪"
+        return "sem_data", "Sem Follow-up", ""
     try:
         limpa_data = str(data_str).strip()[:10]
         dt_follow = dt.strptime(limpa_data, "%Y-%m-%d").date()
         hoje = date.today()
         if dt_follow < hoje:
-            return "atrasado", "Atrasado", "🔴"
+            return "atrasado", "Atrasado", ""
         elif dt_follow == hoje:
-            return "hoje", "Atenção (Hoje)", "🟡"
+            return "hoje", "Atenção (Hoje)", ""
         else:
-            return "em_dia", "Em Dia", "🟢"
+            return "em_dia", "Em Dia", ""
     except:
-        return "sem_data", "Sem Follow-up", "⚪"
+        return "sem_data", "Sem Follow-up", ""
 
 # ---------------------------------------------------------
 # BARRA LATERAL (FILTROS E CONFIGURAÇÕES)
@@ -335,7 +335,7 @@ def exibir_agenda_semana(df_tarefas, df_crm):
             col_atraso, col_hoje = st.columns(2)
 
             with col_atraso:
-                st.markdown(f'<div class="badge-atrasada">🔴 {len(atrasadas)} Tarefas Atrasadas</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="badge-atrasada">{len(atrasadas)} Tarefas Atrasadas</div>', unsafe_allow_html=True)
                 with st.expander("Ver Tarefas Atrasadas"):
                     if not atrasadas.empty:
                         for _, row in atrasadas.iterrows():
@@ -344,7 +344,7 @@ def exibir_agenda_semana(df_tarefas, df_crm):
                         st.write("Nenhuma tarefa atrasada.")
 
             with col_hoje:
-                st.markdown(f'<div class="badge-hoje">🟡 {len(hoje_tarefas)} Tarefas para Hoje</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="badge-hoje">{len(hoje_tarefas)} Tarefas para Hoje</div>', unsafe_allow_html=True)
                 with st.expander("Ver Tarefas para Hoje"):
                     if not hoje_tarefas.empty:
                         for _, row in hoje_tarefas.iterrows():
@@ -369,7 +369,7 @@ def exibir_agenda_semana(df_tarefas, df_crm):
             col_c_atraso, col_c_hoje = st.columns(2)
 
             with col_c_atraso:
-                st.markdown(f'<div class="badge-atrasada">🔴 {len(c_atrasados)} Follow-ups Atrasados</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="badge-atrasada">{len(c_atrasados)} Follow-ups Atrasados</div>', unsafe_allow_html=True)
                 with st.expander("Ver Follow-ups Atrasados"):
                     if not c_atrasados.empty:
                         for _, row in c_atrasados.iterrows():
@@ -378,16 +378,16 @@ def exibir_agenda_semana(df_tarefas, df_crm):
                                 dt_f_br = dt.strptime(raw_dt, "%Y-%m-%d").strftime("%d/%m/%Y")
                             except:
                                 dt_f_br = "Data Inválida"
-                            st.write(f"• 🔴 **{row['Empresa']}** | Contato: `{row['Contato']}` | Data: {dt_f_br}")
+                            st.write(f"• **{row['Empresa']}** | Contato: `{row['Contato']}` | Data: {dt_f_br}")
                     else:
                         st.write("Nenhum follow-up atrasado.")
 
             with col_c_hoje:
-                st.markdown(f'<div class="badge-hoje">🟡 {len(c_hoje)} Follow-ups para Hoje</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="badge-hoje">{len(c_hoje)} Follow-ups para Hoje</div>', unsafe_allow_html=True)
                 with st.expander("Ver Follow-ups para Hoje"):
                     if not c_hoje.empty:
                         for _, row in c_hoje.iterrows():
-                            st.write(f"• 🟡 **{row['Empresa']}** | Contato: `{row['Contato']}`")
+                            st.write(f"• **{row['Empresa']}** | Contato: `{row['Contato']}`")
                     else:
                         st.write("Nenhum follow-up para hoje.")
 
@@ -401,7 +401,7 @@ aba_tarefas, aba_crm, aba_dash, aba_relatorio, aba_novo = st.tabs([
     "Funil de Vendas", 
     "Dashboard", 
     "Relatório Executivo", 
-    "➕ Novo Cadastro"
+    "+ Novo Cadastro"
 ])
 
 # =========================================================
@@ -418,7 +418,7 @@ with aba_tarefas:
         else ["Nenhum / Tarefa Geral"]
     )
 
-    with st.expander("➕ Criar Nova Tarefa", expanded=False):
+    with st.expander("+ Criar Nova Tarefa", expanded=False):
         with st.form(key="form_nova_tarefa_crm", clear_on_submit=True):
             col1, col2 = st.columns([2, 1])
 
@@ -426,7 +426,7 @@ with aba_tarefas:
                 st.markdown("**Selecione a Ação Rápida:**")
                 acao_selecionada = st.radio(
                     "Ação",
-                    options=["📞 Ligar", "💬 Enviar mensagem", "📧 Enviar e-mail", "📄 Enviar proposta"],
+                    options=["Ligar", "Enviar mensagem", "Enviar e-mail", "Enviar proposta"],
                     horizontal=True,
                     label_visibility="collapsed"
                 )
@@ -478,7 +478,7 @@ with aba_tarefas:
                     label_visibility="collapsed"
                 )
             with col_btn:
-                if st.button("🗑️ Excluir Tarefa", use_container_width=True):
+                if st.button("Excluir Tarefa", use_container_width=True):
                     st.session_state.df_tarefas = st.session_state.df_tarefas[
                         st.session_state.df_tarefas["Titulo"] != tarefa_escolhida_exclusao
                     ].reset_index(drop=True)
@@ -494,7 +494,7 @@ with aba_tarefas:
     # ---------------------------------------------------------
     # SEÇÃO DE CALENDÁRIO FUTURO (ABAIXO DA LISTA DE TAREFAS)
     # ---------------------------------------------------------
-    st.subheader("📅 Calendário de Tarefas e Follow-ups Futuros")
+    st.subheader("Calendário de Tarefas e Follow-ups Futuros")
     st.caption("Visualize em formato de tabela cronológica todas as entregas, reuniões e interações planejadas para os próximos dias.")
 
     col_h1, col_h2 = st.columns([2, 2])
@@ -525,7 +525,7 @@ with aba_tarefas:
                     if hoje <= dt_v <= limite_data:
                         eventos_futuros.append({
                             "Data": dt_v,
-                            "Tipo": "📌 Tarefa",
+                            "Tipo": "Tarefa",
                             "Título / Ação": t["Titulo"],
                             "Vinculado a": t.get("Cliente", "Geral"),
                             "Prioridade / Status": f"Prioridade: {t.get('Prioridade', 'Normal')}"
@@ -543,7 +543,7 @@ with aba_tarefas:
                     if hoje <= dt_f <= limite_data:
                         eventos_futuros.append({
                             "Data": dt_f,
-                            "Tipo": "📞 Follow-up CRM",
+                            "Tipo": "Follow-up CRM",
                             "Título / Ação": c.get("Followup_Nota", "Contato Comercial"),
                             "Vinculado a": f"Empresa: {c['Empresa']} ({c['Contato']})",
                             "Prioridade / Status": f"Etapa: {c['Etapa']}"
@@ -560,8 +560,8 @@ with aba_tarefas:
         
         c_m1, c_m2, c_m3 = st.columns(3)
         c_m1.metric("Total de Ações no Período", len(df_futuro))
-        c_m2.metric("Tarefas Pendentes", len(df_futuro[df_futuro["Tipo"] == "📌 Tarefa"]))
-        c_m3.metric("Follow-ups de CRM", len(df_futuro[df_futuro["Tipo"] == "📞 Follow-up CRM"]))
+        c_m2.metric("Tarefas Pendentes", len(df_futuro[df_futuro["Tipo"] == "Tarefa"]))
+        c_m3.metric("Follow-ups de CRM", len(df_futuro[df_futuro["Tipo"] == "Follow-up CRM"]))
 
         st.divider()
 
@@ -621,11 +621,11 @@ with aba_crm:
                 
                 bcol1, bcol2, bcol3 = st.columns([2, 2, 2])
                 with bcol1:
-                    btn_salvar_alt = st.form_submit_button("💾 Salvar Alterações", use_container_width=True)
+                    btn_salvar_alt = st.form_submit_button("Salvar Alterações", use_container_width=True)
                 with bcol2:
-                    btn_fechar_modal = st.form_submit_button("❌ Fechar Ficha", use_container_width=True)
+                    btn_fechar_modal = st.form_submit_button("Fechar Ficha", use_container_width=True)
                 with bcol3:
-                    btn_excluir = st.form_submit_button("🗑️ Excluir Cliente", use_container_width=True)
+                    btn_excluir = st.form_submit_button("Excluir Cliente", use_container_width=True)
                     
                 if btn_salvar_alt:
                     idx_df = st.session_state.df_crm[st.session_state.df_crm["id"] == cliente_edit_id].index
@@ -682,7 +682,7 @@ with aba_crm:
                 st_code, st_label, st_icon = calcular_status_followup(row.get("Followup_Data", ""))
                 cliente_id = row['id']
                 
-                with st.expander(f"{st_icon} {row['Empresa']}"):
+                with st.expander(f"{row['Empresa']}"):
                     dt_f_exib = row.get('Followup_Data', '')
                     
                     try:
@@ -694,7 +694,7 @@ with aba_crm:
                     st.markdown(
                         f"""
                         <div style="line-height: 1.25; margin-bottom: 6px;">
-                            <span style="font-size: 13px;"><b>{st_icon} {row['Empresa']}</b></span><br>
+                            <span style="font-size: 13px;"><b>{row['Empresa']}</b></span><br>
                             <span style="font-size: 12px; color: #94A3B8;">Contato: {row['Contato']}</span><br>
                             <span class="phone-highlight" style="font-size: 12px;">{row.get('Telefone', 'Não informado')}</span><br>
                             <span style="font-size: 11px; color: #CBD5E1;">Follow-up: {dt_f_str}</span>
@@ -876,10 +876,10 @@ with aba_relatorio:
         st.plotly_chart(fig_linha_atv, use_container_width=True)
 
 # =========================================================
-# ABA 5: ➕ NOVO CADASTRO
+# ABA 5: + NOVO CADASTRO
 # =========================================================
 with aba_novo:
-    st.subheader("➕ Novo Cadastro Rápido")
+    st.subheader("+ Novo Cadastro Rápido")
     st.caption("Cadastre rapidamente uma nova empresa informando apenas os dados fundamentais.")
 
     with st.form("form_cadastro_rapido", clear_on_submit=True):
