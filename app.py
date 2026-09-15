@@ -91,6 +91,37 @@ st.markdown("""
             text-transform: uppercase;
         }
 
+        /* Espaçamento elegante para títulos de seções internas */
+        .section-header-covem {
+            font-family: 'Inter', sans-serif;
+            font-size: 20px;
+            font-weight: 700;
+            color: #F8FAFC;
+            margin-top: 10px;
+            margin-bottom: 16px;
+        }
+
+        /* Espaçamento e respiro nas abas (Tabs) do Streamlit */
+        .stTabs {
+            margin-top: 12px !important;
+            margin-bottom: 16px !important;
+        }
+        
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 16px !important;
+            margin-bottom: 12px !important;
+        }
+
+        .stTabs [data-baseweb="tab"] {
+            height: 40px !important;
+            white-space: pre-wrap !important;
+            background-color: transparent !important;
+            border-radius: 6px !important;
+            gap: 4px !important;
+            padding-left: 12px !important;
+            padding-right: 12px !important;
+        }
+
         .badge-atrasada {
             background-color: #4A2024;
             color: #FCA5A5;
@@ -341,7 +372,8 @@ st.divider()
 # FUNÇÃO DE RENDERIZAÇÃO DA AGENDA DA SEMANA
 # ---------------------------------------------------------
 def exibir_agenda_semana(df_tarefas, df_crm):
-    st.markdown('<div class="section-header">Agenda da Semana</div>', unsafe_allow_html=True)
+    # Título da seção com margem inferior limpa e elegante
+    st.markdown('<div class="section-header-covem">Agenda da Semana</div>', unsafe_allow_html=True)
     
     tab_alertas_tarefas, tab_alertas_crm = st.tabs(["Tarefas", "Follow-ups (CRM)"])
 
@@ -729,7 +761,6 @@ with aba_crm:
         cor_header = st.session_state.funnel_colors.get(etapa, "#3B82F6")
         
         with cols[idx]:
-            # Cabeçalho da etapa
             st.markdown(
                 f"""
                 <div style="background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%); border: 1px solid #334155; border-top: 4px solid {cor_header}; padding: 8px; border-radius: 6px; text-align: center; margin-bottom: 16px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
@@ -745,7 +776,6 @@ with aba_crm:
                 st_code, st_label, st_icon = calcular_status_followup(row.get("Followup_Data", ""))
                 cliente_id = row['id']
                 
-                # Card do cliente com bordinha lateral da cor da etapa e fundo levemente tingido com a cor da etapa
                 st.markdown(f"""
                     <div style="border-left: 4px solid {cor_header}; background-color: #111C31; border-top: 1px solid #1E293B; border-right: 1px solid #1E293B; border-bottom: 1px solid #1E293B; border-radius: 4px; margin-bottom: 6px; padding: 2px;">
                 """, unsafe_allow_html=True)
