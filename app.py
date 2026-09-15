@@ -173,7 +173,7 @@ def carregar_dados_crm():
             "Prob": 0.20, "Vendedor": "Lucas Mendes", "Perda": "",
             "Data_Cadastro": str(date.today()),
             "Followup_Data": str(date.today() - timedelta(days=2)), "Followup_Nota": "Enviar apresentação institucional atualizada.", 
-            "Historico": "01/09: Primeiro contato realizado."
+            "Historico": "[01/09/2026 10:00] Primeiro contato realizado."
         },
         {
             "id": 2, "Empresa": "Sistemas Sigma", "Cliente": "QV Energia Solar", "Etapa": "1. Contatado", 
@@ -182,7 +182,7 @@ def carregar_dados_crm():
             "Prob": 0.20, "Vendedor": "Lucas Mendes", "Perda": "",
             "Data_Cadastro": str(date.today()),
             "Followup_Data": str(date.today()), "Followup_Nota": "Ligar para confirmar se recebeu o e-mail.", 
-            "Historico": "02/09: E-mail enviado."
+            "Historico": "[02/09/2026 14:30] E-mail enviado."
         },
         {
             "id": 3, "Empresa": "Indústria Omega", "Cliente": "Elleven", "Etapa": "2. Conversando", 
@@ -191,7 +191,7 @@ def carregar_dados_crm():
             "Prob": 0.40, "Vendedor": "Gabriel Silva", "Perda": "",
             "Data_Cadastro": str(date.today()),
             "Followup_Data": str(date.today() + timedelta(days=3)), "Followup_Nota": "Alinhar escopo do projeto técnico.", 
-            "Historico": "30/08: Reunião inicial."
+            "Historico": "[30/08/2026 09:15] Reunião inicial realizada."
         },
         {
             "id": 4, "Empresa": "Tecnologia Beta", "Cliente": "BraClean", "Etapa": "6. Perdido", 
@@ -200,7 +200,7 @@ def carregar_dados_crm():
             "Prob": 0.00, "Vendedor": "Lucas Mendes", "Perda": "Preço / Orçamento",
             "Data_Cadastro": str(date.today()),
             "Followup_Data": "", "Followup_Nota": "", 
-            "Historico": "25/08: Achou o valor acima do orçamento."
+            "Historico": "[25/08/2026 16:45] Achou o valor acima do orçamento."
         }
     ])
     df_inicial.to_excel(ARQUIVO_DADOS, index=False)
@@ -283,7 +283,7 @@ def calcular_status_followup(data_str):
         return "sem_data", "Sem Follow-up", '<span style="height: 10px; width: 10px; background-color: #94A3B8; border-radius: 50%; display: inline-block;" title="Sem Data"></span>'
 
 # ---------------------------------------------------------
-# BARRA LATERAL (FILTROS E CONFIGURAÇÕES)
+# BARRA LATERAL (FILTROS, NOTIFICAÇÕES E CONFIGURAÇÕES)
 # ---------------------------------------------------------
 opcoes_filtro = ["TODOS"] + CARTEIRAS_COVEM
 cliente_sel = st.sidebar.selectbox("Clientes COVEM:", opcoes_filtro)
@@ -294,6 +294,36 @@ if cliente_sel != "TODOS":
 else:
     df_filtered = df
     titulo_dinamico = COVEM_NAME
+
+# Cálculo em tempo real das notificações para a barra lateral
+if not df_filtered.empty:
+    atrasados_sidebar_count = 0
+    hoje_sidebar_count = 0
+    for _, r in df_filtered.iterrows():
+        st_code, _, _ = calcular_status_followup(r.get("Followup_Data", ""))
+        if st_code == "atrasado":
+            atrasados_sidebar_count += 1
+        elif st_code == "hoje":
+            hoje_sidebar_count += 1
+else:
+    atrasados_sidebar_count = 0
+    hoje_sidebar_count = 0
+
+st.sidebar.divider()
+st.sidebar.markdown("**Painel de Alertas**")
+st.sidebar.markdown(
+    f"""
+    <div style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px;">
+        <div style="background-color: #4A2024; color: #FCA5A5; border: 1px solid #EF4444; padding: 6px 10px; border-radius: 6px; font-size: 12px; font-weight: 600;">
+            <span style="height: 10px; width: 10px; background-color: #EF4444; border-radius: 50%; display: inline-block; margin-right: 6px;"></span> {atrasados_sidebar_count} Follow-ups Atrasados
+        </div>
+        <div style="background-color: #3F2E04; color: #FDE047; border: 1px solid #EAB308; padding: 6px 10px; border-radius: 6px; font-size: 12px; font-weight: 600;">
+            <span style="height: 10px; width: 10px; background-color: #EAB308; border-radius: 50%; display: inline-block; margin-right: 6px;"></span> {hoje_sidebar_count} Follow-ups para Hoje
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
 st.sidebar.divider()
 
@@ -600,7 +630,7 @@ with aba_crm:
             st.markdown(
                 f"""
                 <div style="background-color: #0F172A; border: 2px solid #38BDF8; padding: 25px; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 4px 12px rgba(56, 189, 248, 0.15);">
-                    <h3 style="color: #38BDF8; margin-top: 0; margin-bottom: 20px; font-weight: 700;">Ficha Completa: {row_edit['Empresa']}</h3>
+                    <h3 style="color: #38BDF8; margin-top: 0; margin-bottom: 20px; font-weight: 700;">Ficha Completa & Linha do Tempo: {row_edit['Empresa']}</h3>
                 """,
                 unsafe_allow_html=True
             )
@@ -624,21 +654,57 @@ with aba_crm:
                     except:
                         dt_parse = date.today()
                         
-                    edit_fu_data = st.date_input("Data de Follow-up", value=dt_parse)
+                    edit_fu_data = st.date_input("Próxima Data de Follow-up", value=dt_parse)
                 
-                edit_fu_nota = st.text_area("Nota / Ação de Follow-up", value=row_edit["Followup_Nota"])
-                edit_hist = st.text_area("Histórico do Cliente", value=row_edit["Historico"])
+                edit_fu_nota = st.text_input("Resumo / Nota do Follow-up", value=row_edit["Followup_Nota"])
                 
+                st.divider()
+                st.markdown("**Adicionar Nota Rápida na Linha do Tempo:**")
+                col_t1, col_t2 = st.columns([3, 1])
+                with col_t1:
+                    nova_nota_timeline = st.text_input("Escreva o que foi conversado / alinhado:", placeholder="Ex: Cliente pediu para retornar na próxima terça para fechar o contrato.")
+                with col_t2:
+                    st.markdown("<br>", unsafe_allow_html=True)
+                    adicionar_timeline_btn = st.form_submit_button("+ Registrar na Timeline", use_container_width=True)
+
+                st.markdown("**Histórico de Interações (Linha do Tempo):**")
+                historico_atual = str(row_edit["Historico"]) if pd.notna(row_edit["Historico"]) else ""
+                
+                # Exibição visual limpa do histórico estilo timeline
+                if historico_atual.strip():
+                    for linha_hist in historico_atual.split("\n"):
+                        if linha_hist.strip():
+                            st.markdown(f"- 🕒 `{linha_hist.strip()}`")
+                else:
+                    st.caption("Nenhum registro na linha do tempo ainda.")
+                
+                st.divider()
                 bcol1, bcol2, bcol3 = st.columns([2, 2, 2])
                 with bcol1:
-                    btn_salvar_alt = st.form_submit_button("Salvar Alterações", use_container_width=True)
+                    btn_salvar_alt = st.form_submit_button("Salvar Alterações Gerais", use_container_width=True)
                 with bcol2:
                     btn_fechar_modal = st.form_submit_button("Fechar Ficha", use_container_width=True)
                 with bcol3:
                     btn_excluir = st.form_submit_button("Excluir Cliente", use_container_width=True)
                     
+                # Processamento das ações do formulário
+                idx_df = st.session_state.df_crm[st.session_state.df_crm["id"] == cliente_edit_id].index
+                
+                if adicionar_timeline_btn and nova_nota_timeline.strip():
+                    timestamp_atual = dt.now().strftime("%d/%m/%Y %H:%M")
+                    novo_registro_timeline = f"[{timestamp_atual}] {nova_nota_timeline.strip()}"
+                    
+                    if historico_atual.strip():
+                        historico_atualizado = novo_registro_timeline + "\n" + historico_atual
+                    else:
+                        historico_atualizado = novo_registro_timeline
+                        
+                    st.session_state.df_crm.loc[idx_df, "Historico"] = historico_atualizado
+                    salvar_dados_crm(st.session_state.df_crm)
+                    st.success("Nota adicionada na linha do tempo com sucesso!")
+                    st.rerun()
+
                 if btn_salvar_alt:
-                    idx_df = st.session_state.df_crm[st.session_state.df_crm["id"] == cliente_edit_id].index
                     st.session_state.df_crm.loc[idx_df, "Empresa"] = edit_empresa
                     st.session_state.df_crm.loc[idx_df, "Contato"] = edit_contato
                     st.session_state.df_crm.loc[idx_df, "Cargo"] = edit_cargo
@@ -649,11 +715,10 @@ with aba_crm:
                     st.session_state.df_crm.loc[idx_df, "Vendedor"] = edit_vendedor
                     st.session_state.df_crm.loc[idx_df, "Followup_Data"] = str(edit_fu_data)
                     st.session_state.df_crm.loc[idx_df, "Followup_Nota"] = edit_fu_nota
-                    st.session_state.df_crm.loc[idx_df, "Historico"] = edit_hist
                     
                     salvar_dados_crm(st.session_state.df_crm)
                     st.session_state.cliente_editando_id = None
-                    st.success("Atualizado e salvo com sucesso!")
+                    st.success("Alterações salvas com sucesso!")
                     st.rerun()
                     
                 if btn_fechar_modal:
@@ -972,7 +1037,6 @@ with aba_relatorio:
 
         total_mes = val_prop + val_fech
 
-        # Formatando valores monetários com a quantidade junta
         str_prop_fmt = f"R$ {val_prop:,.2f} ({qtd_prop} un)".replace(",", "X").replace(".", ",").replace("X", ".")
         str_fech_fmt = f"R$ {val_fech:,.2f} ({qtd_fech} un)".replace(",", "X").replace(".", ",").replace("X", ".")
         str_total_fmt = f"R$ {total_mes:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
@@ -1019,7 +1083,6 @@ with aba_relatorio:
         else:
             st.info("Nenhum dado cadastrado para gerar o histórico financeiro.")
 
-    # Gerador do Gráfico Financeiro em Valores (R$)
     if not df_crm_base.empty and "Data_Cadastro" in df_crm_base.columns:
         df_graf_fin = df_crm_base[df_crm_base["Etapa"].isin(["4. Proposta Enviada", "5. Fechado"])].copy()
         if not df_graf_fin.empty:
@@ -1096,7 +1159,7 @@ with aba_novo:
                     "Data_Cadastro": str(date.today()),
                     "Followup_Data": str(date.today()),
                     "Followup_Nota": "Novo cadastro rápido efetuado.",
-                    "Historico": f"Cadastro rápido realizado em {dt.now().strftime('%d/%m/%Y')}"
+                    "Historico": f"[{dt.now().strftime('%d/%m/%Y %H:%M')}] Cadastro rápido realizado."
                 }
                 st.session_state.df_crm = pd.concat(
                     [st.session_state.df_crm, pd.DataFrame([nova_linha_rapida])], 
@@ -1156,7 +1219,7 @@ with aba_novo:
                     "Data_Cadastro": str(date.today()),
                     "Followup_Data": str(f_data_ini) if f_nota_ini else "",
                     "Followup_Nota": f_nota_ini,
-                    "Historico": f"Cadastrado em {dt.now().strftime('%d/%m/%Y')}"
+                    "Historico": f"[{dt.now().strftime('%d/%m/%Y %H:%M')}] Oportunidade cadastrada."
                 }
                 st.session_state.df_crm = pd.concat([st.session_state.df_crm, pd.DataFrame([nova_linha])], ignore_index=True)
                 salvar_dados_crm(st.session_state.df_crm)
