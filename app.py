@@ -394,11 +394,10 @@ def exibir_agenda_semana(df_tarefas, df_crm):
     st.divider()
 
 # ---------------------------------------------------------
-# NAVEGAÇÃO POR ABAS (COM A NOVA ABA DE CALENDÁRIO)
+# NAVEGAÇÃO POR ABAS (CALENDÁRIO INTEGRADO AO GERENCIADOR)
 # ---------------------------------------------------------
-aba_tarefas, aba_calendario, aba_crm, aba_dash, aba_relatorio, aba_novo = st.tabs([
+aba_tarefas, aba_crm, aba_dash, aba_relatorio, aba_novo = st.tabs([
     "Gerenciador de Tarefas",
-    "📅 Calendário Futuro",
     "Funil de Vendas", 
     "Dashboard", 
     "Relatório Executivo", 
@@ -406,7 +405,7 @@ aba_tarefas, aba_calendario, aba_crm, aba_dash, aba_relatorio, aba_novo = st.tab
 ])
 
 # =========================================================
-# ABA 1: GERENCIADOR DE TAREFAS
+# ABA 1: GERENCIADOR DE TAREFAS & CALENDÁRIO FUTURO
 # =========================================================
 with aba_tarefas:
     exibir_agenda_semana(st.session_state.df_tarefas, st.session_state.df_crm)
@@ -490,14 +489,14 @@ with aba_tarefas:
     else:
         st.info("Nenhuma tarefa pendente.")
 
-# =========================================================
-# ABA 2: 📅 CALENDÁRIO FUTURO (NOVO!)
-# =========================================================
-with aba_calendario:
-    st.subheader("📅 Calendário de Tarefas e Follow-ups Futuros")
-    st.caption("Visualize em formato de linha do tempo e tabela cronológica todas as suas entregas, reuniões e interações planejadas para os próximos dias.")
+    st.divider()
 
-    # Filtro de horizonte de tempo
+    # ---------------------------------------------------------
+    # SEÇÃO DE CALENDÁRIO FUTURO (ABAIXO DA LISTA DE TAREFAS)
+    # ---------------------------------------------------------
+    st.subheader("📅 Calendário de Tarefas e Follow-ups Futuros")
+    st.caption("Visualize em formato de tabela cronológica todas as entregas, reuniões e interações planejadas para os próximos dias.")
+
     col_h1, col_h2 = st.columns([2, 2])
     with col_h1:
         horizonte = st.selectbox(
@@ -515,9 +514,6 @@ with aba_calendario:
     else:
         limite_data = hoje + timedelta(days=365)
 
-    st.divider()
-
-    # Consolidando Tarefas e Follow-ups em uma única visão cronológica
     eventos_futuros = []
 
     # Processar Tarefas
@@ -560,10 +556,8 @@ with aba_calendario:
         df_futuro = df_futuro.sort_values(by="Data", ascending=True)
         df_futuro["Data_Formatada"] = pd.to_datetime(df_futuro["Data"]).dt.strftime("%d/%m/%Y")
 
-        # Exibição em Tabela Cronológica Estilizada
         st.markdown(f"#### Compromissos no período ({len(df_futuro)} encontrados)")
         
-        # Exibir métricas rápidas de planejamento
         c_m1, c_m2, c_m3 = st.columns(3)
         c_m1.metric("Total de Ações no Período", len(df_futuro))
         c_m2.metric("Tarefas Pendentes", len(df_futuro[df_futuro["Tipo"] == "📌 Tarefa"]))
@@ -571,37 +565,16 @@ with aba_calendario:
 
         st.divider()
 
-        # Tabela limpa para leitura rápida
         st.dataframe(
             df_futuro[["Data_Formatada", "Tipo", "Título / Ação", "Vinculado a", "Prioridade / Status"]],
             use_container_width=True,
             hide_index=True
         )
-
-        # Gráfico de Gantt / Timeline visual simples integrado
-        st.markdown("#### Linha do Tempo Gráfica")
-        fig_timeline = px.scatter(
-            df_futuro,
-            x="Data",
-            y="Tipo",
-            color="Tipo",
-            hover_data=["Título / Ação", "Vinculado a"],
-            title="Distribuição Cronológica dos Compromissos Futuros"
-        )
-        fig_timeline.update_layout(
-            template="plotly_dark",
-            paper_bgcolor="#1E293B",
-            plot_bgcolor="#1E293B",
-            font=dict(color="#FFFFFF", size=13),
-            height=350
-        )
-        st.plotly_chart(fig_timeline, use_container_width=True)
-
     else:
         st.info("Nenhuma tarefa ou follow-up agendado para este horizonte de tempo.")
 
 # =========================================================
-# ABA 3: FUNIL DE VENDAS
+# ABA 2: FUNIL DE VENDAS
 # =========================================================
 with aba_crm:
     st.subheader(f"Funil de Vendas — {titulo_dinamico}")
@@ -754,7 +727,7 @@ with aba_crm:
                         st.rerun()
 
 # =========================================================
-# ABA 4: DASHBOARD
+# ABA 3: DASHBOARD
 # =========================================================
 with aba_dash:
     st.markdown(f'<div class="notranslate"><h3>1. DISTRIBUIÇÃO DO FUNIL DE VENDAS ({titulo_dinamico})</h3></div>', unsafe_allow_html=True)
@@ -852,7 +825,7 @@ with aba_dash:
         st.info("Nenhum dado encontrado para o período selecionado.")
 
 # =========================================================
-# ABA 5: RELATÓRIO EXECUTIVO
+# ABA 4: RELATÓRIO EXECUTIVO
 # =========================================================
 with aba_relatorio:
     st.title("Relatório Executivo")
@@ -903,7 +876,7 @@ with aba_relatorio:
         st.plotly_chart(fig_linha_atv, use_container_width=True)
 
 # =========================================================
-# ABA 6: ➕ NOVO CADASTRO
+# ABA 5: ➕ NOVO CADASTRO
 # =========================================================
 with aba_novo:
     st.subheader("➕ Novo Cadastro Rápido")
