@@ -356,7 +356,7 @@ st.markdown('<div class="subtitle-covem">Plataforma Executiva de Gestão Comerci
 st.divider()
 
 # ---------------------------------------------------------
-# MENU HORIZONTAL EM CARDS (COR CINZA CLARINHO, QUASE DESPERCEBIDO NA ABA ATIVA)
+# MENU HORIZONTAL EM CARDS (COM DESTAQUE EM AZUL CIANO PARA A ABA ATIVA)
 # ---------------------------------------------------------
 abas_disponiveis = [
     "Gerenciamento de Tarefas",
@@ -372,16 +372,17 @@ for i, nome_aba in enumerate(abas_disponiveis):
     with cols_menu[i]:
         is_active = (st.session_state.menu_ativo == nome_aba)
         
+        # Injeta estilo dinâmico direto via botão/HTML ou usa variação de cor
         if is_active:
-            # Estilo cinza clarinho, quase despercebido para a aba ativa
+            # Fundo azul ciano claro / destacado para indicar a tela aberta
             st.markdown(
                 f"""
                 <style>
                 div[data-testid="column"]:nth-of-type({i+1}) div.stButton > button {{
-                    background-color: #26334D !important;
-                    color: #94A3B8 !important;
-                    border: 1px solid #475569 !important;
-                    font-weight: 500 !important;
+                    background-color: #0284C7 !important;
+                    color: #FFFFFF !important;
+                    border: 2px solid #38BDF8 !important;
+                    font-weight: 700 !important;
                 }}
                 </style>
                 """,
@@ -415,10 +416,10 @@ def exibir_agenda_semana(df_tarefas, df_crm):
                 """
                 <style>
                 div[data-testid="column"]:nth-of-type(1) div.stButton > button {
-                    background-color: #26334D !important;
-                    color: #94A3B8 !important;
-                    border: 1px solid #475569 !important;
-                    font-weight: 500 !important;
+                    background-color: #0284C7 !important;
+                    color: #FFFFFF !important;
+                    border: 2px solid #38BDF8 !important;
+                    font-weight: 700 !important;
                 }
                 </style>
                 """,
@@ -435,10 +436,10 @@ def exibir_agenda_semana(df_tarefas, df_crm):
                 """
                 <style>
                 div[data-testid="column"]:nth-of-type(2) div.stButton > button {
-                    background-color: #26334D !important;
-                    color: #94A3B8 !important;
-                    border: 1px solid #475569 !important;
-                    font-weight: 500 !important;
+                    background-color: #0284C7 !important;
+                    color: #FFFFFF !important;
+                    border: 2px solid #38BDF8 !important;
+                    font-weight: 700 !important;
                 }
                 </style>
                 """,
