@@ -718,7 +718,7 @@ with aba_crm:
         cor_header = st.session_state.funnel_colors.get(etapa, "#3B82F6")
         
         with cols[idx]:
-            # Cabeçalho da coluna do funil
+            # Card de título estilizado com fundo escuro e borda superior colorida
             st.markdown(
                 f"""
                 <div style="background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%); border: 1px solid #334155; border-top: 4px solid {cor_header}; padding: 10px; border-radius: 8px; text-align: center; margin-bottom: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
@@ -734,13 +734,10 @@ with aba_crm:
                 st_code, st_label, st_icon = calcular_status_followup(row.get("Followup_Data", ""))
                 cliente_id = row['id']
                 
-                # Card idêntico ao cabeçalho: Fundo escuro e faixa superior colorida com a cor exata da etapa
-                st.markdown(
-                    f"""
-                    <div style="background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%); border: 1px solid #334155; border-top: 4px solid {cor_header}; padding: 10px; border-radius: 8px; margin-bottom: 10px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-                    """, 
-                    unsafe_allow_html=True
-                )
+                # Envolvendo o expander com uma borda lateral delicada correspondente à cor da etapa atual
+                st.markdown(f"""
+                    <div style="border-left: 3px solid {cor_header}; border-radius: 4px; margin-bottom: 8px;">
+                """, unsafe_allow_html=True)
                 
                 with st.expander(f"{row['Empresa']}"):
                     dt_f_exib = row.get('Followup_Data', '')
@@ -1226,7 +1223,7 @@ with aba_novo:
                     "Etapa": nova_etapa,
                     "Contato": novo_contato if novo_contato else "Não informado",
                     "Cargo": novo_cargo if novo_cargo else "Não informado",
-                    "Telefone": novo_telefone if novo_telefone else "Não informado",
+                    "Telefone": nova_telefone if nova_telefone else "Não informado",
                     "Email": nova_email if nova_email else "Não informado",
                     "Cidade": nova_cidade if nova_cidade else "Não informado",
                     "Valor": nova_valor,
