@@ -391,8 +391,12 @@ for i, nome_aba in enumerate(abas_disponiveis):
             st.session_state.menu_ativo = nome_aba
             st.rerun()
 
-# Espaçamento maior solicitado entre o menu principal e os dois mini-cards abaixo
-st.markdown("<div style='margin-bottom: 35px;'></div>", unsafe_allow_html=True)
+# Espaçamento maior com linha divisória separando o menu principal dos mini cards
+st.markdown("""
+    <div style='margin-top: 30px; margin-bottom: 30px;'>
+        <hr style='border: none; border-top: 1px solid #334155;'>
+    </div>
+""", unsafe_allow_html=True)
 
 # Recupera qual aba está ativa para renderizar o conteúdo correspondente
 aba_selecionada = st.session_state.menu_ativo
