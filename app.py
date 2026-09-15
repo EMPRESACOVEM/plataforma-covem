@@ -218,7 +218,6 @@ def carregar_dados_tarefas():
         except Exception:
             pass
             
-    # Retorna DataFrame vazio para não recriar lixo indesejado
     df_inicial_vazio = pd.DataFrame(columns=["Titulo", "Descricao", "Cliente", "Data_Vencimento", "Prioridade", "Status", "Data_Criacao"])
     df_inicial_vazio.to_excel(ARQUIVO_TAREFAS, index=False)
     return df_inicial_vazio
@@ -553,20 +552,20 @@ with aba_tarefas:
         df_futuro = df_futuro.sort_values(by="Data", ascending=True)
         df_futuro["Data_Formatada"] = pd.to_datetime(df_futuro["Data"]).dt.strftime("%d/%m/%Y")
 
-        st.markdown(f"#### Compromissos no período ({len(df_futuro)} encontrados)")
-        
-        c_m1, c_m2, c_m3 = st.columns(3)
-        c_m1.metric("Total de Ações no Período", len(df_futuro))
-        c_m2.metric("Tarefas Pendentes", len(df_futuro[df_futuro["Tipo"] == "Tarefa"]))
-        c_m3.metric("Follow-ups de CRM", len(df_futuro[df_futuro["Tipo"] == "Follow-up CRM"]))
+        # Bloco minimizável conforme solicitado (inicia fechado/minimizado)
+        with st.expander(f"Ver compromissos no período ({len(df_futuro)} encontrados)", expanded=False):
+            c_m1, c_m2, c_m3 = st.columns(3)
+            c_m1.metric("Total de Ações no Período", len(df_futuro))
+            c_m2.metric("Tarefas Pendentes", len(df_futuro[df_futuro["Tipo"] == "Tarefa"]))
+            c_m3.metric("Follow-ups de CRM", len(df_futuro[df_futuro["Tipo"] == "Follow-up CRM"]))
 
-        st.divider()
+            st.divider()
 
-        st.dataframe(
-            df_futuro[["Data_Formatada", "Tipo", "Título / Ação", "Vinculado a", "Prioridade / Status"]],
-            use_container_width=True,
-            hide_index=True
-        )
+            st.dataframe(
+                df_futuro[["Data_Formatada", "Tipo", "Título / Ação", "Vinculado a", "Prioridade / Status"]],
+                use_container_width=True,
+                hide_index=True
+            )
     else:
         st.info("Nenhuma tarefa ou follow-up agendado para este horizonte de tempo.")
 
@@ -900,7 +899,7 @@ with aba_novo:
                 nova_linha_rapida = {
                     "id": novo_id,
                     "Empresa": rapido_empresa,
-                    "Cliente": rap_carteira if 'rap_carteira' in locals() else rapido_carteira,
+                    "Cliente": rapido_carteira,
                     "Etapa": rapido_etapa,
                     "Contato": "Não informado",
                     "Cargo": "Não informado",
