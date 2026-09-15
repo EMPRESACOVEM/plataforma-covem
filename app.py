@@ -170,29 +170,6 @@ st.markdown("""
             font-family: 'Inter', sans-serif !important;
             font-size: 12px !important;
         }
-
-        /* Estilização personalizada para a Tabela de Tarefas e Follow-ups inspirada no seu layout */
-        .table-container-covem {
-            max-width: 100%;
-            background-color: #1c2541;
-            border-radius: 8px;
-            overflow: hidden;
-            border: 2px solid #48cae4;
-            margin-top: 10px;
-            margin-bottom: 20px;
-        }
-
-        .minicard-th {
-            background-color: #3a506b;
-            border: 1px solid #6c757d;
-            border-radius: 6px;
-            padding: 6px 10px;
-            text-align: center;
-            font-weight: bold;
-            color: #ffffff;
-            font-size: 13px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        }
     </style>
 """, unsafe_allow_html=True)
 
@@ -684,25 +661,15 @@ if aba_selecionada == "Gerenciamento de Tarefas":
 
             st.divider()
 
-            # Renderização da Tabela Estilizada com os Minicards solicitados
-            st.markdown(
-                """
-                <div class="table-container-covem">
-                    <table style="width: 100%; border-collapse: collapse; text-align: left;">
-                        <thead>
-                            <tr style="background-color: #2a3b59;">
-                                <th style="padding: 10px; border-bottom: 2px solid #adb5bd; border-right: 2px solid #adb5bd;"><div class="minicard-th">Excluir Itens</div></th>
-                                <th style="padding: 10px; border-bottom: 2px solid #adb5bd; border-right: 2px solid #adb5bd;"><div class="minicard-th">Data</div></th>
-                                <th style="padding: 10px; border-bottom: 2px solid #adb5bd; border-right: 2px solid #adb5bd;"><div class="minicard-th">Tipo</div></th>
-                                <th style="padding: 10px; border-bottom: 2px solid #adb5bd; border-right: 2px solid #adb5bd;"><div class="minicard-th">Ação</div></th>
-                                <th style="padding: 10px; border-bottom: 2px solid #adb5bd; border-right: 2px solid #adb5bd;"><div class="minicard-th">Empresa</div></th>
-                                <th style="padding: 10px; border-bottom: 2px solid #adb5bd;"><div class="minicard-th">Editar</div></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                """,
-                unsafe_allow_html=True
-            )
+            # Cabeçalho da Tabela personalizada mantendo o formato visual solicitado
+            col_cab1, col_cab2, col_cab3, col_cab4, col_cab5, col_cab6 = st.columns([0.6, 1.2, 1.2, 2.5, 2.0, 1.0])
+            col_cab1.markdown("**Excluir**")
+            col_cab2.markdown("**Data**")
+            col_cab3.markdown("**Tipo**")
+            col_cab4.markdown("**Ação**")
+            col_cab5.markdown("**Empresa**")
+            col_cab6.markdown("**Editar**")
+            st.markdown("<hr style='margin: 4px 0 8px 0; border-color: #334155;'>", unsafe_allow_html=True)
 
             for i, row in df_futuro.iterrows():
                 origem = row["origem"]
@@ -712,16 +679,19 @@ if aba_selecionada == "Gerenciamento de Tarefas":
                 acao_atual = row["Ação"]
                 empresa_atual = row["Empresa"]
 
+                # Identifica se esta linha está no modo de edição manual
                 esta_editando = (st.session_state.editando_agenda_idx == i)
 
                 c_col1, c_col2, c_col3, c_col4, c_col5, c_col6 = st.columns([0.6, 1.2, 1.2, 2.5, 2.0, 1.0])
 
+                # Botão Excluir (Lado esquerdo, antes da data)
                 with c_col1:
                     if st.button("🗑️", key=f"del_agenda_{i}", help="Excluir item"):
                         if origem == "tarefa":
                             st.session_state.df_tarefas = st.session_state.df_tarefas.drop(idx_orig).reset_index(drop=True)
                             salvar_dados_tarefas(st.session_state.df_tarefas)
                         else:
+                            # No CRM, limpar a data do follow-up para desvincular da agenda
                             st.session_state.df_crm.loc[idx_orig, "Followup_Data"] = ""
                             st.session_state.df_crm.loc[idx_orig, "Followup_Nota"] = ""
                             salvar_dados_crm(st.session_state.df_crm)
@@ -729,20 +699,23 @@ if aba_selecionada == "Gerenciamento de Tarefas":
                         st.rerun()
 
                 if not esta_editando:
-                    c_col2.markdown(f"<td style='padding: 14px 16px; border-bottom: 2px solid #adb5bd; border-right: 2px solid #adb5bd;'>{data_atual.strftime('%d/%m/%Y')}</td>", unsafe_allow_html=True)
-                    c_col3.markdown(f"<td style='padding: 14px 16px; border-bottom: 2px solid #adb5bd; border-right: 2px solid #adb5bd;'>{tipo_atual}</td>", unsafe_allow_html=True)
-                    c_col4.markdown(f"<td style='padding: 14px 16px; border-bottom: 2px solid #adb5bd; border-right: 2px solid #adb5bd;'>{acao_atual}</td>", unsafe_allow_html=True)
-                    c_col5.markdown(f"<td style='padding: 14px 16px; border-bottom: 2px solid #adb5bd; border-right: 2px solid #adb5bd;'>{empresa_atual}</td>", unsafe_allow_html=True)
+                    # Exibição normal na tabela
+                    c_col2.text(data_atual.strftime("%d/%m/%Y"))
+                    c_col3.text(tipo_atual)
+                    c_col4.text(acao_atual)
+                    c_col5.text(empresa_atual)
 
+                    # Botão Editar (Lado direito, após a empresa)
                     with c_col6:
                         if st.button("✏️ Editar", key=f"edit_agenda_{i}"):
                             st.session_state.editando_agenda_idx = i
                             st.rerun()
                 else:
+                    # Modo de edição manual direto na linha (sem abrir outra janela)
                     with c_col2:
                         nova_data_ed = st.date_input("Data", value=data_atual, key=f"ed_dt_{i}", label_visibility="collapsed")
                     with c_col3:
-                        st.text(tipo_atual)
+                        st.text(tipo_atual) # O tipo permanece fixo
                     with c_col4:
                         nova_acao_ed = st.text_input("Ação", value=acao_atual, key=f"ed_acao_{i}", label_visibility="collapsed")
                     with c_col5:
@@ -766,15 +739,6 @@ if aba_selecionada == "Gerenciamento de Tarefas":
                             st.rerun()
                 
                 st.markdown("<hr style='margin: 2px 0; border-color: #1E293B;'>", unsafe_allow_html=True)
-            
-            st.markdown(
-                """
-                        </tbody>
-                    </table>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
     else:
         st.info("Nenhuma tarefa ou follow-up agendado para este horizonte de tempo.")
 
