@@ -352,7 +352,7 @@ st.markdown('<div class="subtitle-covem">Plataforma Executiva de Gestão Comerci
 st.divider()
 
 # ---------------------------------------------------------
-# MENU HORIZONTAL EM CARDS (COM DESTAQUE ATIVO CORRETO)
+# MENU HORIZONTAL EM CARDS (DESTAQUE EM CINZA CLARO)
 # ---------------------------------------------------------
 abas_disponiveis = [
     "Gerenciamento de Tarefas",
@@ -368,15 +368,15 @@ for i, nome_aba in enumerate(abas_disponiveis):
     with cols_menu[i]:
         is_active = (st.session_state.menu_ativo == nome_aba)
         
-        # Estilização precisa via seletor de atributo key/label do Streamlit
+        # Estilização do Menu Ativo em Cinza Claro (#334155 fundo, #E2E8F0 texto/borda)
         if is_active:
             st.markdown(
                 f"""
                 <style>
                 div[data-testid="column"]:nth-of-type({i+1}) button[kind="secondary"] {{
-                    background-color: #0284C7 !important;
-                    color: #FFFFFF !important;
-                    border: 2px solid #38BDF8 !important;
+                    background-color: #334155 !important;
+                    color: #F8FAFC !important;
+                    border: 2px solid #E2E8F0 !important;
                     font-weight: 700 !important;
                 }}
                 </style>
@@ -392,7 +392,7 @@ st.markdown("<div style='margin-bottom: 20px;'></div>", unsafe_allow_html=True)
 aba_selecionada = st.session_state.menu_ativo
 
 # ---------------------------------------------------------
-# FUNÇÃO DE RENDERIZAÇÃO DA AGENDA DA SEMANA (MINI-CARDS COMPACTOS)
+# FUNÇÃO DE RENDERIZAÇÃO DA AGENDA DA SEMANA (MINI-CARDS COM CINZA CLARO)
 # ---------------------------------------------------------
 def exibir_agenda_semana(df_tarefas, df_crm):
     st.markdown('<div class="section-header-covem">Agenda da Semana</div>', unsafe_allow_html=True)
@@ -408,9 +408,9 @@ def exibir_agenda_semana(df_tarefas, df_crm):
                 """
                 <style>
                 button[key="sub_btn_tarefas"] {
-                    background-color: #0284C7 !important;
-                    color: #FFFFFF !important;
-                    border: 2px solid #38BDF8 !important;
+                    background-color: #334155 !important;
+                    color: #F8FAFC !important;
+                    border: 2px solid #E2E8F0 !important;
                     font-weight: 700 !important;
                 }
                 </style>
@@ -428,9 +428,9 @@ def exibir_agenda_semana(df_tarefas, df_crm):
                 """
                 <style>
                 button[key="sub_btn_followups"] {
-                    background-color: #0284C7 !important;
-                    color: #FFFFFF !important;
-                    border: 2px solid #38BDF8 !important;
+                    background-color: #334155 !important;
+                    color: #F8FAFC !important;
+                    border: 2px solid #E2E8F0 !important;
                     font-weight: 700 !important;
                 }
                 </style>
@@ -645,8 +645,8 @@ elif aba_selecionada == "Funil de Vendas":
         if not filtro_reg.empty:
             row_edit = filtro_reg.iloc[0]
             st.markdown(f"""
-                <div style="background-color: #0F172A; border: 2px solid #38BDF8; padding: 25px; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 4px 12px rgba(56, 189, 248, 0.15);">
-                    <h3 style="color: #38BDF8; margin-top: 0; margin-bottom: 20px; font-weight: 700;">Ficha Completa & Linha do Tempo: {row_edit['Empresa']}</h3>
+                <div style="background-color: #0F172A; border: 2px solid #E2E8F0; padding: 25px; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 4px 12px rgba(226, 232, 240, 0.15);">
+                    <h3 style="color: #E2E8F0; margin-top: 0; margin-bottom: 20px; font-weight: 700;">Ficha Completa & Linha do Tempo: {row_edit['Empresa']}</h3>
             """, unsafe_allow_html=True)
             
             with st.form(key=f"form_full_edit_horizontal_{cliente_edit_id}"):
