@@ -58,6 +58,10 @@ if 'menu_ativo' not in st.session_state:
 if 'sub_menu_tarefas' not in st.session_state:
     st.session_state.sub_menu_tarefas = "Tarefas"
 
+# Estados para controle de edição inline/modal de tarefas e follow-ups
+if 'tarefa_editando_idx' not in st.session_state:
+    st.session_state.tarefa_editando_idx = None
+
 st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
@@ -391,14 +395,12 @@ for i, nome_aba in enumerate(abas_disponiveis):
             st.session_state.menu_ativo = nome_aba
             st.rerun()
 
-# Espaçamento maior com linha divisória separando o menu principal dos mini cards
 st.markdown("""
     <div style='margin-top: 30px; margin-bottom: 30px;'>
         <hr style='border: none; border-top: 1px solid #334155;'>
     </div>
 """, unsafe_allow_html=True)
 
-# Recupera qual aba está ativa para renderizar o conteúdo correspondente
 aba_selecionada = st.session_state.menu_ativo
 
 # ---------------------------------------------------------
@@ -407,7 +409,6 @@ aba_selecionada = st.session_state.menu_ativo
 def exibir_agenda_semana(df_tarefas, df_crm):
     st.markdown('<div style="margin-top: 4px;"></div>', unsafe_allow_html=True)
     
-    # Mini-cards horizontais para alternar entre Tarefas e Follow-ups
     sub_abas = ["Tarefas", "Follow-ups (CRM)"]
     c_sub1, c_sub2 = st.columns(2)
     
@@ -527,10 +528,6 @@ def exibir_agenda_semana(df_tarefas, df_crm):
     st.divider()
 
 # =========================================================
-# RENDERIZAÇÃO DA ABA ATIVA ESCOLHIDA NO MENU
-# =========================================================
-
-# =========================================================
 # ABA 1: GERENCIADOR DE TAREFAS & CALENDÁRIO FUTURO
 # =========================================================
 if aba_selecionada == "Gerenciamento de Tarefas":
@@ -596,13 +593,13 @@ if aba_selecionada == "Gerenciamento de Tarefas":
     st.divider()
 
     st.subheader("Agenda de Tarefas e Follow ups")
-    st.caption("Visualize em formato de tabela cronológica todas as entregas, reuniões e interações planejadas para os próximos dias.")
+    st.caption("Visualize, exclua ou edite as entregas, reuniões e interações planejadas.")
 
     col_h1, col_h2 = st.columns([2, 2])
     with col_h1:
         horizonte = st.selectbox(
             "Horizonte de Visualização:",
-            ["Próximos 7 Dias", "Próximos 15 Dias", "Próximos 30 Dias", "Todos os Registros Futuros"]
+            ["Próximos 7 Dias", "Próximos 15 Dias", "Próximos 30 Dias", "Todos los Registros Futuros" if False else "Todos os Registros Futuros"]
         )
 
     hoje = date.today()
@@ -615,61 +612,140 @@ if aba_selecionada == "Gerenciamento de Tarefas":
     else:
         limite_data = hoje + timedelta(days=365)
 
-    eventos_futuros = []
+    # ---------------------------------------------------------
+    # PAINEL DE EDIÇÃO RÁPIDA DE TAREFA SELECIONADA
+    # ---------------------------------------------------------
+    if st.session_state.tarefa_editando_idx is not None:
+        idx_t_edit = st.session_state.tarefa_editando_idx
+        if idx_t_edit < len(st.session_state.df_tarefas):
+            t_edit_row = st.session_state.df_tarefas.iloc[idx_t_edit]
+            
+            st.markdown(
+                f"""
+                <div style="background-color: #0F172A; border: 2px solid #EAB308; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                    <h4 style="color: #EAB308; margin-top: 0;">Editando Tarefa: {t_edit_row['Titulo']}</h4>
+                """,
+                unsafe_allow_html=True
+            )
+            
+            with st.form(key=f"form_editar_tarefa_{idx_t_edit}"):
+                col_e1, col_e2 = st.columns(2)
+                with col_e1:
+                    novo_tit = st.text_input("Título / Ação", value=t_edit_row["Titulo"])
+                    novo_cli = st.selectbox("Cliente Vinculado", options=lista_clientes, index=lista_clientes.index(t_edit_row["Cliente"]) if t_edit_row["Cliente"] in lista_clientes else 0)
+                    try:
+                        dt_venc_parsed = dt.strptime(str(t_edit_row["Data_Vencimento"])[:10], "%Y-%m-%d").date()
+                    except:
+                        dt_venc_parsed = date.today()
+                    nova_dt = st.date_input("Data de Vencimento", value=dt_venc_parsed)
+                with col_e2:
+                    nova_desc = st.text_area("Descrição", value=t_edit_row.get("Descricao", ""))
+                    prioridades_list = ["Baixa", "Média", "Alta", "Urgente"]
+                    nova_prio = st.selectbox("Prioridade", options=prioridades_list, index=prioridades_list.index(t_edit_row["Prioridade"]) if t_edit_row["Prioridade"] in prioridades_list else 0)
+                    status_list_t = ["Pendente", "Concluído"]
+                    novo_status_t = st.selectbox("Status", options=status_list_t, index=status_list_t.index(t_edit_row["Status"]) if t_edit_row["Status"] in status_list_t else 0)
 
+                b_col1, b_col2 = st.columns(2)
+                with b_col1:
+                    salvar_edicao_t = st.form_submit_button("Salvar Alterações", use_container_width=True)
+                with b_col2:
+                    cancelar_edicao_t = st.form_submit_button("Cancelar", use_container_width=True)
+
+                if salvar_edicao_t:
+                    st.session_state.df_tarefas.loc[idx_t_edit, "Titulo"] = novo_tit
+                    st.session_state.df_tarefas.loc[idx_t_edit, "Cliente"] = novo_cli
+                    st.session_state.df_tarefas.loc[idx_t_edit, "Data_Vencimento"] = str(nova_dt)
+                    st.session_state.df_tarefas.loc[idx_t_edit, "Descricao"] = nova_desc
+                    st.session_state.df_tarefas.loc[idx_t_edit, "Prioridade"] = nova_prio
+                    st.session_state.df_tarefas.loc[idx_t_edit, "Status"] = novo_status_t
+                    
+                    salvar_dados_tarefas(st.session_state.df_tarefas)
+                    st.session_state.tarefa_editando_idx = None
+                    st.success("Tarefa atualizada com sucesso!")
+                    st.rerun()
+
+                if cancelar_edicao_t:
+                    st.session_state.tarefa_editando_idx = None
+                    st.rerun()
+
+            st.markdown("</div>", unsafe_allow_html=True)
+
+    # ---------------------------------------------------------
+    # LISTAGEM INTERATIVA COM BOTÕES DE EXCLUSÃO E EDIÇÃO
+    # ---------------------------------------------------------
+    st.markdown("#### Lista Detalhada (Ações Rápidas)")
+
+    # Seção 1: TAREFAS CADASTRADAS
+    st.markdown("**Tarefas Operacionais:**")
     if not st.session_state.df_tarefas.empty:
-        for _, t in st.session_state.df_tarefas.iterrows():
-            if pd.notna(t.get("Data_Vencimento")):
-                try:
-                    dt_v = dt.strptime(str(t["Data_Vencimento"])[:10], "%Y-%m-%d").date()
-                    if hoje <= dt_v <= limite_data:
-                        eventos_futuros.append({
-                            "Data": dt_v,
-                            "Tipo": "Tarefa",
-                            "Título / Ação": t["Titulo"],
-                            "Vinculado a": t.get("Cliente", "Geral"),
-                            "Prioridade / Status": f"Prioridade: {t.get('Prioridade', 'Normal')}"
-                        })
-                except:
-                    pass
+        for idx_t, row_t in st.session_state.df_tarefas.iterrows():
+            try:
+                dt_v_val = dt.strptime(str(row_t["Data_Vencimento"])[:10], "%Y-%m-%d").date()
+                dt_v_str = dt_v_val.strftime("%d/%m/%Y")
+            except:
+                dt_v_str = "Sem Data"
+                dt_v_val = hoje
 
+            if hoje <= dt_v_val <= limite_data or horizonte == "Todos os Registros Futuros":
+                c_t1, c_t2, c_t3, c_t4, c_t5 = st.columns([2, 1.5, 1, 0.6, 0.6])
+                with c_t1:
+                    st.write(f"📌 **{row_t['Titulo']}**")
+                    if row_t.get('Descricao'):
+                        st.caption(f"{row_t['Descricao']}")
+                with c_t2:
+                    st.write(f"Cliente: `{row_t.get('Cliente', 'Geral')}`")
+                with c_t3:
+                    st.write(f"📅 {dt_v_str} | *{row_t.get('Prioridade', 'Normal')}*")
+                with c_t4:
+                    if st.button("✏️", key=f"edit_t_{idx_t}", help="Editar Tarefa"):
+                        st.session_state.tarefa_editando_idx = idx_t
+                        st.rerun()
+                with c_t5:
+                    if st.button("🗑️", key=f"del_t_{idx_t}", help="Excluir Tarefa"):
+                        st.session_state.df_tarefas = st.session_state.df_tarefas.drop(idx_t).reset_index(drop=True)
+                        salvar_dados_tarefas(st.session_state.df_tarefas)
+                        st.success("Tarefa excluída!")
+                        st.rerun()
+                st.markdown("<hr style='margin: 4px 0; border-color: #1E293B;'>", unsafe_allow_html=True)
+    else:
+        st.info("Nenhuma tarefa cadastrada.")
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # Seção 2: FOLLOW-UPS DO CRM
+    st.markdown("**Follow-ups Comerciais (CRM):**")
     if not df_filtered.empty:
-        for _, c in df_filtered.iterrows():
-            f_dat = c.get("Followup_Data", "")
+        tem_fu = False
+        for idx_c, row_c in df_filtered.iterrows():
+            f_dat = row_c.get("Followup_Data", "")
             if pd.notna(f_dat) and str(f_dat).strip() not in ["", "nan", "NaT"]:
                 try:
-                    dt_f = dt.strptime(str(f_dat)[:10], "%Y-%m-%d").date()
-                    if hoje <= dt_f <= limite_data:
-                        eventos_futuros.append({
-                            "Data": dt_f,
-                            "Tipo": "Follow-up CRM",
-                            "Título / Ação": c.get("Followup_Nota", "Contato Comercial"),
-                            "Vinculado a": f"Empresa: {c['Empresa']} ({c['Contato']})",
-                            "Prioridade / Status": f"Etapa: {c['Etapa']}"
-                        })
+                    dt_f_val = dt.strptime(str(f_dat)[:10], "%Y-%m-%d").date()
+                    dt_f_str = dt_f_val.strftime("%d/%m/%Y")
+                    if hoje <= dt_f_val <= limite_data or horizonte == "Todos os Registros Futuros":
+                        tem_fu = True
+                        c_f1, c_f2, c_f3, c_f4 = st.columns([2.5, 1.5, 1, 0.6])
+                        with c_f1:
+                            st.write(f"📞 **{row_c['Empresa']}** ({row_c['Contato']})")
+                            st.caption(f"Nota: {row_c.get('Followup_Nota', 'Sem observação')}")
+                        with c_f2:
+                            st.write(f"Etapa: `{row_c['Etapa']}`")
+                        with c_f3:
+                            st.write(f"📅 {dt_f_str}")
+                        with c_f4:
+                            if st.button("🗑️", key=f"del_fu_{idx_c}", help="Remover Data de Follow-up"):
+                                st.session_state.df_crm.loc[idx_c, "Followup_Data"] = ""
+                                st.session_state.df_crm.loc[idx_c, "Followup_Nota"] = ""
+                                salvar_dados_crm(st.session_state.df_crm)
+                                st.success("Follow-up limpo com sucesso!")
+                                st.rerun()
+                        st.markdown("<hr style='margin: 4px 0; border-color: #1E293B;'>", unsafe_allow_html=True)
                 except:
                     pass
-
-    if eventos_futuros:
-        df_futuro = pd.DataFrame(eventos_futuros)
-        df_futuro = df_futuro.sort_values(by="Data", ascending=True)
-        df_futuro["Data_Formatada"] = pd.to_datetime(df_futuro["Data"]).dt.strftime("%d/%m/%Y")
-
-        with st.expander(f"Ver compromissos no período ({len(df_futuro)} encontrados)", expanded=False):
-            c_m1, c_m2, c_m3 = st.columns(3)
-            c_m1.metric("Total de Ações no Período", len(df_futuro))
-            c_m2.metric("Tarefas Pendentes", len(df_futuro[df_futuro["Tipo"] == "Tarefa"]))
-            c_m3.metric("Follow-ups de CRM", len(df_futuro[df_futuro["Tipo"] == "Follow-up CRM"]))
-
-            st.divider()
-
-            st.dataframe(
-                df_futuro[["Data_Formatada", "Tipo", "Título / Ação", "Vinculado a", "Prioridade / Status"]],
-                use_container_width=True,
-                hide_index=True
-            )
+        if not tem_fu:
+            st.info("Nenhum follow-up de CRM agendado para este período.")
     else:
-        st.info("Nenhuma tarefa ou follow-up agendado para este horizonte de tempo.")
+        st.info("Nenhum cliente cadastrado no CRM.")
 
 # =========================================================
 # ABA 2: FUNIL DE VENDAS
