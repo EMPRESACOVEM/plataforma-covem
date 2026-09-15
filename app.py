@@ -28,7 +28,7 @@ COVEM_NAME = "GRUPO COVEM"
 CARTEIRAS_COVEM = ["BraClean", "QV Energia Solar", "Elleven"]
 
 # ---------------------------------------------------------
-# PALETA COVEM & ESTILIZAÇÃO CSS (COMPACTAÇÃO MÁXIMA)
+# PALETA COVEM & ESTILIZAÇÃO CSS (CORREÇÃO DE ESPAÇAMENTO DOS CARDS)
 # ---------------------------------------------------------
 DEFAULT_COLORS = {
     "1. Contatado": "#F472B6",         # Rosa Pastel suave
@@ -122,21 +122,21 @@ st.markdown("""
             font-weight: 600;
         }
 
-        /* COMPACTAÇÃO EXTREMA DE ESPAÇOS VERTICAIS DO STREAMLIT */
+        /* AJUSTE EQUILIBRADO DOS CARDS DO CRM */
         div[data-testid="stVerticalBlock"] {
-            gap: 0px !important;
+            gap: 2px !important;
         }
         
-        div[data-testid="stVerticalBlock"] > div {
-            gap: 0px !important;
-            margin-bottom: 0px !important;
-            padding-bottom: 0px !important;
-        }
-
         div[data-testid="stExpander"] {
-            margin-bottom: 2px !important;
+            margin-bottom: 4px !important;
             border: 1px solid #334155 !important;
             background-color: #0F172A !important;
+        }
+
+        /* Garante respiro interno no expander para legibilidade */
+        div[data-testid="stExpander"] details summary {
+            padding-top: 6px !important;
+            padding-bottom: 6px !important;
         }
 
         div[data-testid="stMetricValue"] {
@@ -734,7 +734,7 @@ with aba_crm:
             # Cabeçalho da etapa
             st.markdown(
                 f"""
-                <div style="background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%); border: 1px solid #334155; border-top: 4px solid {cor_header}; padding: 8px; border-radius: 6px; text-align: center; margin-bottom: 4px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
+                <div style="background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%); border: 1px solid #334155; border-top: 4px solid {cor_header}; padding: 8px; border-radius: 6px; text-align: center; margin-bottom: 6px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
                     <b style="color: #F8FAFC; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">{etapa}</b>
                 </div>
                 """, 
@@ -748,7 +748,7 @@ with aba_crm:
                 cliente_id = row['id']
                 
                 st.markdown(f"""
-                    <div style="border-left: 3px solid {cor_header}; border-radius: 4px; margin-bottom: 1px;">
+                    <div style="border-left: 3px solid {cor_header}; border-radius: 4px; margin-bottom: 4px;">
                 """, unsafe_allow_html=True)
                 
                 with st.expander(f"{row['Empresa']}"):
@@ -762,11 +762,12 @@ with aba_crm:
                     
                     st.markdown(
                         f"""
-                        <div style="line-height: 1.2; margin-bottom: 4px;">
+                        <div style="line-height: 1.4; margin-bottom: 8px;">
                             <span style="font-size: 13px;"><b>{row['Empresa']}</b></span><br>
                             <span style="font-size: 12px; color: #94A3B8;">Contato: {row['Contato']}</span><br>
                             <span class="phone-highlight" style="font-size: 12px;">{row.get('Telefone', 'Não informado')}</span><br>
-                            <span style="font-size: 11px; color: #CBD5E1;">Follow-up: {st_icon} {dt_f_str}</span>
+                            <hr style="margin: 6px 0; border-color: #334155;">
+                            <span style="font-size: 12px; color: #E2E8F0;"><b>Follow-up:</b> {st_icon} {dt_f_str}</span>
                         </div>
                         """,
                         unsafe_allow_html=True
@@ -791,6 +792,7 @@ with aba_crm:
                         st.success(f"Movido para {nova_etapa_card}!")
                         st.rerun()
 
+                    st.markdown("<div style='margin-top: 6px;'></div>", unsafe_allow_html=True)
                     if st.button("EDITAR", key=f"btn_edit_{cliente_id}", use_container_width=True):
                         st.session_state.cliente_editando_id = cliente_id
                         st.rerun()
