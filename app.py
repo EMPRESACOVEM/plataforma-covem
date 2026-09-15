@@ -748,10 +748,11 @@ with aba_crm:
         cor_header = st.session_state.funnel_colors.get(etapa, "#3B82F6")
         
         with cols[idx]:
+            # Card de título estilizado com fundo escuro e borda superior colorida
             st.markdown(
                 f"""
-                <div style="background-color: {cor_header}; padding: 6px; border-radius: 6px; text-align: center; margin-bottom: 8px;">
-                    <b style="color: #1E293B; font-size: 12px;">{etapa}</b>
+                <div style="background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%); border: 1px solid #334155; border-top: 4px solid {cor_header}; padding: 10px; border-radius: 8px; text-align: center; margin-bottom: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+                    <b style="color: #F8FAFC; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">{etapa}</b>
                 </div>
                 """, 
                 unsafe_allow_html=True
@@ -857,10 +858,11 @@ with aba_dash:
         qtd = contagem_calculada[etapa]
         
         with cols_m[i]:
+            # Card de título estilizado no Dashboard
             st.markdown(
                 f"""
-                <div style="background-color: {cor_header}; padding: 4px; border-radius: 4px; text-align: center; margin-bottom: 4px;">
-                    <b style="color: #1E293B; font-size: 11px;">{etapa}</b>
+                <div style="background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%); border: 1px solid #334155; border-top: 4px solid {cor_header}; padding: 10px; border-radius: 8px; text-align: center; margin-bottom: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+                    <b style="color: #F8FAFC; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">{etapa}</b>
                 </div>
                 """, 
                 unsafe_allow_html=True
@@ -870,8 +872,8 @@ with aba_dash:
     with cols_m[-1]:
         st.markdown(
             """
-            <div style="background-color: #0F172A; padding: 4px; border-radius: 4px; text-align: center; margin-bottom: 4px;">
-                <b style="color: #FFFFFF; font-size: 11px;">TOTAL</b>
+            <div style="background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%); border: 1px solid #334155; border-top: 4px solid #FFFFFF; padding: 10px; border-radius: 8px; text-align: center; margin-bottom: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+                <b style="color: #F8FAFC; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">TOTAL</b>
             </div>
             """, 
             unsafe_allow_html=True
@@ -1249,7 +1251,7 @@ with aba_novo:
                     "Etapa": nova_etapa,
                     "Contato": novo_contato if novo_contato else "Não informado",
                     "Cargo": novo_cargo if novo_cargo else "Não informado",
-                    "Telefone": novo_telefone if novo_telefone else "Não informado",
+                    "Telefone": nova_telefone if nova_telefone else "Não informado",
                     "Email": nova_email if nova_email else "Não informado",
                     "Cidade": nova_cidade if nova_cidade else "Não informado",
                     "Valor": nova_valor,
