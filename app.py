@@ -234,15 +234,6 @@ if 'df_crm' not in st.session_state:
 if 'df_tarefas' not in st.session_state:
     st.session_state.df_tarefas = carregar_dados_tarefas()
 
-if 'df_historico_executivo' not in st.session_state:
-    st.session_state.df_historico_executivo = pd.DataFrame([
-        {"Mês/Ano": "Out/25", "Leads Qualificados": 12, "Reuniões Agendadas": 4, "Propostas Enviadas": 2, "Projetos Fechados": 1},
-        {"Mês/Ano": "Nov/25", "Leads Qualificados": 15, "Reuniões Agendadas": 6, "Propostas Enviadas": 4, "Projetos Fechados": 2},
-        {"Mês/Ano": "Dez/25", "Leads Qualificados": 13, "Reuniões Agendadas": 7, "Propostas Enviadas": 5, "Projetos Fechados": 3},
-        {"Mês/Ano": "Jan/26", "Leads Qualificados": 25, "Reuniões Agendadas": 9, "Propostas Enviadas": 7, "Projetos Fechados": 4},
-        {"Mês/Ano": "Fev/26", "Leads Qualificados": 15, "Reuniões Agendadas": 12, "Propostas Enviadas": 10, "Projetos Fechados": 6}
-    ])
-
 if 'cliente_editando_id' not in st.session_state:
     st.session_state.cliente_editando_id = None
 
@@ -552,7 +543,6 @@ with aba_tarefas:
         df_futuro = df_futuro.sort_values(by="Data", ascending=True)
         df_futuro["Data_Formatada"] = pd.to_datetime(df_futuro["Data"]).dt.strftime("%d/%m/%Y")
 
-        # Bloco minimizável conforme solicitado (inicia fechado/minimizado)
         with st.expander(f"Ver compromissos no período ({len(df_futuro)} encontrados)", expanded=False):
             c_m1, c_m2, c_m3 = st.columns(3)
             c_m1.metric("Total de Ações no Período", len(df_futuro))
@@ -827,14 +817,65 @@ with aba_relatorio:
     st.title("Relatório Executivo")
     st.caption("Acompanhamento histórico de atividades operacionais e evolução financeira.")
 
-    st.subheader("1. Histórico de Evolução de Atividades & Prospecção")
+    st.subheader("Historico de Atividades")
+
+    # Geração dinâmica do Histórico de Atividades baseado no Funil de Vendas
+    df_crm_base = df_filtered.copy()
+    if not df_crm_base.empty and "Data_Cadastro" in df_crm_base.columns:
+        df_crm_base["Data_Datetime"] = pd.to_datetime(df_crm_base["Data_Cadastro"], errors="coerce")
+        df_crm_base["Mês/Ano"] = df_crm_base["Data_Datetime"].dt.strftime("%b/%y").str.capitalize()
+        
+        # Substituição de meses para o formato em português padrão
+        meses_map = {"Jan": "Jan", "Feb": "Fev", "Mar": "Mar", "Apr": "Abr", "May": "Mai", "Jun": "Jun", "Jul": "Jul", "Aug": "Ago", "Sep": "Set", "Oct": "Out", "Nov": "Nov", "Dec": "Dez"}
+        df_crm_base["Mês/Ano"] = df_crm_base["Mês/Ano"].replace(meses_map, regex=True)
+
+        # Agrupamento e contagem dinâmica por etapa solicitada
+        historico_dinamico = []
+        meses_unicos = df_crm_base["Mês/Ano"].dropna().unique()
+        
+        for m in meses_unicos:
+            sub_m = df_crm_base[df_crm_base["Mês/Ano"] == m]
+            
+            leads_q = len(sub_m[sub_m["Etapa"].isin(["1. Contatado", "2. Conversando", "3. Reunião Agendada", "4. Proposta Enviada", "5. Fechado"])])
+            reunioes = len(sub_m[sub_m["Etapa"] == "3. Reunião Agendada"])
+            propostas = len(sub_m[sub_m["Etapa"] == "4. Proposta Enviada"])
+            fechados = len(sub_m[sub_m["Etapa"] == "5. Fechado"])
+            
+            historico_dinamico.append({
+                "Mês/Ano": m,
+                "Leads Qualificados": leads_q,
+                "Reuniões Agendadas": reunioes,
+                "Propostas Enviadas": propostas,
+                "Projetos Fechados": fechados
+            })
+        
+        df_historico_calculado = pd.DataFrame(historico_dinamico)
+    else:
+        df_historico_calculado = pd.DataFrame(columns=["Mês/Ano", "Leads Qualificados", "Reuniões Agendadas", "Propostas Enviadas", "Projetos Fechados"])
 
     with st.expander("Exibir / Ocultar Tabela de Histórico de Atividades", expanded=True):
-        df_hist = st.session_state.df_historico_executivo.copy()
-        st.dataframe(df_hist, use_container_width=True, hide_index=True)
+        if not df_historico_calculado.empty:
+            # Aplicação de cores pastéis via Estilização CSS do Pandas Styler
+            def colorir_tabela_historico(val, col_name):
+                if col_name == "Mês/Ano":
+                    return "background-color: #FDE047; color: #1E293B; font-weight: bold;" # Amarelo Pastel
+                elif col_name == "Leads Qualificados":
+                    return "background-color: #F472B6; color: #1E293B; font-weight: bold;" # Rosa Pastel
+                elif col_name == "Reuniões Agendadas":
+                    return "background-color: #FDBA74; color: #1E293B; font-weight: bold;" # Laranja Pastel
+                elif col_name == "Propostas Enviadas":
+                    return "background-color: #93C5FD; color: #1E293B; font-weight: bold;" # Azul Pastel
+                elif col_name == "Projetos Fechados":
+                    return "background-color: #86EFAC; color: #1E293B; font-weight: bold;" # Verde Pastel
+                return ""
 
-    if not st.session_state.df_historico_executivo.empty:
-        df_melted_atv = st.session_state.df_historico_executivo.melt(
+            df_estilizado = df_historico_calculado.style.apply(lambda col: [colorir_tabela_historico(v, col.name) for v in col], axis=0)
+            st.dataframe(df_estilizado, use_container_width=True, hide_index=True)
+        else:
+            st.info("Nenhum dado cadastrado para gerar o histórico de atividades.")
+
+    if not df_historico_calculado.empty:
+        df_melted_atv = df_historico_calculado.melt(
             id_vars=["Mês/Ano"], 
             value_vars=["Leads Qualificados", "Reuniões Agendadas", "Propostas Enviadas", "Projetos Fechados"],
             var_name="Métrica", 
@@ -842,10 +883,10 @@ with aba_relatorio:
         )
         
         cores_atv = {
-            "Leads Qualificados": "#38BDF8",   
-            "Reuniões Agendadas": "#FACC15",   
-            "Propostas Enviadas": "#FB923C",   
-            "Projetos Fechados": "#4ADE80"    
+            "Leads Qualificados": "#F472B6",   
+            "Reuniões Agendadas": "#FDBA74",   
+            "Propostas Enviadas": "#93C5FD",   
+            "Projetos Fechados": "#86EFAC"    
         }
 
         fig_linha_atv = px.line(
