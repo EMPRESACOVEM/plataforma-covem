@@ -28,7 +28,7 @@ COVEM_NAME = "GRUPO COVEM"
 CARTEIRAS_COVEM = ["BraClean", "QV Energia Solar", "Elleven"]
 
 # ---------------------------------------------------------
-# PALETA COVEM & ESTILIZAÇÃO CSS (ESPAÇAMENTO E CORES NOS CARDS)
+# PALETA COVEM & ESTILIZAÇÃO CSS
 # ---------------------------------------------------------
 DEFAULT_COLORS = {
     "1. Contatado": "#F472B6",         # Rosa Pastel suave
@@ -122,14 +122,14 @@ st.markdown("""
             font-weight: 600;
         }
 
-        /* ESPAÇAMENTO VERTICAL PADRONIZADO E EQUILIBRADO */
         div[data-testid="stVerticalBlock"] {
-            gap: 4px !important;
+            gap: 2px !important;
         }
         
         div[data-testid="stExpander"] {
             margin-bottom: 4px !important;
             border: 1px solid #334155 !important;
+            background-color: #0F172A !important;
         }
 
         div[data-testid="stExpander"] details summary {
@@ -163,7 +163,7 @@ PROB_MAP = {
 MOTIVOS_PERDA_PADRAO = list(CORES_PERDAS.keys())
 
 # ---------------------------------------------------------
-# FUNÇÕES DE PERSISTÊNCIA (CRM, TAREFAS, HISTÓRICO E FINANCEIRO)
+# FUNÇÕES DE PERSISTÊNCIA
 # ---------------------------------------------------------
 def carregar_dados_crm():
     if ARQUIVO_DADOS.exists():
@@ -275,7 +275,7 @@ if 'cliente_editando_id' not in st.session_state:
 df = st.session_state.df_crm
 
 # ---------------------------------------------------------
-# FUNÇÃO DE LÓGICA DE CORES DO FOLLOW-UP (COM BOLINHAS)
+# FUNÇÃO DE LÓGICA DE CORES DO FOLLOW-UP
 # ---------------------------------------------------------
 def calcular_status_followup(data_str):
     if not data_str or pd.isna(data_str) or str(data_str).strip() in ["", "nan", "NaT", "None"]:
@@ -729,10 +729,10 @@ with aba_crm:
         cor_header = st.session_state.funnel_colors.get(etapa, "#3B82F6")
         
         with cols[idx]:
-            # Cabeçalho da etapa
+            # Cabeçalho da etapa com cor dinâmica e margem inferior aumentada para dar respiro ao primeiro card
             st.markdown(
                 f"""
-                <div style="background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%); border: 1px solid #334155; border-top: 4px solid {cor_header}; padding: 8px; border-radius: 6px; text-align: center; margin-bottom: 4px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
+                <div style="background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%); border: 1px solid #334155; border-top: 4px solid {cor_header}; padding: 8px; border-radius: 6px; text-align: center; margin-bottom: 16px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
                     <b style="color: #F8FAFC; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">{etapa}</b>
                 </div>
                 """, 
@@ -745,9 +745,8 @@ with aba_crm:
                 st_code, st_label, st_icon = calcular_status_followup(row.get("Followup_Data", ""))
                 cliente_id = row['id']
                 
-                # Fundo colorido sutil para cada card baseado na cor da etapa
                 st.markdown(f"""
-                    <div style="border-left: 3px solid {cor_header}; background-color: {cor_header}12; border-radius: 4px; margin-bottom: 4px;">
+                    <div style="border-left: 3px solid {cor_header}; border-radius: 4px; margin-bottom: 4px;">
                 """, unsafe_allow_html=True)
                 
                 with st.expander(f"{row['Empresa']}"):
@@ -930,9 +929,6 @@ with aba_relatorio:
     st.title("Relatório Executivo")
     st.caption("Acompanhamento histórico de atividades operacionais e evolução financeira.")
 
-    # ---------------------------------------------------------
-    # SEÇÃO 1: HISTÓRICO DE ATIVIDADES
-    # ---------------------------------------------------------
     st.subheader("Historico de Atividades")
 
     df_historico_salvo = carregar_dados_historico()
@@ -1043,9 +1039,6 @@ with aba_relatorio:
 
     st.divider()
 
-    # ---------------------------------------------------------
-    # SEÇÃO 2: HISTÓRICO FINANCEIRO
-    # ---------------------------------------------------------
     st.subheader("Historico Financeiro")
 
     df_financeiro_salvo = carregar_dados_financeiro()
