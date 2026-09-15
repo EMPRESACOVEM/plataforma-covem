@@ -28,7 +28,7 @@ COVEM_NAME = "GRUPO COVEM"
 CARTEIRAS_COVEM = ["BraClean", "QV Energia Solar", "Elleven"]
 
 # ---------------------------------------------------------
-# PALETA COVEM & ESTILIZAÇÃO CSS (TONS PASTÉIS)
+# PALETA COVEM & ESTILIZAÇÃO CSS AVANÇADA (ENTERPRISE DARK)
 # ---------------------------------------------------------
 DEFAULT_COLORS = {
     "1. Contatado": "#F472B6",         # Rosa Pastel suave
@@ -91,6 +91,47 @@ st.markdown("""
             text-transform: uppercase;
         }
 
+        /* 3. KPI Cards Estilizados com Cores de Fundo */
+        .kpi-card {
+            background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
+            border: 1px solid #334155;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            margin-bottom: 10px;
+        }
+        .kpi-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: #94A3B8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+        }
+        .kpi-value {
+            font-size: 24px;
+            font-weight: 800;
+            color: #F8FAFC;
+        }
+
+        /* 1. Cards do Funil com Efeito Glassmorphism & Bordas Laterais */
+        .kanban-card {
+            background: rgba(30, 41, 59, 0.75);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-left-width: 5px;
+            padding: 14px;
+            border-radius: 10px;
+            margin-bottom: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            transition: transform 0.2s ease;
+        }
+        .kanban-card:hover {
+            transform: translateY(-2px);
+        }
+
         .badge-atrasada {
             background-color: #4A2024;
             color: #FCA5A5;
@@ -122,20 +163,40 @@ st.markdown("""
             font-weight: 600;
         }
 
+        .money-highlight {
+            color: #34D399;
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        /* 4. Estilização Elegante de Alertas e Mensagens em Dark Mode */
+        div.stSuccess {
+            background-color: #064E3B !important;
+            color: #A7F3D0 !important;
+            border: 1px solid #059669 !important;
+            border-radius: 8px !important;
+        }
+        div.stError {
+            background-color: #7F1D1D !important;
+            color: #FECACA !important;
+            border: 1px solid #DC2626 !important;
+            border-radius: 8px !important;
+        }
+        div.stWarning {
+            background-color: #78350F !important;
+            color: #FEF08A !important;
+            border: 1px solid #D97706 !important;
+            border-radius: 8px !important;
+        }
+        div.stInfo {
+            background-color: #1E3A8A !important;
+            color: #BFDBFE !important;
+            border: 1px solid #2563EB !important;
+            border-radius: 8px !important;
+        }
+
         div[data-testid="stVerticalBlock"] > div {
             gap: 0.15rem !important;
-        }
-
-        div[data-testid="stMetricValue"] {
-            font-family: 'Inter', sans-serif !important;
-            font-size: 22px !important;
-            font-weight: 700 !important;
-            color: #FFFFFF !important;
-        }
-
-        div[data-testid="stMetricLabel"] {
-            font-family: 'Inter', sans-serif !important;
-            font-size: 12px !important;
         }
     </style>
 """, unsafe_allow_html=True)
@@ -598,10 +659,14 @@ with aba_tarefas:
         df_futuro["Data_Formatada"] = pd.to_datetime(df_futuro["Data"]).dt.strftime("%d/%m/%Y")
 
         with st.expander(f"Ver compromissos no período ({len(df_futuro)} encontrados)", expanded=False):
+            # KPI Cards Estilizados no Calendário
             c_m1, c_m2, c_m3 = st.columns(3)
-            c_m1.metric("Total de Ações no Período", len(df_futuro))
-            c_m2.metric("Tarefas Pendentes", len(df_futuro[df_futuro["Tipo"] == "Tarefa"]))
-            c_m3.metric("Follow-ups de CRM", len(df_futuro[df_futuro["Tipo"] == "Follow-up CRM"]))
+            with c_m1:
+                st.markdown(f'<div class="kpi-card"><div class="kpi-title">Total no Período</div><div class="kpi-value">{len(df_futuro)}</div></div>', unsafe_allow_html=True)
+            with c_m2:
+                st.markdown(f'<div class="kpi-card"><div class="kpi-title">Tarefas Pendentes</div><div class="kpi-value">{len(df_futuro[df_futuro["Tipo"] == "Tarefa"])}</div></div>', unsafe_allow_html=True)
+            with c_m3:
+                st.markdown(f'<div class="kpi-card"><div class="kpi-title">Follow-ups CRM</div><div class="kpi-value">{len(df_futuro[df_futuro["Tipo"] == "Follow-up CRM"])}</div></div>', unsafe_allow_html=True)
 
             st.divider()
 
@@ -614,7 +679,7 @@ with aba_tarefas:
         st.info("Nenhuma tarefa ou follow-up agendado para este horizonte de tempo.")
 
 # =========================================================
-# ABA 2: FUNIL DE VENDAS
+# ABA 2: FUNIL DE VENDAS (COM CARDS ESTILIZADOS KANBAN)
 # =========================================================
 with aba_crm:
     st.subheader(f"Funil de Vendas — {titulo_dinamico}")
@@ -750,7 +815,7 @@ with aba_crm:
         with cols[idx]:
             st.markdown(
                 f"""
-                <div style="background-color: {cor_header}; padding: 6px; border-radius: 6px; text-align: center; margin-bottom: 8px;">
+                <div style="background-color: {cor_header}; padding: 6px; border-radius: 6px; text-align: center; margin-bottom: 12px;">
                     <b style="color: #1E293B; font-size: 12px;">{etapa}</b>
                 </div>
                 """, 
@@ -762,53 +827,56 @@ with aba_crm:
             for _, row in sub_df.iterrows():
                 st_code, st_label, st_icon = calcular_status_followup(row.get("Followup_Data", ""))
                 cliente_id = row['id']
+                val_fmt = f"R$ {row.get('Valor', 0.0):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
                 
-                with st.expander(f"{row['Empresa']}"):
-                    dt_f_exib = row.get('Followup_Data', '')
-                    
-                    try:
-                        raw_val = str(dt_f_exib).strip()[:10]
-                        dt_f_str = dt.strptime(raw_val, "%Y-%m-%d").strftime("%d/%m/%Y") if raw_val and raw_val not in ["nan", "NaT", ""] else "Não agendado"
-                    except:
-                        dt_f_str = "Não agendado"
-                    
-                    st.markdown(
-                        f"""
-                        <div style="line-height: 1.25; margin-bottom: 6px;">
-                            <span style="font-size: 13px;"><b>{row['Empresa']}</b></span><br>
-                            <span style="font-size: 12px; color: #94A3B8;">Contato: {row['Contato']}</span><br>
-                            <span class="phone-highlight" style="font-size: 12px;">{row.get('Telefone', 'Não informado')}</span><br>
-                            <span style="font-size: 11px; color: #CBD5E1;">Follow-up: {st_icon} {dt_f_str}</span>
-                        </div>
-                        """,
-                        unsafe_allow_html=True
-                    )
-                    
-                    nova_etapa_card = st.selectbox(
-                        "Mover Etapa:", 
-                        options=etapas, 
-                        index=etapas.index(row["Etapa"]), 
-                        key=f"mov_etapa_{cliente_id}",
-                        label_visibility="collapsed"
-                    )
-                    
-                    if nova_etapa_card != row["Etapa"]:
-                        idx_df = st.session_state.df_crm[st.session_state.df_crm["id"] == cliente_id].index
-                        st.session_state.df_crm.loc[idx_df, "Etapa"] = nova_etapa_card
-                        st.session_state.df_crm.loc[idx_df, "Prob"] = PROB_MAP[nova_etapa_card]
-                        if nova_etapa_card == "6. Perdido":
-                            st.session_state.df_crm.loc[idx_df, "Perda"] = "Outros"
-                        
-                        salvar_dados_crm(st.session_state.df_crm)
-                        st.success(f"Movido para {nova_etapa_card}!")
-                        st.rerun()
+                dt_f_exib = row.get('Followup_Data', '')
+                try:
+                    raw_val = str(dt_f_exib).strip()[:10]
+                    dt_f_str = dt.strptime(raw_val, "%Y-%m-%d").strftime("%d/%m/%Y") if raw_val and raw_val not in ["nan", "NaT", ""] else "Não agendado"
+                except:
+                    dt_f_str = "Não agendado"
 
-                    if st.button("EDITAR", key=f"btn_edit_{cliente_id}", use_container_width=True):
-                        st.session_state.cliente_editando_id = cliente_id
-                        st.rerun()
+                # 1. Card Glassmorphism Estilizado para o Kanban
+                st.markdown(
+                    f"""
+                    <div class="kanban-card" style="border-left-color: {cor_header};">
+                        <div style="font-size: 14px; font-weight: 700; color: #F8FAFC; margin-bottom: 4px;">{row['Empresa']}</div>
+                        <div style="font-size: 12px; color: #94A3B8; margin-bottom: 2px;">👤 {row['Contato']}</div>
+                        <div class="phone-highlight" style="font-size: 12px; margin-bottom: 4px;">📞 {row.get('Telefone', 'Não informado')}</div>
+                        <div class="money-highlight" style="margin-bottom: 6px;">{val_fmt}</div>
+                        <div style="font-size: 11px; color: #CBD5E1; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 4px;">Follow-up: {st_icon} {dt_f_str}</div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+                
+                nova_etapa_card = st.selectbox(
+                    "Mover:", 
+                    options=etapas, 
+                    index=etapas.index(row["Etapa"]), 
+                    key=f"mov_etapa_{cliente_id}",
+                    label_visibility="collapsed"
+                )
+                
+                if nova_etapa_card != row["Etapa"]:
+                    idx_df = st.session_state.df_crm[st.session_state.df_crm["id"] == cliente_id].index
+                    st.session_state.df_crm.loc[idx_df, "Etapa"] = nova_etapa_card
+                    st.session_state.df_crm.loc[idx_df, "Prob"] = PROB_MAP[nova_etapa_card]
+                    if nova_etapa_card == "6. Perdido":
+                        st.session_state.df_crm.loc[idx_df, "Perda"] = "Outros"
+                    
+                    salvar_dados_crm(st.session_state.df_crm)
+                    st.success(f"Movido para {nova_etapa_card}!")
+                    st.rerun()
+
+                if st.button("EDITAR FICHA", key=f"btn_edit_{cliente_id}", use_container_width=True):
+                    st.session_state.cliente_editando_id = cliente_id
+                    st.rerun()
+
+                st.markdown("<div style='margin-bottom: 15px;'></div>", unsafe_allow_html=True)
 
 # =========================================================
-# ABA 3: DASHBOARD
+# ABA 3: DASHBOARD (COM KPI CARDS ESTILIZADOS)
 # =========================================================
 with aba_dash:
     st.markdown(f'<div class="notranslate"><h3>1. DISTRIBUIÇÃO DO FUNIL DE VENDAS ({titulo_dinamico})</h3></div>', unsafe_allow_html=True)
@@ -859,24 +927,24 @@ with aba_dash:
         with cols_m[i]:
             st.markdown(
                 f"""
-                <div style="background-color: {cor_header}; padding: 4px; border-radius: 4px; text-align: center; margin-bottom: 4px;">
-                    <b style="color: #1E293B; font-size: 11px;">{etapa}</b>
+                <div class="kpi-card" style="border-top: 4px solid {cor_header};">
+                    <div class="kpi-title">{etapa}</div>
+                    <div class="kpi-value">{qtd}</div>
                 </div>
-                """, 
+                """,
                 unsafe_allow_html=True
             )
-            st.metric(label="", value=qtd)
 
     with cols_m[-1]:
         st.markdown(
-            """
-            <div style="background-color: #0F172A; padding: 4px; border-radius: 4px; text-align: center; margin-bottom: 4px;">
-                <b style="color: #FFFFFF; font-size: 11px;">TOTAL</b>
+            f"""
+            <div class="kpi-card" style="border-top: 4px solid #FFFFFF;">
+                <div class="kpi-title">TOTAL</div>
+                <div class="kpi-value">{total_leads}</div>
             </div>
-            """, 
+            """,
             unsafe_allow_html=True
         )
-        st.metric(label="", value=total_leads)
 
     st.divider()
 
@@ -1056,7 +1124,7 @@ with aba_relatorio:
     st.divider()
 
     # ---------------------------------------------------------
-    # SEÇÃO 2: HISTÓRICO FINANCEIRO ( COM GRÁFICO DE LINHAS)
+    # SEÇÃO 2: HISTÓRICO FINANCEIRO
     # ---------------------------------------------------------
     st.subheader("Historico Financeiro")
 
@@ -1120,7 +1188,6 @@ with aba_relatorio:
         else:
             st.info("Nenhum dado cadastrado para gerar o histórico financeiro.")
 
-    # Gráfico de Linhas Financeiro Reativado e Conectado
     if not df_crm_base.empty and "Data_Cadastro" in df_crm_base.columns:
         df_graf_fin = df_crm_base[df_crm_base["Etapa"].isin(["4. Proposta Enviada", "5. Fechado"])].copy()
         if not df_graf_fin.empty:
