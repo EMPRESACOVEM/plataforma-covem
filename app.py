@@ -50,6 +50,14 @@ CORES_PERDAS = {
 if 'funnel_colors' not in st.session_state:
     st.session_state.funnel_colors = DEFAULT_COLORS.copy()
 
+# Inicializa o estado da aba ativa se não existir
+if 'menu_ativo' not in st.session_state:
+    st.session_state.menu_ativo = "Gerenciamento de Tarefas"
+
+# Inicializa o estado da sub-aba em Tarefas se não existir
+if 'sub_menu_tarefas' not in st.session_state:
+    st.session_state.sub_menu_tarefas = "Tarefas"
+
 st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
@@ -91,7 +99,6 @@ st.markdown("""
             text-transform: uppercase;
         }
 
-        /* Título de seção com respiro inferior garantido */
         .section-header-covem {
             font-family: 'Inter', sans-serif;
             font-size: 20px;
@@ -99,28 +106,6 @@ st.markdown("""
             color: #F8FAFC;
             margin-top: 10px;
             margin-bottom: 18px !important;
-        }
-
-        /* Força espaçamento robusto em todas as instâncias de abas (Tabs) */
-        div.stTabs {
-            margin-top: 16px !important;
-            margin-bottom: 20px !important;
-        }
-        
-        div.stTabs [data-baseweb="tab-list"] {
-            gap: 16px !important;
-            margin-bottom: 16px !important;
-            background-color: transparent !important;
-        }
-
-        div.stTabs [data-baseweb="tab"] {
-            height: 40px !important;
-            white-space: pre-wrap !important;
-            background-color: transparent !important;
-            border-radius: 6px !important;
-            gap: 4px !important;
-            padding-left: 12px !important;
-            padding-right: 12px !important;
         }
 
         .badge-atrasada {
@@ -158,7 +143,6 @@ st.markdown("""
             gap: 2px !important;
         }
         
-        /* Adiciona distância limpa e profissional entre os botões/badges e os expanders */
         div[data-testid="stExpander"] {
             margin-top: 12px !important;
             margin-bottom: 8px !important;
@@ -372,18 +356,102 @@ st.markdown('<div class="subtitle-covem">Plataforma Executiva de Gestão Comerci
 st.divider()
 
 # ---------------------------------------------------------
-# FUNÇÃO DE RENDERIZAÇÃO DA AGENDA DA SEMANA
+# MENU HORIZONTAL EM CARDS (COM DESTAQUE EM AZUL CIANO PARA A ABA ATIVA)
+# ---------------------------------------------------------
+abas_disponiveis = [
+    "Gerenciamento de Tarefas",
+    "Funil de Vendas", 
+    "Dashboard", 
+    "Relatório Executivo", 
+    "+ Novo Cadastro"
+]
+
+cols_menu = st.columns(len(abas_disponiveis))
+
+for i, nome_aba in enumerate(abas_disponiveis):
+    with cols_menu[i]:
+        is_active = (st.session_state.menu_ativo == nome_aba)
+        
+        # Injeta estilo dinâmico direto via botão/HTML ou usa variação de cor
+        if is_active:
+            # Fundo azul ciano claro / destacado para indicar a tela aberta
+            st.markdown(
+                f"""
+                <style>
+                div[data-testid="column"]:nth-of-type({i+1}) div.stButton > button {{
+                    background-color: #0284C7 !important;
+                    color: #FFFFFF !important;
+                    border: 2px solid #38BDF8 !important;
+                    font-weight: 700 !important;
+                }}
+                </style>
+                """,
+                unsafe_allow_html=True
+            )
+        
+        if st.button(nome_aba, key=f"menu_card_{i}", use_container_width=True):
+            st.session_state.menu_ativo = nome_aba
+            st.rerun()
+
+st.markdown("<div style='margin-bottom: 20px;'></div>", unsafe_allow_html=True)
+
+# Recupera qual aba está ativa para renderizar o conteúdo correspondente
+aba_selecionada = st.session_state.menu_ativo
+
+# ---------------------------------------------------------
+# FUNÇÃO DE RENDERIZAÇÃO DA AGENDA DA SEMANA (COM MINI-CARDS)
 # ---------------------------------------------------------
 def exibir_agenda_semana(df_tarefas, df_crm):
-    # Título da seção com respiro inferior robusto
     st.markdown('<div class="section-header-covem">Agenda da Semana</div>', unsafe_allow_html=True)
-    
-    # Espaçador visual adicional em HTML para garantir respiro impecável nas abas
     st.markdown('<div style="margin-top: 14px;"></div>', unsafe_allow_html=True)
     
-    tab_alertas_tarefas, tab_alertas_crm = st.tabs(["Tarefas", "Follow-ups (CRM)"])
+    # Mini-cards horizontais para alternar entre Tarefas e Follow-ups
+    sub_abas = ["Tarefas", "Follow-ups (CRM)"]
+    c_sub1, c_sub2 = st.columns(2)
+    
+    with c_sub1:
+        is_sub_active_1 = (st.session_state.sub_menu_tarefas == "Tarefas")
+        if is_sub_active_1:
+            st.markdown(
+                """
+                <style>
+                div[data-testid="column"]:nth-of-type(1) div.stButton > button {
+                    background-color: #0284C7 !important;
+                    color: #FFFFFF !important;
+                    border: 2px solid #38BDF8 !important;
+                    font-weight: 700 !important;
+                }
+                </style>
+                """,
+                unsafe_allow_html=True
+            )
+        if st.button("Tarefas", key="sub_btn_tarefas", use_container_width=True):
+            st.session_state.sub_menu_tarefas = "Tarefas"
+            st.rerun()
+            
+    with c_sub2:
+        is_sub_active_2 = (st.session_state.sub_menu_tarefas == "Follow-ups (CRM)")
+        if is_sub_active_2:
+            st.markdown(
+                """
+                <style>
+                div[data-testid="column"]:nth-of-type(2) div.stButton > button {
+                    background-color: #0284C7 !important;
+                    color: #FFFFFF !important;
+                    border: 2px solid #38BDF8 !important;
+                    font-weight: 700 !important;
+                }
+                </style>
+                """,
+                unsafe_allow_html=True
+            )
+        if st.button("Follow-ups (CRM)", key="sub_btn_followups", use_container_width=True):
+            st.session_state.sub_menu_tarefas = "Follow-ups (CRM)"
+            st.rerun()
 
-    with tab_alertas_tarefas:
+    st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
+
+    if st.session_state.sub_menu_tarefas == "Tarefas":
         if df_tarefas.empty or "Data_Vencimento" not in df_tarefas.columns:
             st.info("Nenhuma tarefa cadastrada.")
         else:
@@ -415,7 +483,7 @@ def exibir_agenda_semana(df_tarefas, df_crm):
                     else:
                         st.write("Nenhuma tarefa para hoje.")
 
-    with tab_alertas_crm:
+    else:
         if df_crm.empty:
             st.info("Nenhum cliente no CRM.")
         else:
@@ -456,21 +524,14 @@ def exibir_agenda_semana(df_tarefas, df_crm):
 
     st.divider()
 
-# ---------------------------------------------------------
-# NAVEGAÇÃO POR ABAS
-# ---------------------------------------------------------
-aba_tarefas, aba_crm, aba_dash, aba_relatorio, aba_novo = st.tabs([
-    "Gerenciador de Tarefas",
-    "Funil de Vendas", 
-    "Dashboard", 
-    "Relatório Executivo", 
-    "+ Novo Cadastro"
-])
+# =========================================================
+# RENDERIZAÇÃO DA ABA ATIVA ESCOLHIDA NO MENU
+# =========================================================
 
 # =========================================================
 # ABA 1: GERENCIADOR DE TAREFAS & CALENDÁRIO FUTURO
 # =========================================================
-with aba_tarefas:
+if aba_selecionada == "Gerenciamento de Tarefas":
     exibir_agenda_semana(st.session_state.df_tarefas, st.session_state.df_crm)
     
     st.subheader("Gerenciador de Tarefas")
@@ -635,7 +696,7 @@ with aba_tarefas:
 # =========================================================
 # ABA 2: FUNIL DE VENDAS
 # =========================================================
-with aba_crm:
+elif aba_selecionada == "Funil de Vendas":
     st.subheader(f"Funil de Vendas — {titulo_dinamico}")
     st.caption("Dica: Use o seletor em cada card para mover rapidamente o cliente de etapa, ou clique em EDITAR para abrir a ficha completa em destaque abaixo.")
 
@@ -837,7 +898,7 @@ with aba_crm:
 # =========================================================
 # ABA 3: DASHBOARD
 # =========================================================
-with aba_dash:
+elif aba_selecionada == "Dashboard":
     st.markdown(f'<div class="notranslate"><h3>1. DISTRIBUIÇÃO DO FUNIL DE VENDAS ({titulo_dinamico})</h3></div>', unsafe_allow_html=True)
     
     col_f1, _ = st.columns([2, 2])
@@ -962,7 +1023,7 @@ with aba_dash:
 # =========================================================
 # ABA 4: RELATÓRIO EXECUTIVO
 # =========================================================
-with aba_relatorio:
+elif aba_selecionada == "Relatório Executivo":
     st.title("Relatório Executivo")
     st.caption("Acompanhamento histórico de atividades operacionais e evolução financeira.")
 
@@ -1177,7 +1238,7 @@ with aba_relatorio:
 # =========================================================
 # ABA 5: + NOVO CADASTRO
 # =========================================================
-with aba_novo:
+elif aba_selecionada == "+ Novo Cadastro":
     st.subheader("+ Novo Cadastro Rápido")
     st.caption("Cadastre rapidamente uma nova empresa informando apenas os dados fundamentais.")
 
@@ -1264,11 +1325,11 @@ with aba_novo:
                     "Empresa": nova_empresa,
                     "Cliente": novo_cliente,
                     "Etapa": nova_etapa,
-                    "Contato": nova_contato if nova_contato else "Não informado",
+                    "Contato": novo_contato if novo_contato else "Não informado",
                     "Cargo": novo_cargo if novo_cargo else "Não informado",
                     "Telefone": nova_telefone if nova_telefone else "Não informado",
                     "Email": nova_email if nova_email else "Não informado",
-                    "Cidade": nova_cidade if nova_cidade else "Não informado",
+                    "Cidade": nova_cidade if nova_cidade else "Not informado",
                     "Valor": nova_valor,
                     "Prob": PROB_MAP[nova_etapa],
                     "Vendedor": novo_vendedor if novo_vendedor else "Não informado",
