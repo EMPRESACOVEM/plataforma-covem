@@ -28,7 +28,7 @@ COVEM_NAME = "GRUPO COVEM"
 CARTEIRAS_COVEM = ["BraClean", "QV Energia Solar", "Elleven"]
 
 # ---------------------------------------------------------
-# PALETA COVEM & ESTILIZAÇÃO CSS
+# PALETA COVEM & ESTILIZAÇÃO CSS (MENU COM AZUL PASTEL)
 # ---------------------------------------------------------
 DEFAULT_COLORS = {
     "1. Contatado": "#F472B6",         # Rosa Pastel suave
@@ -110,6 +110,22 @@ st.markdown("""
             color: #F8FAFC;
             margin-top: 10px;
             margin-bottom: 18px !important;
+        }
+
+        /* ESTILIZAÇÃO DOS BOTÕES DO MENU PRINCIPAL (AZUL PASTEL) */
+        div[data-testid="stHorizontalBlock"] > div[data-testid="column"] div.stButton > button {
+            background-color: #1E293B !important;
+            color: #93C5FD !important;
+            border: 1px solid #93C5FD !important;
+            border-radius: 8px !important;
+            font-weight: 600 !important;
+            transition: all 0.2s ease-in-out;
+        }
+
+        div[data-testid="stHorizontalBlock"] > div[data-testid="column"] div.stButton > button:hover {
+            background-color: #93C5FD !important;
+            color: #0F172A !important;
+            border-color: #93C5FD !important;
         }
 
         .badge-atrasada {
@@ -360,7 +376,7 @@ st.markdown('<div class="subtitle-covem">Plataforma Executiva de Gestão Comerci
 st.divider()
 
 # ---------------------------------------------------------
-# MENU HORIZONTAL EM CARDS
+# MENU HORIZONTAL EM CARDS (COM DESTAQUE AZUL PASTEL)
 # ---------------------------------------------------------
 abas_disponiveis = [
     "Gerenciamento de Tarefas",
@@ -381,10 +397,10 @@ for i, nome_aba in enumerate(abas_disponiveis):
                 f"""
                 <style>
                 div[data-testid="column"]:nth-of-type({i+1}) div.stButton > button {{
-                    background-color: #26334D !important;
-                    color: #94A3B8 !important;
-                    border: 1px solid #475569 !important;
-                    font-weight: 500 !important;
+                    background-color: #93C5FD !important;
+                    color: #0F172A !important;
+                    border: 1px solid #93C5FD !important;
+                    font-weight: 700 !important;
                 }}
                 </style>
                 """,
@@ -419,10 +435,10 @@ def exibir_agenda_semana(df_tarefas, df_crm):
                 """
                 <style>
                 div[data-testid="column"]:nth-of-type(1) div.stButton > button {
-                    background-color: #26334D !important;
-                    color: #94A3B8 !important;
-                    border: 1px solid #475569 !important;
-                    font-weight: 500 !important;
+                    background-color: #93C5FD !important;
+                    color: #0F172A !important;
+                    border: 1px solid #93C5FD !important;
+                    font-weight: 700 !important;
                 }
                 </style>
                 """,
@@ -439,10 +455,10 @@ def exibir_agenda_semana(df_tarefas, df_crm):
                 """
                 <style>
                 div[data-testid="column"]:nth-of-type(2) div.stButton > button {
-                    background-color: #26334D !important;
-                    color: #94A3B8 !important;
-                    border: 1px solid #475569 !important;
-                    font-weight: 500 !important;
+                    background-color: #93C5FD !important;
+                    color: #0F172A !important;
+                    border: 1px solid #93C5FD !important;
+                    font-weight: 700 !important;
                 }
                 </style>
                 """,
