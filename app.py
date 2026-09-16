@@ -170,25 +170,6 @@ st.markdown("""
             font-family: 'Inter', sans-serif !important;
             font-size: 12px !important;
         }
-
-        /* Forçamento de alta especificidade para os botões do menu principal */
-        div.row-widget.stButton > button, 
-        div[data-testid="column"] div.stButton > button {
-            background-color: #2563eb !important;
-            color: #ffffff !important;
-            border: 1px solid #2563eb !important;
-            border-radius: 8px !important;
-            font-weight: 600 !important;
-            transition: all 0.3s ease !important;
-        }
-
-        div.row-widget.stButton > button:hover, 
-        div[data-testid="column"] div.stButton > button:hover {
-            background-color: #1d4ed8 !important;
-            border-color: #1d4ed8 !important;
-            color: #ffffff !important;
-            box-shadow: 0 0 12px rgba(37, 99, 235, 0.6) !important;
-        }
     </style>
 """, unsafe_allow_html=True)
 
@@ -400,10 +381,10 @@ for i, nome_aba in enumerate(abas_disponiveis):
                 f"""
                 <style>
                 div[data-testid="column"]:nth-of-type({i+1}) div.stButton > button {{
-                    background-color: #1d4ed8 !important;
-                    border-color: #1d4ed8 !important;
-                    color: #ffffff !important;
-                    box-shadow: 0 0 14px rgba(37, 99, 235, 0.7) !important;
+                    background-color: #26334D !important;
+                    color: #94A3B8 !important;
+                    border: 1px solid #475569 !important;
+                    font-weight: 500 !important;
                 }}
                 </style>
                 """,
@@ -438,9 +419,10 @@ def exibir_agenda_semana(df_tarefas, df_crm):
                 """
                 <style>
                 div[data-testid="column"]:nth-of-type(1) div.stButton > button {
-                    background-color: #1d4ed8 !important;
-                    border-color: #1d4ed8 !important;
-                    color: #ffffff !important;
+                    background-color: #26334D !important;
+                    color: #94A3B8 !important;
+                    border: 1px solid #475569 !important;
+                    font-weight: 500 !important;
                 }
                 </style>
                 """,
@@ -457,9 +439,10 @@ def exibir_agenda_semana(df_tarefas, df_crm):
                 """
                 <style>
                 div[data-testid="column"]:nth-of-type(2) div.stButton > button {
-                    background-color: #1d4ed8 !important;
-                    border-color: #1d4ed8 !important;
-                    color: #ffffff !important;
+                    background-color: #26334D !important;
+                    color: #94A3B8 !important;
+                    border: 1px solid #475569 !important;
+                    font-weight: 500 !important;
                 }
                 </style>
                 """,
@@ -1377,6 +1360,6 @@ elif aba_selecionada == "+ Novo Cadastro":
                     "Historico": f"[{dt.now().strftime('%d/%m/%Y %H:%M')}] Oportunidade cadastrada."
                 }
                 st.session_state.df_crm = pd.concat([st.session_state.df_crm, pd.DataFrame([nova_linha])], ignore_index=True)
-                sal_dados_crm = salvar_dados_crm(st.session_state.df_crm)
+                salvar_dados_crm(st.session_state.df_crm)
                 st.success("Oportunidade cadastrada e salva com sucesso!")
                 st.rerun()
