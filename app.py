@@ -409,7 +409,7 @@ aba_selecionada = st.session_state.menu_ativo
 def exibir_agenda_semana(df_tarefas, df_crm):
     st.markdown('<div style="margin-top: 4px;"></div>', unsafe_allow_html=True)
     
-    sub_abas = ["Tarefas", "Follow-ups (CRM)"]
+    sub_abas = ["Tarefas", "Follow-up"]
     c_sub1, c_sub2 = st.columns(2)
     
     with c_sub1:
@@ -433,7 +433,7 @@ def exibir_agenda_semana(df_tarefas, df_crm):
             st.rerun()
             
     with c_sub2:
-        is_sub_active_2 = (st.session_state.sub_menu_tarefas == "Follow-ups (CRM)")
+        is_sub_active_2 = (st.session_state.sub_menu_tarefas == "Follow-up")
         if is_sub_active_2:
             st.markdown(
                 """
@@ -448,8 +448,8 @@ def exibir_agenda_semana(df_tarefas, df_crm):
                 """,
                 unsafe_allow_html=True
             )
-        if st.button("Follow-ups (CRM)", key="sub_btn_followups", use_container_width=True):
-            st.session_state.sub_menu_tarefas = "Follow-ups (CRM)"
+        if st.button("Follow-up", key="sub_btn_followups", use_container_width=True):
+            st.session_state.sub_menu_tarefas = "Follow-up"
             st.rerun()
 
     st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
@@ -531,9 +531,8 @@ def exibir_agenda_semana(df_tarefas, df_crm):
 # ABA 1: GERENCIADOR DE TAREFAS & CALENDÁRIO FUTURO
 # =========================================================
 if aba_selecionada == "Gerenciamento de Tarefas":
+    st.subheader("Gerenciamento de Tarefas")
     exibir_agenda_semana(st.session_state.df_tarefas, st.session_state.df_crm)
-    
-    st.subheader("Gerenciador de Tarefas")
 
     lista_clientes = (
         ["Nenhum / Tarefa Geral"] + st.session_state.df_crm["Empresa"].dropna().tolist()
@@ -592,8 +591,7 @@ if aba_selecionada == "Gerenciamento de Tarefas":
 
     st.divider()
 
-    st.subheader("Agenda de Tarefas e Follow ups")
-    st.caption("Visualize em formato de tabela cronológica todas as entregas, reuniões e interações planejadas para os próximos dias.")
+    st.subheader("Agenda de Tarefas e Follow Up")
 
     col_h1, col_h2 = st.columns([2, 2])
     with col_h1:
