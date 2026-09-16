@@ -171,9 +171,10 @@ st.markdown("""
             font-size: 12px !important;
         }
 
-        /* Estilização personalizada para os botões do menu principal com tom de azul */
+        /* Forçamento de alta especificidade para os botões do menu principal */
+        div.row-widget.stButton > button, 
         div[data-testid="column"] div.stButton > button {
-            background-color: #0f172a !important;
+            background-color: #2563eb !important;
             color: #ffffff !important;
             border: 1px solid #2563eb !important;
             border-radius: 8px !important;
@@ -181,11 +182,12 @@ st.markdown("""
             transition: all 0.3s ease !important;
         }
 
+        div.row-widget.stButton > button:hover, 
         div[data-testid="column"] div.stButton > button:hover {
-            background-color: #2563eb !important;
-            border-color: #2563eb !important;
+            background-color: #1d4ed8 !important;
+            border-color: #1d4ed8 !important;
             color: #ffffff !important;
-            box-shadow: 0 0 12px rgba(37, 99, 235, 0.4) !important;
+            box-shadow: 0 0 12px rgba(37, 99, 235, 0.6) !important;
         }
     </style>
 """, unsafe_allow_html=True)
@@ -398,10 +400,10 @@ for i, nome_aba in enumerate(abas_disponiveis):
                 f"""
                 <style>
                 div[data-testid="column"]:nth-of-type({i+1}) div.stButton > button {{
-                    background-color: #2563eb !important;
-                    border-color: #2563eb !important;
+                    background-color: #1d4ed8 !important;
+                    border-color: #1d4ed8 !important;
                     color: #ffffff !important;
-                    box-shadow: 0 0 12px rgba(37, 99, 235, 0.4) !important;
+                    box-shadow: 0 0 14px rgba(37, 99, 235, 0.7) !important;
                 }}
                 </style>
                 """,
@@ -436,8 +438,8 @@ def exibir_agenda_semana(df_tarefas, df_crm):
                 """
                 <style>
                 div[data-testid="column"]:nth-of-type(1) div.stButton > button {
-                    background-color: #2563eb !important;
-                    border-color: #2563eb !important;
+                    background-color: #1d4ed8 !important;
+                    border-color: #1d4ed8 !important;
                     color: #ffffff !important;
                 }
                 </style>
@@ -455,8 +457,8 @@ def exibir_agenda_semana(df_tarefas, df_crm):
                 """
                 <style>
                 div[data-testid="column"]:nth-of-type(2) div.stButton > button {
-                    background-color: #2563eb !important;
-                    border-color: #2563eb !important;
+                    background-color: #1d4ed8 !important;
+                    border-color: #1d4ed8 !important;
                     color: #ffffff !important;
                 }
                 </style>
