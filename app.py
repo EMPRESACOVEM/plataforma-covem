@@ -103,15 +103,6 @@ st.markdown("""
             text-transform: uppercase;
         }
 
-        .section-header-covem {
-            font-family: 'Inter', sans-serif;
-            font-size: 20px;
-            font-weight: 700;
-            color: #F8FAFC;
-            margin-top: 10px;
-            margin-bottom: 18px !important;
-        }
-
         .badge-atrasada {
             background-color: #4A2024;
             color: #FCA5A5;
@@ -1019,17 +1010,15 @@ elif aba_selecionada == "Dashboard":
 
     st.divider()
 
-    # TÍTULO E GRÁFICO CORRIGIDOS E BLINDADOS CONTRA ERROS DE TIPO
-    st.markdown(f'<div class="notranslate"><h3>Motivo de Perda — {titulo_dinamico}</h3></div>', unsafe_allow_html=True)
+    # TÍTULO E GRÁFICO DE PERDA ATUALIZADOS CONFORME SOLICITADO
+    st.markdown(f'<div class="notranslate"><h3>Gráfico de Motivo de Perda — {titulo_dinamico}</h3></div>', unsafe_allow_html=True)
     df_perdidos = df_dash[df_dash["Etapa"] == "6. Perdido"].copy()
     
     if not df_perdidos.empty and "Perda" in df_perdidos.columns:
-        # Conversão segura para string preenchendo vazios ou nulos para evitar AttributeErrors
         df_perdidos["Perda"] = df_perdidos["Perda"].fillna("").astype(str).str.strip()
         df_motivos = df_perdidos[df_perdidos["Perda"] != ""].groupby("Perda").size().reset_index(name="Quantidade")
         
         if not df_motivos.empty:
-            # Gráfico alterado para Barras Verticais conforme solicitado
             fig_perda = px.bar(
                 df_motivos,
                 x="Perda",
