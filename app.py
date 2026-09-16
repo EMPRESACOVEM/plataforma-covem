@@ -683,7 +683,7 @@ if aba_selecionada == "Gerenciamento de Tarefas":
             with col_b_editar:
                 pass
 
-            # Aba única com título "Tarefas e Follow up" contendo o selectbox integrado
+            # O título "Tarefas e Follow up" agora é oficialmente o rótulo embutido da aba/selectbox
             st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
             
             item_selecionado_acoes = st.selectbox(
@@ -697,7 +697,7 @@ if aba_selecionada == "Gerenciamento de Tarefas":
                 origem_sel = sel_row["origem"]
                 idx_orig_sel = sel_row["index_original"]
 
-                # Ações de Excluir e Editar ativadas nos mini cards
+                # Ações de Excluir e Editar acionadas nos mini cards
                 with col_b_excluir:
                     if st.button("Excluir", use_container_width=True, key="btn_excluir_aba"):
                         if origem_sel == "tarefa":
