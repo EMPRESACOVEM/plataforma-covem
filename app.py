@@ -1,4 +1,4 @@
-import streamlit as st
+[source: 3]import streamlit as st
 import pandas as pd
 import plotly.express as px
 import io
@@ -20,6 +20,13 @@ ARQUIVO_DADOS = BASE_DIR / "banco_crm_covem.xlsx"
 ARQUIVO_TAREFAS = BASE_DIR / "banco_tarefas_covem.xlsx"
 ARQUIVO_HISTORICO = BASE_DIR / "banco_historico_covem.xlsx"
 ARQUIVO_FINANCEIRO = BASE_DIR / "banco_financeiro_covem.xlsx"
+
+# ---------------------------------------------------------
+# EXIBIÇÃO DA LOGO NA BARRA LATERAL
+# ---------------------------------------------------------
+CAMINHO_LOGO = BASE_DIR / "logo_coverem.png"
+if CAMINHO_LOGO.exists():
+    st.sidebar.image(str(CAMINHO_LOGO), use_container_width=True)
 
 # Nome Oficial do Grupo
 COVEM_NAME = "GRUPO COVEM"
