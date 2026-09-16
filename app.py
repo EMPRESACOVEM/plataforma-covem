@@ -673,12 +673,12 @@ if aba_selecionada == "Gerenciamento de Tarefas":
             )
 
             st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
-            st.markdown("##### Gerenciamento de Itens (Excluir ou Editar)")
             
             item_selecionado_acoes = st.selectbox(
                 "Selecione o compromisso para gerenciar (Editar/Excluir):",
                 options=range(len(df_futuro)),
-                format_func=lambda x: f"[{df_futuro.loc[x, 'Data_Formatada']}] {df_futuro.loc[x, 'Tipo']} - {df_futuro.loc[x, 'Título / Ação']} ({df_futuro.loc[x, 'Vinculado a']})"
+                format_func=lambda x: f"[{df_futuro.loc[x, 'Data_Formatada']}] {df_futuro.loc[x, 'Tipo']} - {df_futuro.loc[x, 'Título / Ação']} ({df_futuro.loc[x, 'Vinculado a']})",
+                label_visibility="collapsed"
             )
 
             if item_selecionado_acoes is not None:
@@ -688,7 +688,7 @@ if aba_selecionada == "Gerenciamento de Tarefas":
 
                 col_acao1, col_acao2 = st.columns(2)
                 with col_acao1:
-                    if st.button("🗑️ Excluir Item Selecionado", use_container_width=True):
+                    if st.button("Excluir", use_container_width=True):
                         if origem_sel == "tarefa":
                             st.session_state.df_tarefas = st.session_state.df_tarefas.drop(idx_orig_sel).reset_index(drop=True)
                             salvar_dados_tarefas(st.session_state.df_tarefas)
@@ -700,7 +700,7 @@ if aba_selecionada == "Gerenciamento de Tarefas":
                         st.rerun()
 
                 with col_acao2:
-                    with st.popover("✏️ Editar Item Selecionado", use_container_width=True):
+                    with st.popover("Editar", use_container_width=True):
                         novo_txt_acao = st.text_input("Título / Ação", value=sel_row["Título / Ação"])
                         novo_vinc_acao = st.text_input("Vínculo / Empresa", value=sel_row["Vinculado a"])
                         if st.button("Salvar Alterações"):
