@@ -597,7 +597,8 @@ if aba_selecionada == "Gerenciamento de Tarefas":
     with col_h1:
         horizonte = st.selectbox(
             "Horizonte de Visualização:",
-            ["Próximos 7 Dias", "Próximos 15 Dias", "Próximos 30 Dias", "Todos os Registros Futuros"]
+            ["Próximos 7 Dias", "Próximos 15 Dias", "Próximos 30 Dias", "Todos os Registros Futuros"],
+            label_visibility="collapsed"
         )
 
     hoje = date.today()
@@ -661,7 +662,6 @@ if aba_selecionada == "Gerenciamento de Tarefas":
 
             st.divider()
 
-            # Exibe a tabela estilizada igualzinha à imagem de referência
             df_exibicao_tabela = df_futuro[["Data_Formatada", "Tipo", "Título / Ação", "Vinculado a", "Prioridade / Status"]]
             
             st.dataframe(
