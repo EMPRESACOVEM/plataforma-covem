@@ -22,11 +22,15 @@ ARQUIVO_HISTORICO = BASE_DIR / "banco_historico_covem.xlsx"
 ARQUIVO_FINANCEIRO = BASE_DIR / "banco_financeiro_covem.xlsx"
 
 # ---------------------------------------------------------
-# EXIBIÇÃO DA LOGO NA BARRA LATERAL
+# EXIBIÇÃO DA LOGO CENTRALIZADA ACIMA DO MENU PRINCIPAL
 # ---------------------------------------------------------
 CAMINHO_LOGO = BASE_DIR / "logo_coverem.png"
 if CAMINHO_LOGO.exists():
-    st.sidebar.image(str(CAMINHO_LOGO), use_container_width=True)
+    # Cria colunas para centralizar a imagem no layout wide
+    _, col_logo, _ = st.columns([1, 1.5, 1])
+    with col_logo:
+        st.image(str(CAMINHO_LOGO), use_container_width=True)
+    st.markdown("<div style='margin-bottom: 20px;'></div>", unsafe_allow_html=True)
 
 # Nome Oficial do Grupo
 COVEM_NAME = "GRUPO COVEM"
