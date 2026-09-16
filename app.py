@@ -324,9 +324,11 @@ cliente_sel = st.sidebar.selectbox("Clientes COVEM:", opcoes_filtro)
 if cliente_sel != "TODOS":
     df_filtered = df[df["Cliente"] == cliente_sel]
     titulo_dinamico = f"Dashboard - {cliente_sel}"
+    titulo_funil = f"Funil de Vendas — {cliente_sel}"
 else:
     df_filtered = df
     titulo_dinamico = f"Dashboard - {COVEM_NAME}"
+    titulo_funil = f"Funil de Vendas — {COVEM_NAME}"
 
 st.sidebar.divider()
 
@@ -717,7 +719,7 @@ if aba_selecionada == "Gerenciamento de Tarefas":
 # ABA 2: FUNIL DE VENDAS
 # =========================================================
 elif aba_selecionada == "Funil de Vendas":
-    st.subheader(f"Funil de Vendas — {titulo_dinamico}")
+    st.subheader(titulo_funil)
 
     if st.session_state.cliente_editando_id is not None:
         cliente_edit_id = st.session_state.cliente_editando_id
