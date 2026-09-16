@@ -28,7 +28,7 @@ COVEM_NAME = "GRUPO COVEM"
 CARTEIRAS_COVEM = ["BraClean", "QV Energia Solar", "Elleven"]
 
 # ---------------------------------------------------------
-# PALETA COVEM & ESTILIZAÇÃO CSS (MENU COM AZUL PASTEL)
+# PALETA COVEM & ESTILIZAÇÃO CSS (MENU COM AZUL PASTEL FORÇADO)
 # ---------------------------------------------------------
 DEFAULT_COLORS = {
     "1. Contatado": "#F472B6",         # Rosa Pastel suave
@@ -112,20 +112,22 @@ st.markdown("""
             margin-bottom: 18px !important;
         }
 
-        /* ESTILIZAÇÃO DOS BOTÕES DO MENU PRINCIPAL (AZUL PASTEL) */
-        div[data-testid="stHorizontalBlock"] > div[data-testid="column"] div.stButton > button {
-            background-color: #1E293B !important;
-            color: #93C5FD !important;
-            border: 1px solid #93C5FD !important;
+        /* FORÇANDO O ESTILO DOS BOTÕES DO MENU PRINCIPAL COM AZUL PASTEL (#93C5FD) */
+        div[data-testid="stHorizontalBlock"] button {
+            background-color: #93C5FD !important;
+            color: #0F172A !important;
+            border: 1px solid #79B8FC !important;
             border-radius: 8px !important;
-            font-weight: 600 !important;
+            font-weight: 700 !important;
+            width: 100% !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
             transition: all 0.2s ease-in-out;
         }
 
-        div[data-testid="stHorizontalBlock"] > div[data-testid="column"] div.stButton > button:hover {
-            background-color: #93C5FD !important;
+        div[data-testid="stHorizontalBlock"] button:hover {
+            background-color: #79B8FC !important;
             color: #0F172A !important;
-            border-color: #93C5FD !important;
+            border-color: #60A5FA !important;
         }
 
         .badge-atrasada {
@@ -376,7 +378,7 @@ st.markdown('<div class="subtitle-covem">Plataforma Executiva de Gestão Comerci
 st.divider()
 
 # ---------------------------------------------------------
-# MENU HORIZONTAL EM CARDS (COM DESTAQUE AZUL PASTEL)
+# MENU HORIZONTAL EM CARDS (COM AZUL PASTEL GARANTIDO)
 # ---------------------------------------------------------
 abas_disponiveis = [
     "Gerenciamento de Tarefas",
@@ -390,23 +392,6 @@ cols_menu = st.columns(len(abas_disponiveis))
 
 for i, nome_aba in enumerate(abas_disponiveis):
     with cols_menu[i]:
-        is_active = (st.session_state.menu_ativo == nome_aba)
-        
-        if is_active:
-            st.markdown(
-                f"""
-                <style>
-                div[data-testid="column"]:nth-of-type({i+1}) div.stButton > button {{
-                    background-color: #93C5FD !important;
-                    color: #0F172A !important;
-                    border: 1px solid #93C5FD !important;
-                    font-weight: 700 !important;
-                }}
-                </style>
-                """,
-                unsafe_allow_html=True
-            )
-        
         if st.button(nome_aba, key=f"menu_card_{i}", use_container_width=True):
             st.session_state.menu_ativo = nome_aba
             st.rerun()
@@ -429,41 +414,11 @@ def exibir_agenda_semana(df_tarefas, df_crm):
     c_sub1, c_sub2 = st.columns(2)
     
     with c_sub1:
-        is_sub_active_1 = (st.session_state.sub_menu_tarefas == "Tarefas")
-        if is_sub_active_1:
-            st.markdown(
-                """
-                <style>
-                div[data-testid="column"]:nth-of-type(1) div.stButton > button {
-                    background-color: #93C5FD !important;
-                    color: #0F172A !important;
-                    border: 1px solid #93C5FD !important;
-                    font-weight: 700 !important;
-                }
-                </style>
-                """,
-                unsafe_allow_html=True
-            )
         if st.button("Tarefas", key="sub_btn_tarefas", use_container_width=True):
             st.session_state.sub_menu_tarefas = "Tarefas"
             st.rerun()
             
     with c_sub2:
-        is_sub_active_2 = (st.session_state.sub_menu_tarefas == "Follow-up")
-        if is_sub_active_2:
-            st.markdown(
-                """
-                <style>
-                div[data-testid="column"]:nth-of-type(2) div.stButton > button {
-                    background-color: #93C5FD !important;
-                    color: #0F172A !important;
-                    border: 1px solid #93C5FD !important;
-                    font-weight: 700 !important;
-                }
-                </style>
-                """,
-                unsafe_allow_html=True
-            )
         if st.button("Follow-up", key="sub_btn_followups", use_container_width=True):
             st.session_state.sub_menu_tarefas = "Follow-up"
             st.rerun()
