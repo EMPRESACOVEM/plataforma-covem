@@ -593,7 +593,7 @@ if aba_selecionada == "Gerenciamento de Tarefas":
     st.divider()
 
     st.subheader("Agenda de Tarefas e Follow ups")
-    st.caption("Visualize em formato de tabela cronológica todas as entregas, reuniões e interações planejadas para os próximos dias.")
+    st.caption("Visualize em formato de tabela cronológica todas as entregas, reuniões e interações planejadas para los próximos dias.")
 
     col_h1, col_h2 = st.columns([2, 2])
     with col_h1:
@@ -663,32 +663,51 @@ if aba_selecionada == "Gerenciamento de Tarefas":
 
             st.divider()
 
-            # Exibe a tabela estilizada igualzinha à imagem de referência
-            df_exibicao_tabela = df_futuro[["Data_Formatada", "Tipo", "Título / Ação", "Vinculado a", "Prioridade / Status"]]
+            # Adiciona a coluna de seleção por quadradinhos diretamente na tabela visualizada
+            df_exibicao_tabela = df_futuro[["Data_Formatada", "Tipo", "Título / Ação", "Vinculado a", "Prioridade / Status"]].copy()
             
-            st.dataframe(
-                df_exibicao_tabela,
-                use_container_width=True,
-                hide_index=True
-            )
+            # Criamos uma lista de marcações para exibição customizada linha a linha
+            selecoes_linhas = []
+            
+            # Cabeçalho personalizado alinhado com a coluna de seleção
+            col_cab1, col_cab2, col_cab3, col_cab4, col_cab5, col_cab6 = st.columns([1.2, 1.2, 2.8, 2.2, 1.8, 0.6])
+            col_cab1.markdown("**Data**")
+            col_cab2.markdown("**Tipo**")
+            col_cab3.markdown("**Título / Ação**")
+            col_cab4.markdown("**Vinculado a**")
+            col_cab5.markdown("**Prioridade / Status**")
+            col_cab6.markdown("**Selecionar**")
+            st.markdown("<hr style='margin: 4px 0 8px 0; border-color: #334155;'>", unsafe_allow_html=True)
+
+            item_selecionado_idx = None
+
+            for i, row in df_futuro.iterrows():
+                c_l1, c_l2, c_l3, c_l4, c_l5, c_l6 = st.columns([1.2, 1.2, 2.8, 2.2, 1.8, 0.6])
+                c_l1.text(row["Data_Formatada"])
+                c_l2.text(row["Tipo"])
+                c_l3.text(row["Título / Ação"])
+                c_l4.text(row["Vinculado a"])
+                c_l5.text(row["Prioridade / Status"])
+                
+                with c_l6:
+                    marcado = st.checkbox("", key=f"chk_agenda_{i}", label_visibility="collapsed")
+                    if marcado:
+                        item_selecionado_idx = i
+
+                st.markdown("<hr style='margin: 2px 0; border-color: #1E293B;'>", unsafe_allow_html=True)
 
             st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
             
-            item_selecionado_acoes = st.selectbox(
-                "Selecione o compromisso para gerenciar (Editar/Excluir):",
-                options=range(len(df_futuro)),
-                format_func=lambda x: f"[{df_futuro.loc[x, 'Data_Formatada']}] {df_futuro.loc[x, 'Tipo']} - {df_futuro.loc[x, 'Título / Ação']} ({df_futuro.loc[x, 'Vinculado a']})",
-                label_visibility="collapsed"
-            )
+            # Botões de Excluir e Editar logo abaixo
+            col_b_excluir, col_b_editar = st.columns(2)
 
-            if item_selecionado_acoes is not None:
-                sel_row = df_futuro.loc[item_selecionado_acoes]
-                origem_sel = sel_row["origem"]
-                idx_orig_sel = sel_row["index_original"]
-
-                col_acao1, col_acao2 = st.columns(2)
-                with col_acao1:
-                    if st.button("Excluir", use_container_width=True):
+            with col_b_excluir:
+                if st.button("Excluir", use_container_width=True):
+                    if item_selecionado_idx is not None:
+                        sel_row = df_futuro.loc[item_selecionado_idx]
+                        origem_sel = sel_row["origem"]
+                        idx_orig_sel = sel_row["index_original"]
+                        
                         if origem_sel == "tarefa":
                             st.session_state.df_tarefas = st.session_state.df_tarefas.drop(idx_orig_sel).reset_index(drop=True)
                             salvar_dados_tarefas(st.session_state.df_tarefas)
@@ -698,11 +717,17 @@ if aba_selecionada == "Gerenciamento de Tarefas":
                             salvar_dados_crm(st.session_state.df_crm)
                         st.success("Item removido com sucesso!")
                         st.rerun()
+                    else:
+                        st.warning("Selecione um item marcando o quadradinho na linha correspondente.")
 
-                with col_acao2:
-                    with st.popover("Editar", use_container_width=True):
+            with col_b_editar:
+                with st.popover("Editar", use_container_width=True):
+                    if item_selecionado_idx is not None:
+                        sel_row = df_futuro.loc[item_selecionado_idx]
+                        origem_sel = sel_row["origem"]
+                        idx_orig_sel = sel_row["index_original"]
+                        
                         novo_txt_acao = st.text_input("Título / Ação", value=sel_row["Título / Ação"])
-                        novo_vinc_acao = st.text_input("Vínculo / Empresa", value=sel_row["Vinculado a"])
                         if st.button("Salvar Alterações"):
                             if origem_sel == "tarefa":
                                 st.session_state.df_tarefas.loc[idx_orig_sel, "Titulo"] = novo_txt_acao
@@ -712,6 +737,8 @@ if aba_selecionada == "Gerenciamento de Tarefas":
                                 salvar_dados_crm(st.session_state.df_crm)
                             st.success("Atualizado com sucesso!")
                             st.rerun()
+                    else:
+                        st.warning("Selecione primeiro um item marcando o quadradinho na linha da tabela.")
     else:
         st.info("Nenhuma tarefa ou follow-up agendado para este horizonte de tempo.")
 
