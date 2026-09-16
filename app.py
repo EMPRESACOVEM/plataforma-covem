@@ -814,6 +814,9 @@ elif aba_selecionada == "Funil de Vendas":
                     st.session_state.df_crm.loc[idx_df, "Vendedor"] = edit_vendedor
                     st.session_state.df_crm.loc[idx_df, "Followup_Data"] = str(edit_fu_data)
                     st.session_state.df_crm.loc[idx_df, "Followup_Nota"] = edit_fu_nota
+                    
+                    # Garantir que a coluna 'Perda' aceite strings para evitar TypeError
+                    st.session_state.df_crm["Perda"] = st.session_state.df_crm["Perda"].astype(str)
                     st.session_state.df_crm.loc[idx_df, "Perda"] = str(edit_motivo_perda)
                     
                     salvar_dados_crm(st.session_state.df_crm)
@@ -896,6 +899,7 @@ elif aba_selecionada == "Funil de Vendas":
                         st.session_state.df_crm.loc[idx_df, "Etapa"] = nova_etapa_card
                         st.session_state.df_crm.loc[idx_df, "Prob"] = PROB_MAP[nova_etapa_card]
                         if nova_etapa_card == "6. Perdido":
+                            st.session_state.df_crm["Perda"] = st.session_state.df_crm["Perda"].astype(str)
                             st.session_state.df_crm.loc[idx_df, "Perda"] = "Outros"
                         
                         salvar_dados_crm(st.session_state.df_crm)
