@@ -987,7 +987,6 @@ elif aba_selecionada == "Dashboard":
 
     st.divider()
 
-    # Título atualizado conforme solicitado
     if cliente_sel != "TODOS":
         titulo_grafico_funil = f"Dashboard Gráfico - {cliente_sel}"
     else:
@@ -1020,7 +1019,8 @@ elif aba_selecionada == "Dashboard":
 
     st.divider()
 
-    st.markdown(f'<div class="notranslate"><h3>Motivos de Perda de Vendas — {titulo_dinamico}</h3></div>', unsafe_allow_html=True)
+    # TÍTULO ALTERADO CONFORME SOLICITADO: Motivo de Perda - [EMPRESA]
+    st.markdown(f'<div class="notranslate"><h3>Motivo de Perda — {titulo_dinamico}</h3></div>', unsafe_allow_html=True)
     df_perdidos = df_dash[df_dash["Etapa"] == "6. Perdido"]
     
     if not df_perdidos.empty and "Perda" in df_perdidos.columns:
