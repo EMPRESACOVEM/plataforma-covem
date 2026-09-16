@@ -34,7 +34,7 @@ DEFAULT_COLORS = {
     "1. Contatado": "#F472B6",         # Rosa Pastel suave
     "2. Conversando": "#FDE047",        # Amarelo Pastel suave
     "3. Reunião Agendada": "#FDBA74",  # Laranja Pastel suave
-    "4. Proposta Enviada": "#3B82F6",  # Azul Sóbrio/Escuro (Modificado para não ser claro)
+    "4. Proposta Enviada": "#93C5FD",  # Azul Pastel suave
     "5. Fechado": "#86EFAC",           # Verde Pastel suave
     "6. Perdido": "#FCA5A5"            # Vermelho Pastel suave
 }
@@ -169,6 +169,23 @@ st.markdown("""
         div[data-testid="stMetricLabel"] {
             font-family: 'Inter', sans-serif !important;
             font-size: 12px !important;
+        }
+
+        /* Estilização personalizada para os botões do menu principal com tom de azul */
+        div[data-testid="column"] div.stButton > button {
+            background-color: #0f172a !important;
+            color: #ffffff !important;
+            border: 1px solid #2563eb !important;
+            border-radius: 8px !important;
+            font-weight: 600 !important;
+            transition: all 0.3s ease !important;
+        }
+
+        div[data-testid="column"] div.stButton > button:hover {
+            background-color: #2563eb !important;
+            border-color: #2563eb !important;
+            color: #ffffff !important;
+            box-shadow: 0 0 12px rgba(37, 99, 235, 0.4) !important;
         }
     </style>
 """, unsafe_allow_html=True)
@@ -381,10 +398,10 @@ for i, nome_aba in enumerate(abas_disponiveis):
                 f"""
                 <style>
                 div[data-testid="column"]:nth-of-type({i+1}) div.stButton > button {{
-                    background-color: #26334D !important;
-                    color: #94A3B8 !important;
-                    border: 1px solid #475569 !important;
-                    font-weight: 500 !important;
+                    background-color: #2563eb !important;
+                    border-color: #2563eb !important;
+                    color: #ffffff !important;
+                    box-shadow: 0 0 12px rgba(37, 99, 235, 0.4) !important;
                 }}
                 </style>
                 """,
@@ -419,10 +436,9 @@ def exibir_agenda_semana(df_tarefas, df_crm):
                 """
                 <style>
                 div[data-testid="column"]:nth-of-type(1) div.stButton > button {
-                    background-color: #26334D !important;
-                    color: #94A3B8 !important;
-                    border: 1px solid #475569 !important;
-                    font-weight: 500 !important;
+                    background-color: #2563eb !important;
+                    border-color: #2563eb !important;
+                    color: #ffffff !important;
                 }
                 </style>
                 """,
@@ -439,10 +455,9 @@ def exibir_agenda_semana(df_tarefas, df_crm):
                 """
                 <style>
                 div[data-testid="column"]:nth-of-type(2) div.stButton > button {
-                    background-color: #26334D !important;
-                    color: #94A3B8 !important;
-                    border: 1px solid #475569 !important;
-                    font-weight: 500 !important;
+                    background-color: #2563eb !important;
+                    border-color: #2563eb !important;
+                    color: #ffffff !important;
                 }
                 </style>
                 """,
@@ -1107,7 +1122,7 @@ elif aba_selecionada == "Relatório Executivo":
                 elif col_name == "Reuniões Agendadas":
                     return "background-color: #FDBA74; color: #1E293B; font-weight: bold;"
                 elif col_name == "Propostas Enviadas":
-                    return "background-color: #3B82F6; color: #FFFFFF; font-weight: bold;"
+                    return "background-color: #93C5FD; color: #1E293B; font-weight: bold;"
                 elif col_name == "Projetos Fechados":
                     return "background-color: #86EFAC; color: #1E293B; font-weight: bold;"
                 return ""
@@ -1128,7 +1143,7 @@ elif aba_selecionada == "Relatório Executivo":
         cores_atv = {
             "Leads Qualificados": "#F472B6",   
             "Reuniões Agendadas": "#FDBA74",   
-            "Propostas Enviadas": "#3B82F6",   
+            "Propostas Enviadas": "#93C5FD",   
             "Projetos Fechados": "#86EFAC"    
         }
 
@@ -1207,7 +1222,7 @@ elif aba_selecionada == "Relatório Executivo":
                 if col_name == "Mês/Ano":
                     return "background-color: #FDE047; color: #1E293B; font-weight: bold;"
                 elif col_name == "Propostas Enviadas":
-                    return "background-color: #3B82F6; color: #FFFFFF; font-weight: bold;"
+                    return "background-color: #93C5FD; color: #1E293B; font-weight: bold;"
                 elif col_name == "Projetos Fechados":
                     return "background-color: #86EFAC; color: #1E293B; font-weight: bold;"
                 elif col_name == "Total":
@@ -1226,7 +1241,7 @@ elif aba_selecionada == "Relatório Executivo":
             df_agrupado_fin = df_graf_fin.groupby(["Mês/Ano", "Tipo"])["Valor"].sum().reset_index()
 
             cores_fin_graf = {
-                "Propostas Enviadas": "#3B82F6",
+                "Propostas Enviadas": "#93C5FD",
                 "Projetos Fechados": "#86EFAC"
             }
 
@@ -1360,6 +1375,6 @@ elif aba_selecionada == "+ Novo Cadastro":
                     "Historico": f"[{dt.now().strftime('%d/%m/%Y %H:%M')}] Oportunidade cadastrada."
                 }
                 st.session_state.df_crm = pd.concat([st.session_state.df_crm, pd.DataFrame([nova_linha])], ignore_index=True)
-                salvar_dados_crm(st.session_state.df_crm)
+                sal_dados_crm = salvar_dados_crm(st.session_state.df_crm)
                 st.success("Oportunidade cadastrada e salva com sucesso!")
                 st.rerun()
