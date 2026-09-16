@@ -34,7 +34,7 @@ DEFAULT_COLORS = {
     "1. Contatado": "#F472B6",         # Rosa Pastel suave
     "2. Conversando": "#FDE047",        # Amarelo Pastel suave
     "3. Reunião Agendada": "#FDBA74",  # Laranja Pastel suave
-    "4. Proposta Enviada": "#93C5FD",  # Azul Pastel suave
+    "4. Proposta Enviada": "#3B82F6",  # Azul Sóbrio/Escuro (Modificado para não ser claro)
     "5. Fechado": "#86EFAC",           # Verde Pastel suave
     "6. Perdido": "#FCA5A5"            # Vermelho Pastel suave
 }
@@ -1107,7 +1107,7 @@ elif aba_selecionada == "Relatório Executivo":
                 elif col_name == "Reuniões Agendadas":
                     return "background-color: #FDBA74; color: #1E293B; font-weight: bold;"
                 elif col_name == "Propostas Enviadas":
-                    return "background-color: #93C5FD; color: #1E293B; font-weight: bold;"
+                    return "background-color: #3B82F6; color: #FFFFFF; font-weight: bold;"
                 elif col_name == "Projetos Fechados":
                     return "background-color: #86EFAC; color: #1E293B; font-weight: bold;"
                 return ""
@@ -1128,7 +1128,7 @@ elif aba_selecionada == "Relatório Executivo":
         cores_atv = {
             "Leads Qualificados": "#F472B6",   
             "Reuniões Agendadas": "#FDBA74",   
-            "Propostas Enviadas": "#93C5FD",   
+            "Propostas Enviadas": "#3B82F6",   
             "Projetos Fechados": "#86EFAC"    
         }
 
@@ -1207,7 +1207,7 @@ elif aba_selecionada == "Relatório Executivo":
                 if col_name == "Mês/Ano":
                     return "background-color: #FDE047; color: #1E293B; font-weight: bold;"
                 elif col_name == "Propostas Enviadas":
-                    return "background-color: #93C5FD; color: #1E293B; font-weight: bold;"
+                    return "background-color: #3B82F6; color: #FFFFFF; font-weight: bold;"
                 elif col_name == "Projetos Fechados":
                     return "background-color: #86EFAC; color: #1E293B; font-weight: bold;"
                 elif col_name == "Total":
@@ -1226,7 +1226,7 @@ elif aba_selecionada == "Relatório Executivo":
             df_agrupado_fin = df_graf_fin.groupby(["Mês/Ano", "Tipo"])["Valor"].sum().reset_index()
 
             cores_fin_graf = {
-                "Propostas Enviadas": "#93C5FD",
+                "Propostas Enviadas": "#3B82F6",
                 "Projetos Fechados": "#86EFAC"
             }
 
