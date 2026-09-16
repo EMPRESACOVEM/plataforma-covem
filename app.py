@@ -1,4 +1,4 @@
-import streamlit as st
+[source: 7]import streamlit as st
 import pandas as pd
 import plotly.express as px
 import io
@@ -926,7 +926,8 @@ elif aba_selecionada == "Dashboard":
     with col_f1:
         periodo_sel = st.selectbox(
             "Visualizar Período:", 
-            ["Todos os Registros", "Esta Semana", "15 Dias", "1 Mês", "2 Meses", "3 Meses"]
+            ["Todos os Registros", "Esta Semana", "15 Dias", "1 Mês", "2 Meses", "3 Meses"],
+            label_visibility="collapsed"
         )
     
     df_dash = df_filtered.copy()
@@ -986,7 +987,13 @@ elif aba_selecionada == "Dashboard":
 
     st.divider()
 
-    st.markdown(f'<div class="notranslate"><h3>Funil de Vendas — {titulo_dinamico}</h3></div>', unsafe_allow_html=True)
+    # Título atualizado conforme solicitado
+    if cliente_sel != "TODOS":
+        titulo_grafico_funil = f"Dashboard Gráfico - {cliente_sel}"
+    else:
+        titulo_grafico_funil = f"Dashboard Gráfico - {COVEM_NAME}"
+
+    st.markdown(f'<div class="notranslate"><h3>{titulo_grafico_funil}</h3></div>', unsafe_allow_html=True)
     df_pizza = pd.DataFrame(list(contagem_calculada.items()), columns=["Etapa", "Quantidade"])
     df_pizza_valida = df_pizza[df_pizza["Quantidade"] > 0]
 
