@@ -323,10 +323,10 @@ cliente_sel = st.sidebar.selectbox("Clientes COVEM:", opcoes_filtro)
 
 if cliente_sel != "TODOS":
     df_filtered = df[df["Cliente"] == cliente_sel]
-    titulo_dinamico = f"CRM — {cliente_sel}"
+    titulo_dinamico = f"Dashboard - {cliente_sel}"
 else:
     df_filtered = df
-    titulo_dinamico = COVEM_NAME
+    titulo_dinamico = f"Dashboard - {COVEM_NAME}"
 
 st.sidebar.divider()
 
@@ -918,7 +918,7 @@ elif aba_selecionada == "Funil de Vendas":
 # ABA 3: DASHBOARD
 # =========================================================
 elif aba_selecionada == "Dashboard":
-    st.markdown(f'<div class="notranslate"><h3>1. DISTRIBUIÇÃO DO FUNIL DE VENDAS ({titulo_dinamico})</h3></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="notranslate"><h3>{titulo_dinamico}</h3></div>', unsafe_allow_html=True)
     
     col_f1, _ = st.columns([2, 2])
     with col_f1:
