@@ -185,6 +185,7 @@ def carregar_dados_crm():
             for col in ["id", "Empresa", "Cliente", "Etapa", "Contato", "Cargo", "Telefone", "Email", "Cidade", "Valor", "Prob", "Vendedor", "Perda", "Data_Cadastro", "Followup_Data", "Followup_Nota", "Historico"]:
                 if col not in df_loaded.columns:
                     df_loaded[col] = ""
+            df_loaded["Perda"] = df_loaded["Perda"].fillna("").astype(str)
             return df_loaded
         except Exception:
             pass
@@ -227,6 +228,7 @@ def carregar_dados_crm():
             "Historico": "[25/08/2026 16:45] Achou o valor acima do orçamento."
         }
     ])
+    df_inicial["Perda"] = df_inicial["Perda"].astype(str)
     df_inicial.to_excel(ARQUIVO_DADOS, index=False)
     return df_inicial
 
@@ -750,7 +752,7 @@ elif aba_selecionada == "Funil de Vendas":
                 
                 edit_fu_nota = st.text_input("Resumo / Nota do Follow-up", value=row_edit["Followup_Nota"])
                 
-                edit_perda = row_edit.get("Perda", "")
+                edit_perda = str(row_edit.get("Perda", "")).strip()
                 edit_motivo_perda = st.selectbox(
                     "Motivo de Perda (Se aplicável)", 
                     options=[""] + MOTIVOS_PERDA_PADRAO,
@@ -812,7 +814,7 @@ elif aba_selecionada == "Funil de Vendas":
                     st.session_state.df_crm.loc[idx_df, "Vendedor"] = edit_vendedor
                     st.session_state.df_crm.loc[idx_df, "Followup_Data"] = str(edit_fu_data)
                     st.session_state.df_crm.loc[idx_df, "Followup_Nota"] = edit_fu_nota
-                    st.session_state.df_crm.loc[idx_df, "Perda"] = edit_motivo_perda
+                    st.session_state.df_crm.loc[idx_df, "Perda"] = str(edit_motivo_perda)
                     
                     salvar_dados_crm(st.session_state.df_crm)
                     st.session_state.cliente_editando_id = None
@@ -1010,7 +1012,6 @@ elif aba_selecionada == "Dashboard":
 
     st.divider()
 
-    # TÍTULO E GRÁFICO DE PERDA ATUALIZADOS CONFORME SOLICITADO
     st.markdown(f'<div class="notranslate"><h3>Gráfico de Motivo de Perda — {titulo_dinamico}</h3></div>', unsafe_allow_html=True)
     df_perdidos = df_dash[df_dash["Etapa"] == "6. Perdido"].copy()
     
@@ -1353,11 +1354,11 @@ elif aba_selecionada == "+ Novo Cadastro":
                     "Cargo": novo_cargo if novo_cargo else "Não informado",
                     "Telefone": novo_telefone if novo_telefone else "Não informado",
                     "Email": nova_email if nova_email else "Não informado",
-                    "Cidade": nova_cidade if nova_cidade else "Not informado",
+                    "Cidade": nova_cidade if nova_cidade else "Não informado",
                     "Valor": nova_valor,
                     "Prob": PROB_MAP[nova_etapa],
                     "Vendedor": novo_vendedor if novo_vendedor else "Não informado",
-                    "Perda": motivo_perda if "Perdido" in nova_etapa else "",
+                    "Perda": str(motivo_perda) if "Perdido" in nova_etapa else "",
                     "Data_Cadastro": str(date.today()),
                     "Followup_Data": str(f_data_ini) if f_nota_ini else "",
                     "Followup_Nota": f_nota_ini,
