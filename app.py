@@ -1019,29 +1019,36 @@ elif aba_selecionada == "Dashboard":
 
     st.divider()
 
-    # TÍTULO ALTERADO CONFORME SOLICITADO: Motivo de Perda - [EMPRESA]
+    # TÍTULO E GRÁFICO CORRIGIDOS E BLINDADOS CONTRA ERROS DE TIPO
     st.markdown(f'<div class="notranslate"><h3>Motivo de Perda — {titulo_dinamico}</h3></div>', unsafe_allow_html=True)
-    df_perdidos = df_dash[df_dash["Etapa"] == "6. Perdido"]
+    df_perdidos = df_dash[df_dash["Etapa"] == "6. Perdido"].copy()
     
     if not df_perdidos.empty and "Perda" in df_perdidos.columns:
-        df_motivos = df_perdidos[df_perdidos["Perda"].str.strip() != ""].groupby("Perda").size().reset_index(name="Quantidade")
+        # Conversão segura para string preenchendo vazios ou nulos para evitar AttributeErrors
+        df_perdidos["Perda"] = df_perdidos["Perda"].fillna("").astype(str).str.strip()
+        df_motivos = df_perdidos[df_perdidos["Perda"] != ""].groupby("Perda").size().reset_index(name="Quantidade")
+        
         if not df_motivos.empty:
-            fig_perda = px.pie(
+            # Gráfico alterado para Barras Verticais conforme solicitado
+            fig_perda = px.bar(
                 df_motivos,
-                values="Quantidade",
-                names="Perda",
+                x="Perda",
+                y="Quantidade",
                 color="Perda",
                 color_discrete_map=CORES_PERDAS,
-                hole=0.4
+                text="Quantidade"
             )
             fig_perda.update_layout(
                 template="plotly_dark",
                 paper_bgcolor="#1E293B",
                 plot_bgcolor="#1E293B",
                 font=dict(color="#FFFFFF", size=13),
-                height=380
+                height=380,
+                xaxis_title="Motivo de Perda",
+                yaxis_title="Quantidade",
+                showlegend=False
             )
-            fig_perda.update_traces(textinfo="percent+value")
+            fig_perda.update_traces(textposition="outside")
             st.plotly_chart(fig_perda, use_container_width=True)
         else:
             st.info("Nenhum motivo de perda especificado para os leads perdidos.")
