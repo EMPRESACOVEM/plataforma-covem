@@ -718,7 +718,6 @@ if aba_selecionada == "Gerenciamento de Tarefas":
 # =========================================================
 elif aba_selecionada == "Funil de Vendas":
     st.subheader(f"Funil de Vendas — {titulo_dinamico}")
-    st.caption("Dica: Use o seletor em cada card para mover rapidamente o cliente de etapa, ou clique em EDITAR para abrir a ficha completa em destaque abaixo.")
 
     if st.session_state.cliente_editando_id is not None:
         cliente_edit_id = st.session_state.cliente_editando_id
@@ -1347,7 +1346,7 @@ elif aba_selecionada == "+ Novo Cadastro":
                     "Etapa": nova_etapa,
                     "Contato": novo_contato if novo_contato else "Não informado",
                     "Cargo": novo_cargo if novo_cargo else "Não informado",
-                    "Telefone": nova_telefone if nova_telefone else "Não informado",
+                    "Telefone": novo_telefone if novo_telefone else "Não informado",
                     "Email": nova_email if nova_email else "Não informado",
                     "Cidade": nova_cidade if nova_cidade else "Not informado",
                     "Valor": nova_valor,
