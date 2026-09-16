@@ -663,7 +663,7 @@ if aba_selecionada == "Gerenciamento de Tarefas":
 
             st.divider()
 
-            # Tabela principal limpa
+            # Exibe a tabela estilizada igualzinha à imagem de referência
             df_exibicao_tabela = df_futuro[["Data_Formatada", "Tipo", "Título / Ação", "Vinculado a", "Prioridade / Status"]]
             
             st.dataframe(
@@ -674,22 +674,11 @@ if aba_selecionada == "Gerenciamento de Tarefas":
 
             st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
             
-            # Mini cards de Excluir e Editar logo abaixo da tabela principal
-            col_b_excluir, col_b_editar = st.columns(2)
-
-            with col_b_excluir:
-                pass
-
-            with col_b_editar:
-                pass
-
-            # O título "Tarefas e Follow up" agora é oficialmente o rótulo embutido da aba/selectbox
-            st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
-            
             item_selecionado_acoes = st.selectbox(
-                "Tarefas e Follow up",
+                "Selecione o compromisso para gerenciar (Editar/Excluir):",
                 options=range(len(df_futuro)),
-                format_func=lambda x: f"[{df_futuro.loc[x, 'Data_Formatada']}] {df_futuro.loc[x, 'Tipo']} - {df_futuro.loc[x, 'Título / Ação']} ({df_futuro.loc[x, 'Vinculado a']})"
+                format_func=lambda x: f"[{df_futuro.loc[x, 'Data_Formatada']}] {df_futuro.loc[x, 'Tipo']} - {df_futuro.loc[x, 'Título / Ação']} ({df_futuro.loc[x, 'Vinculado a']})",
+                label_visibility="collapsed"
             )
 
             if item_selecionado_acoes is not None:
@@ -697,9 +686,9 @@ if aba_selecionada == "Gerenciamento de Tarefas":
                 origem_sel = sel_row["origem"]
                 idx_orig_sel = sel_row["index_original"]
 
-                # Ações de Excluir e Editar acionadas nos mini cards
-                with col_b_excluir:
-                    if st.button("Excluir", use_container_width=True, key="btn_excluir_aba"):
+                col_acao1, col_acao2 = st.columns(2)
+                with col_acao1:
+                    if st.button("Excluir", use_container_width=True):
                         if origem_sel == "tarefa":
                             st.session_state.df_tarefas = st.session_state.df_tarefas.drop(idx_orig_sel).reset_index(drop=True)
                             salvar_dados_tarefas(st.session_state.df_tarefas)
@@ -710,10 +699,11 @@ if aba_selecionada == "Gerenciamento de Tarefas":
                         st.success("Item removido com sucesso!")
                         st.rerun()
 
-                with col_b_editar:
+                with col_acao2:
                     with st.popover("Editar", use_container_width=True):
-                        novo_txt_acao = st.text_input("Título / Ação", value=sel_row["Título / Ação"], key="input_edit_aba")
-                        if st.button("Salvar Alterações", key="btn_salvar_edit_aba"):
+                        novo_txt_acao = st.text_input("Título / Ação", value=sel_row["Título / Ação"])
+                        novo_vinc_acao = st.text_input("Vínculo / Empresa", value=sel_row["Vinculado a"])
+                        if st.button("Salvar Alterações"):
                             if origem_sel == "tarefa":
                                 st.session_state.df_tarefas.loc[idx_orig_sel, "Titulo"] = novo_txt_acao
                                 salvar_dados_tarefas(st.session_state.df_tarefas)
