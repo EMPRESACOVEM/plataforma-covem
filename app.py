@@ -1054,7 +1054,6 @@ elif aba_selecionada == "Dashboard":
 # =========================================================
 elif aba_selecionada == "Relatório Executivo":
     st.title("Relatório Executivo")
-    st.caption("Acompanhamento histórico de atividades operacionais e evolução financeira.")
 
     st.subheader("Historico de Atividades")
 
