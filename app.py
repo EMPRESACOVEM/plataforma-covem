@@ -623,10 +623,11 @@ if aba_selecionada == "Gerenciamento de Tarefas":
                         eventos_futuros.append({
                             "origem": "tarefa",
                             "index_original": idx_t,
-                            "Data": dt_v,
+                            "Data_Formatada": dt_v.strftime("%d/%m/%Y"),
                             "Tipo": "Tarefa",
-                            "Ação": t["Titulo"],
-                            "Empresa": t.get("Cliente", "Geral")
+                            "Título / Ação": t["Titulo"],
+                            "Vinculado a": f"Cliente: {t.get('Cliente', 'Geral')}",
+                            "Prioridade / Status": f"Prioridade: {t.get('Prioridade', 'Normal')}"
                         })
                 except:
                     pass
@@ -641,17 +642,18 @@ if aba_selecionada == "Gerenciamento de Tarefas":
                         eventos_futuros.append({
                             "origem": "crm",
                             "index_original": idx_c,
-                            "Data": dt_f,
+                            "Data_Formatada": dt_f.strftime("%d/%m/%Y"),
                             "Tipo": "Follow-up CRM",
-                            "Ação": c.get("Followup_Nota", "Contato Comercial"),
-                            "Empresa": c["Empresa"]
+                            "Título / Ação": c.get("Followup_Nota", "Contato Comercial"),
+                            "Vinculado a": f"Empresa: {c['Empresa']} ({c.get('Contato', 'Não informado')})",
+                            "Prioridade / Status": f"Etapa: {c['Etapa']}"
                         })
                 except:
                     pass
 
     if eventos_futuros:
         df_futuro = pd.DataFrame(eventos_futuros)
-        df_futuro = df_futuro.sort_values(by="Data", ascending=True).reset_index(drop=True)
+        df_futuro = df_futuro.sort_values(by="Data_Formatada", ascending=True).reset_index(drop=True)
 
         with st.expander(f"Ver compromissos no período ({len(df_futuro)} encontrados)", expanded=True):
             c_m1, c_m2, c_m3 = st.columns(3)
@@ -661,84 +663,55 @@ if aba_selecionada == "Gerenciamento de Tarefas":
 
             st.divider()
 
-            # Cabeçalho da Tabela personalizada mantendo o formato visual solicitado
-            col_cab1, col_cab2, col_cab3, col_cab4, col_cab5, col_cab6 = st.columns([0.6, 1.2, 1.2, 2.5, 2.0, 1.0])
-            col_cab1.markdown("**Excluir**")
-            col_cab2.markdown("**Data**")
-            col_cab3.markdown("**Tipo**")
-            col_cab4.markdown("**Ação**")
-            col_cab5.markdown("**Empresa**")
-            col_cab6.markdown("**Editar**")
-            st.markdown("<hr style='margin: 4px 0 8px 0; border-color: #334155;'>", unsafe_allow_html=True)
+            # Exibe a tabela estilizada igualzinha à imagem de referência
+            df_exibicao_tabela = df_futuro[["Data_Formatada", "Tipo", "Título / Ação", "Vinculado a", "Prioridade / Status"]]
+            
+            st.dataframe(
+                df_exibicao_tabela,
+                use_container_width=True,
+                hide_index=True
+            )
 
-            for i, row in df_futuro.iterrows():
-                origem = row["origem"]
-                idx_orig = row["index_original"]
-                data_atual = row["Data"]
-                tipo_atual = row["Tipo"]
-                acao_atual = row["Ação"]
-                empresa_atual = row["Empresa"]
+            st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
+            st.markdown("##### Gerenciamento de Itens (Excluir ou Editar)")
+            
+            item_selecionado_acoes = st.selectbox(
+                "Selecione o compromisso para gerenciar (Editar/Excluir):",
+                options=range(len(df_futuro)),
+                format_func=lambda x: f"[{df_futuro.loc[x, 'Data_Formatada']}] {df_futuro.loc[x, 'Tipo']} - {df_futuro.loc[x, 'Título / Ação']} ({df_futuro.loc[x, 'Vinculado a']})"
+            )
 
-                # Identifica se esta linha está no modo de edição manual
-                esta_editando = (st.session_state.editando_agenda_idx == i)
+            if item_selecionado_acoes is not None:
+                sel_row = df_futuro.loc[item_selecionado_acoes]
+                origem_sel = sel_row["origem"]
+                idx_orig_sel = sel_row["index_original"]
 
-                c_col1, c_col2, c_col3, c_col4, c_col5, c_col6 = st.columns([0.6, 1.2, 1.2, 2.5, 2.0, 1.0])
-
-                # Botão Excluir (Lado esquerdo, antes da data)
-                with c_col1:
-                    if st.button("🗑️", key=f"del_agenda_{i}", help="Excluir item"):
-                        if origem == "tarefa":
-                            st.session_state.df_tarefas = st.session_state.df_tarefas.drop(idx_orig).reset_index(drop=True)
+                col_acao1, col_acao2 = st.columns(2)
+                with col_acao1:
+                    if st.button("🗑️ Excluir Item Selecionado", use_container_width=True):
+                        if origem_sel == "tarefa":
+                            st.session_state.df_tarefas = st.session_state.df_tarefas.drop(idx_orig_sel).reset_index(drop=True)
                             salvar_dados_tarefas(st.session_state.df_tarefas)
                         else:
-                            # No CRM, limpar a data do follow-up para desvincular da agenda
-                            st.session_state.df_crm.loc[idx_orig, "Followup_Data"] = ""
-                            st.session_state.df_crm.loc[idx_orig, "Followup_Nota"] = ""
+                            st.session_state.df_crm.loc[idx_orig_sel, "Followup_Data"] = ""
+                            st.session_state.df_crm.loc[idx_orig_sel, "Followup_Nota"] = ""
                             salvar_dados_crm(st.session_state.df_crm)
                         st.success("Item removido com sucesso!")
                         st.rerun()
 
-                if not esta_editando:
-                    # Exibição normal na tabela
-                    c_col2.text(data_atual.strftime("%d/%m/%Y"))
-                    c_col3.text(tipo_atual)
-                    c_col4.text(acao_atual)
-                    c_col5.text(empresa_atual)
-
-                    # Botão Editar (Lado direito, após a empresa)
-                    with c_col6:
-                        if st.button("✏️ Editar", key=f"edit_agenda_{i}"):
-                            st.session_state.editando_agenda_idx = i
-                            st.rerun()
-                else:
-                    # Modo de edição manual direto na linha (sem abrir outra janela)
-                    with c_col2:
-                        nova_data_ed = st.date_input("Data", value=data_atual, key=f"ed_dt_{i}", label_visibility="collapsed")
-                    with c_col3:
-                        st.text(tipo_atual) # O tipo permanece fixo
-                    with c_col4:
-                        nova_acao_ed = st.text_input("Ação", value=acao_atual, key=f"ed_acao_{i}", label_visibility="collapsed")
-                    with c_col5:
-                        nova_empresa_ed = st.text_input("Empresa", value=empresa_atual, key=f"ed_emp_{i}", label_visibility="collapsed")
-
-                    with c_col6:
-                        if st.button("💾 Salvar", key=f"save_agenda_{i}"):
-                            if origem == "tarefa":
-                                st.session_state.df_tarefas.loc[idx_orig, "Data_Vencimento"] = str(nova_data_ed)
-                                st.session_state.df_tarefas.loc[idx_orig, "Titulo"] = nova_acao_ed
-                                st.session_state.df_tarefas.loc[idx_orig, "Cliente"] = nova_empresa_ed
+                with col_acao2:
+                    with st.popover("✏️ Editar Item Selecionado", use_container_width=True):
+                        novo_txt_acao = st.text_input("Título / Ação", value=sel_row["Título / Ação"])
+                        novo_vinc_acao = st.text_input("Vínculo / Empresa", value=sel_row["Vinculado a"])
+                        if st.button("Salvar Alterações"):
+                            if origem_sel == "tarefa":
+                                st.session_state.df_tarefas.loc[idx_orig_sel, "Titulo"] = novo_txt_acao
                                 salvar_dados_tarefas(st.session_state.df_tarefas)
                             else:
-                                st.session_state.df_crm.loc[idx_orig, "Followup_Data"] = str(nova_data_ed)
-                                st.session_state.df_crm.loc[idx_orig, "Followup_Nota"] = nova_acao_ed
-                                st.session_state.df_crm.loc[idx_orig, "Empresa"] = nova_empresa_ed
+                                st.session_state.df_crm.loc[idx_orig_sel, "Followup_Nota"] = novo_txt_acao
                                 salvar_dados_crm(st.session_state.df_crm)
-                            
-                            st.session_state.editando_agenda_idx = None
-                            st.success("Alterações salvas!")
+                            st.success("Atualizado com sucesso!")
                             st.rerun()
-                
-                st.markdown("<hr style='margin: 2px 0; border-color: #1E293B;'>", unsafe_allow_html=True)
     else:
         st.info("Nenhuma tarefa ou follow-up agendado para este horizonte de tempo.")
 
