@@ -187,7 +187,7 @@ conn = get_gsheets_connection()
 def carregar_dados_crm():
     try:
         # Lê os dados em tempo real da planilha conectada
-        df_loaded = conn.read(worksheet="Página1", ttl=0)
+        df_loaded = conn.read(worksheet="Pagina1", ttl=0)
         df_loaded = df_loaded.dropna(how="all")
         
         # Assegurar codificação UTF-8 correta em colunas textuais para evitar erros de codec ASCII
