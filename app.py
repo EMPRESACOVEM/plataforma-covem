@@ -7,6 +7,7 @@ import urllib.parse
 import datetime
 from datetime import datetime as dt, date, timedelta
 from pathlib import Path
+from streamlit_gsheets import GSheetsConnection
 
 # Configuração da página
 st.set_page_config(
@@ -14,9 +15,8 @@ st.set_page_config(
     layout="wide"
 )
 
-# Caminho do diretório base e arquivos de persistência local
+# Caminho do diretório base para arquivos secundários (Tarefas, Histórico, Financeiro)
 BASE_DIR = Path(__file__).parent if "__file__" in locals() else Path.cwd()
-ARQUIVO_DADOS = BASE_DIR / "banco_crm_covem.xlsx"
 ARQUIVO_TAREFAS = BASE_DIR / "banco_tarefas_covem.xlsx"
 ARQUIVO_HISTORICO = BASE_DIR / "banco_historico_covem.xlsx"
 ARQUIVO_FINANCEIRO = BASE_DIR / "banco_financeiro_covem.xlsx"
@@ -176,20 +176,36 @@ PROB_MAP = {
 MOTIVOS_PERDA_PADRAO = list(CORES_PERDAS.keys())
 
 # ---------------------------------------------------------
-# FUNÇÕES DE PERSISTÊNCIA
+# CONEXÃO COM O GOOGLE SHEETS (PERSISTÊNCIA DO CRM)
 # ---------------------------------------------------------
+@st.cache_resource
+def get_gsheets_connection():
+    return st.connection("gsheets", type=GSheetsConnection)
+
+conn = get_gsheets_connection()
+
 def carregar_dados_crm():
-    if ARQUIVO_DADOS.exists():
-        try:
-            df_loaded = pd.read_excel(ARQUIVO_DADOS)
-            for col in ["id", "Empresa", "Cliente", "Etapa", "Contato", "Cargo", "Telefone", "Email", "Cidade", "Valor", "Prob", "Vendedor", "Perda", "Data_Cadastro", "Followup_Data", "Followup_Nota", "Historico"]:
-                if col not in df_loaded.columns:
-                    df_loaded[col] = ""
+    try:
+        # Lê os dados da planilha do Google Sheets (ttl=0 garante tempo real)
+        df_loaded = conn.read(worksheet="Página1", ttl=0)
+        df_loaded = df_loaded.dropna(how="all")
+        
+        colunas_esperadas = ["id", "Empresa", "Cliente", "Etapa", "Contato", "Cargo", "Telefone", "Email", "Cidade", "Valor", "Prob", "Vendedor", "Perda", "Data_Cadastro", "Followup_Data", "Followup_Nota", "Historico"]
+        for col in colunas_esperadas:
+            if col not in df_loaded.columns:
+                df_loaded[col] = ""
+                
+        # Tratamento de tipos
+        if not df_loaded.empty:
+            df_loaded["id"] = pd.to_numeric(df_loaded["id"], errors="coerce").fillna(0).astype(int)
+            df_loaded["Valor"] = pd.to_numeric(df_loaded["Valor"], errors="coerce").fillna(0.0)
+            df_loaded["Prob"] = pd.to_numeric(df_loaded["Prob"], errors="coerce").fillna(0.2)
             df_loaded["Perda"] = df_loaded["Perda"].fillna("").astype(str)
             return df_loaded
-        except Exception:
-            pass
-            
+    except Exception as e:
+        st.warning(f"Aviso ao ler do Google Sheets: {e}. Carregando dados padrão iniciais.")
+
+    # Dados padrão caso a planilha esteja vazia ou com erro de conexão inicial
     df_inicial = pd.DataFrame([
         {
             "id": 1, "Empresa": "Grupo Delta", "Cliente": "BraClean", "Etapa": "1. Contatado", 
@@ -217,35 +233,26 @@ def carregar_dados_crm():
             "Data_Cadastro": str(date.today()),
             "Followup_Data": str(date.today() + timedelta(days=3)), "Followup_Nota": "Alinhar escopo do projeto técnico.", 
             "Historico": "[30/08/2026 09:15] Reunião inicial realizada."
-        },
-        {
-            "id": 4, "Empresa": "Tecnologia Beta", "Cliente": "BraClean", "Etapa": "6. Perdido", 
-            "Contato": "Carlos Eduardo", "Cargo": "Comprador", "Telefone": "(16) 98888-7777", 
-            "Email": "carlos@betatech.com", "Cidade": "Sertãozinho / SP", "Valor": 25000.0, 
-            "Prob": 0.00, "Vendedor": "Lucas Mendes", "Perda": "Preço / Orçamento",
-            "Data_Cadastro": str(date.today()),
-            "Followup_Data": "", "Followup_Nota": "", 
-            "Historico": "[25/08/2026 16:45] Achou o valor acima do orçamento."
         }
     ])
-    df_inicial["Perda"] = df_inicial["Perda"].astype(str)
-    df_inicial.to_excel(ARQUIVO_DADOS, index=False)
+    try:
+        conn.update(worksheet="Página1", data=df_inicial)
+    except:
+        pass
     return df_inicial
 
 def salvar_dados_crm(df):
-    df.to_excel(ARQUIVO_DADOS, index=False)
+    try:
+        conn.update(worksheet="Página1", data=df)
+    except Exception as e:
+        st.error(f"Erro ao salvar dados no Google Sheets: {e}")
 
 def carregar_dados_tarefas():
     if ARQUIVO_TAREFAS.exists():
         try:
-            df_loaded = pd.read_excel(ARQUIVO_TAREFAS)
-            for col in ["Titulo", "Descricao", "Cliente", "Data_Vencimento", "Prioridade", "Status", "Data_Criacao"]:
-                if col not in df_loaded.columns:
-                    df_loaded[col] = ""
-            return df_loaded
+            return pd.read_excel(ARQUIVO_TAREFAS)
         except Exception:
             pass
-            
     df_inicial_vazio = pd.DataFrame(columns=["Titulo", "Descricao", "Cliente", "Data_Vencimento", "Prioridade", "Status", "Data_Criacao"])
     df_inicial_vazio.to_excel(ARQUIVO_TAREFAS, index=False)
     return df_inicial_vazio
@@ -814,8 +821,6 @@ elif aba_selecionada == "Funil de Vendas":
                     st.session_state.df_crm.loc[idx_df, "Vendedor"] = edit_vendedor
                     st.session_state.df_crm.loc[idx_df, "Followup_Data"] = str(edit_fu_data)
                     st.session_state.df_crm.loc[idx_df, "Followup_Nota"] = edit_fu_nota
-                    
-                    # Garantir que a coluna 'Perda' aceite strings para evitar TypeError
                     st.session_state.df_crm["Perda"] = st.session_state.df_crm["Perda"].astype(str)
                     st.session_state.df_crm.loc[idx_df, "Perda"] = str(edit_motivo_perda)
                     
@@ -858,7 +863,7 @@ elif aba_selecionada == "Funil de Vendas":
             
             for _, row in sub_df.iterrows():
                 st_code, st_label, st_icon = calcular_status_followup(row.get("Followup_Data", ""))
-                cliente_id = row['id']
+                cliente_id = int(row['id'])
                 
                 st.markdown(f"""
                     <div style="border-left: 4px solid {cor_header}; background-color: #111C31; border-top: 1px solid #1E293B; border-right: 1px solid #1E293B; border-bottom: 1px solid #1E293B; border-radius: 4px; margin-bottom: 6px; padding: 2px;">
@@ -1312,7 +1317,7 @@ elif aba_selecionada == "+ Novo Cadastro":
                     ignore_index=True
                 )
                 salvar_dados_crm(st.session_state.df_crm)
-                st.success(f"Empresa '{rapido_empresa}' cadastrada e salva com sucesso!")
+                st.success(f"Empresa '{rapido_empresa}' cadastrada e salva com sucesso na nuvem!")
                 st.rerun()
 
     st.write("---")
@@ -1369,5 +1374,5 @@ elif aba_selecionada == "+ Novo Cadastro":
                 }
                 st.session_state.df_crm = pd.concat([st.session_state.df_crm, pd.DataFrame([nova_linha])], ignore_index=True)
                 salvar_dados_crm(st.session_state.df_crm)
-                st.success("Oportunidade cadastrada e salva com sucesso!")
+                st.success("Oportunidade cadastrada e salva com sucesso na nuvem!")
                 st.rerun()
