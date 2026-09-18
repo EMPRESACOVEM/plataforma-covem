@@ -176,7 +176,7 @@ PROB_MAP = {
 MOTIVOS_PERDA_PADRAO = list(CORES_PERDAS.keys())
 
 # ---------------------------------------------------------
-# CONEXÃO COM O GOOGLE SHEETS (PERSISTÊNCIA DO CRM)
+# CONEXÃO COM O GOOGLE SHEETS (PERSISTÊNCIA NA NUVEM)
 # ---------------------------------------------------------
 @st.cache_resource
 def get_gsheets_connection():
@@ -186,7 +186,7 @@ conn = get_gsheets_connection()
 
 def carregar_dados_crm():
     try:
-        # Lê os dados da planilha do Google Sheets (ttl=0 garante tempo real)
+        # Lê os dados da planilha do Google Sheets em tempo real (ttl=0)
         df_loaded = conn.read(worksheet="Página1", ttl=0)
         df_loaded = df_loaded.dropna(how="all")
         
@@ -195,7 +195,6 @@ def carregar_dados_crm():
             if col not in df_loaded.columns:
                 df_loaded[col] = ""
                 
-        # Tratamento de tipos
         if not df_loaded.empty:
             df_loaded["id"] = pd.to_numeric(df_loaded["id"], errors="coerce").fillna(0).astype(int)
             df_loaded["Valor"] = pd.to_numeric(df_loaded["Valor"], errors="coerce").fillna(0.0)
@@ -205,7 +204,7 @@ def carregar_dados_crm():
     except Exception as e:
         st.warning(f"Aviso ao ler do Google Sheets: {e}. Carregando dados padrão iniciais.")
 
-    # Dados padrão caso a planilha esteja vazia ou com erro de conexão inicial
+    # Dados padrão caso a planilha esteja vazia
     df_inicial = pd.DataFrame([
         {
             "id": 1, "Empresa": "Grupo Delta", "Cliente": "BraClean", "Etapa": "1. Contatado", 
