@@ -186,9 +186,15 @@ conn = get_gsheets_connection()
 
 def carregar_dados_crm():
     try:
-        # Lê os dados em tempo real da planilha conectada (ttl=0 evita cache desatualizado)
+        # Lê os dados em tempo real da planilha conectada com tratamento utf-8 para acentuação
         df_loaded = conn.read(worksheet="Página1", ttl=0)
         df_loaded = df_loaded.dropna(how="all")
+        
+        # Assegurar codificação UTF-8 correta em colunas textuais para evitar erros de codec ASCII
+        for col in df_loaded.select_dtypes(include=['object']).columns:
+            df_loaded[col] = df_loaded[col].astype(str).apply(
+                lambda x: x.encode('utf-8', 'ignore').decode('utf-8') if x != 'nan' else ""
+            )
         
         colunas_esperadas = ["id", "Empresa", "Cliente", "Etapa", "Contato", "Cargo", "Telefone", "Email", "Cidade", "Valor", "Prob", "Vendedor", "Perda", "Data_Cadastro", "Followup_Data", "Followup_Nota", "Historico"]
         for col in colunas_esperadas:
