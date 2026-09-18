@@ -7,7 +7,6 @@ import urllib.parse
 import datetime
 from datetime import datetime as dt, date, timedelta
 from pathlib import Path
-from streamlit_gsheets import GSheetsConnection
 
 # Configuração da página
 st.set_page_config(
@@ -15,8 +14,9 @@ st.set_page_config(
     layout="wide"
 )
 
-# Caminho para arquivos secundários locais (Tarefas, Histórico, Financeiro)
+# Caminho para arquivos locais
 BASE_DIR = Path(__file__).parent if "__file__" in locals() else Path.cwd()
+ARQUIVO_CRM_CSV = BASE_DIR / "clientes_crm.csv"
 ARQUIVO_TAREFAS = BASE_DIR / "banco_tarefas_covem.xlsx"
 ARQUIVO_HISTORICO = BASE_DIR / "banco_historico_covem.xlsx"
 ARQUIVO_FINANCEIRO = BASE_DIR / "banco_financeiro_covem.xlsx"
@@ -50,15 +50,12 @@ CORES_PERDAS = {
 if 'funnel_colors' not in st.session_state:
     st.session_state.funnel_colors = DEFAULT_COLORS.copy()
 
-# Inicializa o estado da aba ativa se não existir
 if 'menu_ativo' not in st.session_state:
     st.session_state.menu_ativo = "Gerenciamento de Tarefas"
 
-# Inicializa o estado da sub-aba em Tarefas se não existir
 if 'sub_menu_tarefas' not in st.session_state:
     st.session_state.sub_menu_tarefas = "Tarefas"
 
-# Inicializa o estado de edição da tabela de agenda se não existir
 if 'editando_agenda_idx' not in st.session_state:
     st.session_state.editando_agenda_idx = None
 
@@ -176,41 +173,29 @@ PROB_MAP = {
 MOTIVOS_PERDA_PADRAO = list(CORES_PERDAS.keys())
 
 # ---------------------------------------------------------
-# CONEXÃO COM O GOOGLE SHEETS (PERSISTÊNCIA NA NUVEM)
+# CARREGAMENTO E SALVAMENTO VIA ARQUIVO CSV LOCAL
 # ---------------------------------------------------------
-@st.cache_resource
-def get_gsheets_connection():
-    return st.connection("gsheets", type=GSheetsConnection)
-
-conn = get_gsheets_connection()
-
 def carregar_dados_crm():
-    try:
-        # Lê os dados em tempo real da planilha conectada
-        df_loaded = conn.read(worksheet="Pagina1", ttl=0)
-        df_loaded = df_loaded.dropna(how="all")
-        
-        # Assegurar codificação UTF-8 correta em colunas textuais para evitar erros de codec ASCII
-        for col in df_loaded.select_dtypes(include=['object']).columns:
-            df_loaded[col] = df_loaded[col].astype(str).apply(
-                lambda x: x.encode('utf-8', 'ignore').decode('utf-8') if x != 'nan' else ""
-            )
-        
-        colunas_esperadas = ["id", "Empresa", "Cliente", "Etapa", "Contato", "Cargo", "Telefone", "Email", "Cidade", "Valor", "Prob", "Vendedor", "Perda", "Data_Cadastro", "Followup_Data", "Followup_Nota", "Historico"]
-        for col in colunas_esperadas:
-            if col not in df_loaded.columns:
-                df_loaded[col] = ""
-                
-        if not df_loaded.empty:
-            df_loaded["id"] = pd.to_numeric(df_loaded["id"], errors="coerce").fillna(0).astype(int)
-            df_loaded["Valor"] = pd.to_numeric(df_loaded["Valor"], errors="coerce").fillna(0.0)
-            df_loaded["Prob"] = pd.to_numeric(df_loaded["Prob"], errors="coerce").fillna(0.2)
-            df_loaded["Perda"] = df_loaded["Perda"].fillna("").astype(str)
-            return df_loaded
-    except Exception as e:
-        st.warning(f"Aviso ao ler do Google Sheets: {e}. Carregando dados padrão iniciais.")
+    if ARQUIVO_CRM_CSV.exists():
+        try:
+            df_loaded = pd.read_csv(ARQUIVO_CRM_CSV)
+            df_loaded = df_loaded.dropna(how="all")
+            
+            colunas_esperadas = ["id", "Empresa", "Cliente", "Etapa", "Contato", "Cargo", "Telefone", "Email", "Cidade", "Valor", "Prob", "Vendedor", "Perda", "Data_Cadastro", "Followup_Data", "Followup_Nota", "Historico"]
+            for col in colunas_esperadas:
+                if col not in df_loaded.columns:
+                    df_loaded[col] = ""
+                    
+            if not df_loaded.empty:
+                df_loaded["id"] = pd.to_numeric(df_loaded["id"], errors="coerce").fillna(0).astype(int)
+                df_loaded["Valor"] = pd.to_numeric(df_loaded["Valor"], errors="coerce").fillna(0.0)
+                df_loaded["Prob"] = pd.to_numeric(df_loaded["Prob"], errors="coerce").fillna(0.2)
+                df_loaded["Perda"] = df_loaded["Perda"].fillna("").astype(str)
+                return df_loaded
+        except Exception as e:
+            st.warning(f"Aviso ao ler o arquivo CSV local: {e}. Criando dados padrão.")
 
-    # Dados padrão caso a planilha esteja vazia ou ocorra falha de leitura
+    # Dados padrão caso o arquivo ainda não exista
     df_inicial = pd.DataFrame([
         {
             "id": 1, "Empresa": "Grupo Delta", "Cliente": "BraClean", "Etapa": "1. Contatado", 
@@ -240,23 +225,14 @@ def carregar_dados_crm():
             "Historico": "[30/08/2026 09:15] Reunião inicial realizada."
         }
     ])
-    try:
-        conn.update(worksheet="Página1", data=df_inicial)
-    except:
-        pass
+    df_inicial.to_csv(ARQUIVO_CRM_CSV, index=False)
     return df_inicial
 
 def salvar_dados_crm(df):
     try:
-        # Garante codificação UTF-8 em texto antes de enviar para a nuvem
-        df_clean = df.copy()
-        for col in df_clean.select_dtypes(include=['object']).columns:
-            df_clean[col] = df_clean[col].astype(str).apply(
-                lambda x: x.encode('utf-8', 'ignore').decode('utf-8') if x != 'nan' else ""
-            )
-        conn.update(worksheet="Página1", data=df_clean)
+        df.to_csv(ARQUIVO_CRM_CSV, index=False)
     except Exception as e:
-        st.error(f"Erro ao salvar dados no Google Sheets: {e}")
+        st.error(f"Erro ao salvar dados no arquivo CSV: {e}")
 
 def carregar_dados_tarefas():
     if ARQUIVO_TAREFAS.exists():
@@ -1328,7 +1304,7 @@ elif aba_selecionada == "+ Novo Cadastro":
                     ignore_index=True
                 )
                 salvar_dados_crm(st.session_state.df_crm)
-                st.success(f"Empresa '{rapido_empresa}' cadastrada e salva com sucesso na nuvem!")
+                st.success(f"Empresa '{rapido_empresa}' cadastrada e salva com sucesso no computador!")
                 st.rerun()
 
     st.write("---")
@@ -1385,5 +1361,5 @@ elif aba_selecionada == "+ Novo Cadastro":
                 }
                 st.session_state.df_crm = pd.concat([st.session_state.df_crm, pd.DataFrame([nova_linha])], ignore_index=True)
                 salvar_dados_crm(st.session_state.df_crm)
-                st.success("Oportunidade cadastrada e salva com sucesso na nuvem!")
+                st.success("Oportunidade cadastrada e salva com sucesso no computador!")
                 st.rerun()
