@@ -186,7 +186,7 @@ conn = get_gsheets_connection()
 
 def carregar_dados_crm():
     try:
-        # Lê os dados em tempo real da planilha conectada com tratamento utf-8 para acentuação
+        # Lê os dados em tempo real da planilha conectada
         df_loaded = conn.read(worksheet="Página1", ttl=0)
         df_loaded = df_loaded.dropna(how="all")
         
@@ -248,7 +248,13 @@ def carregar_dados_crm():
 
 def salvar_dados_crm(df):
     try:
-        conn.update(worksheet="Página1", data=df)
+        # Garante codificação UTF-8 em texto antes de enviar para a nuvem
+        df_clean = df.copy()
+        for col in df_clean.select_dtypes(include=['object']).columns:
+            df_clean[col] = df_clean[col].astype(str).apply(
+                lambda x: x.encode('utf-8', 'ignore').decode('utf-8') if x != 'nan' else ""
+            )
+        conn.update(worksheet="Página1", data=df_clean)
     except Exception as e:
         st.error(f"Erro ao salvar dados no Google Sheets: {e}")
 
