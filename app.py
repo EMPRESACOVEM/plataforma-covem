@@ -88,7 +88,7 @@ st.markdown("""
             color: #F1F5F9;
             text-align: center;
             margin-bottom: 2px;
-            margin-top: -10px;
+            margin-top: -20px;
             text-transform: uppercase;
         }
 
@@ -348,14 +348,8 @@ st.sidebar.download_button(
 )
 
 # ---------------------------------------------------------
-# EXIBIÇÃO DA LOGO E TÍTULO PRINCIPAL CENTRALIZADOS
+# 1. TÍTULO PRINCIPAL: GRUPO COVEM
 # ---------------------------------------------------------
-CAMINHO_LOGO = BASE_DIR / "logo_coverem.png"
-if CAMINHO_LOGO.exists():
-    _, col_logo, _ = st.columns([1, 1.2, 1])
-    with col_logo:
-        st.image(str(CAMINHO_LOGO), use_container_width=True)
-
 st.markdown(f'<div class="title-covem">{COVEM_NAME}</div>', unsafe_allow_html=True)
 st.markdown('<div class="subtitle-covem">Plataforma Executiva de Gestão Comercial e Operacional</div>', unsafe_allow_html=True)
 st.divider()
@@ -821,6 +815,7 @@ elif aba_selecionada == "Funil de Vendas":
                     st.session_state.df_crm.loc[idx_df, "Followup_Data"] = str(edit_fu_data)
                     st.session_state.df_crm.loc[idx_df, "Followup_Nota"] = edit_fu_nota
                     
+                    # Garantir que a coluna 'Perda' aceite strings para evitar TypeError
                     st.session_state.df_crm["Perda"] = st.session_state.df_crm["Perda"].astype(str)
                     st.session_state.df_crm.loc[idx_df, "Perda"] = str(edit_motivo_perda)
                     
