@@ -186,6 +186,13 @@ conn = get_gsheets_connection()
 
 def carregar_dados_crm():
     try:
+        # Garante que substitui \\n literais por quebras de linha reais caso venham do TOML
+        if "connections" in st.secrets and "gsheets" in st.secrets["connections"]:
+            if "private_key" in st.secrets["connections"]["gsheets"]:
+                pk = st.secrets["connections"]["gsheets"]["private_key"]
+                if "\\n" in pk:
+                    st.secrets["connections"]["gsheets"]["private_key"] = pk.replace("\\n", "\n")
+
         df_loaded = conn.read(worksheet="Página1", ttl=0)
         df_loaded = df_loaded.dropna(how="all")
         
