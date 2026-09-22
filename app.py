@@ -31,8 +31,8 @@ CARTEIRAS_COVEM = ["BraClean", "QV Energia Solar", "Elleven"]
 # PALETA COVEM & ESTILIZAÇÃO CSS
 # ---------------------------------------------------------
 DEFAULT_COLORS = {
-    "1. Contatado": "#F472B6",         # Rosa Pastel suave
-    "2. Conversando": "#FDE047",        # Amarelo Pastel suave
+    "1. Prospecção": "#F472B6",          # Rosa Pastel suave
+    "2. Qualificação": "#FDE047",       # Amarelo Pastel suave
     "3. Reunião Agendada": "#FDBA74",  # Laranja Pastel suave
     "4. Proposta Enviada": "#93C5FD",  # Azul Pastel suave
     "5. Fechado": "#86EFAC",           # Verde Pastel suave
@@ -165,8 +165,8 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 PROB_MAP = {
-    "1. Contatado": 0.20,
-    "2. Conversando": 0.40,
+    "1. Prospecção": 0.20,
+    "2. Qualificação": 0.40,
     "3. Reunião Agendada": 0.60,
     "4. Proposta Enviada": 0.80,
     "5. Fechado": 1.00,
@@ -206,13 +206,20 @@ def carregar_dados_crm():
             df_loaded["Valor"] = pd.to_numeric(df_loaded["Valor"], errors="coerce").fillna(0.0)
             df_loaded["Prob"] = pd.to_numeric(df_loaded["Prob"], errors="coerce").fillna(0.2)
             df_loaded["Perda"] = df_loaded["Perda"].fillna("").astype(str)
+            
+            # Migração automática caso venha do modelo antigo
+            df_loaded["Etapa"] = df_loaded["Etapa"].replace({
+                "1. Contatado": "1. Prospecção",
+                "2. Conversando": "2. Qualificação"
+            })
+            
             return df_loaded
     except Exception as e:
         st.warning(f"Aviso ao ler do Google Sheets: {e}. Carregando dados padrão iniciais.")
 
     df_inicial = pd.DataFrame([
         {
-            "id": 1, "Empresa": "Grupo Delta", "Cliente": "BraClean", "Etapa": "1. Contatado", 
+            "id": 1, "Empresa": "Grupo Delta", "Cliente": "BraClean", "Etapa": "1. Prospecção", 
             "Contato": "Roberto Alves", "Cargo": "Diretor Comercial", "Telefone": "(16) 99876-5432", 
             "Email": "roberto@grupodelta.com.br", "Cidade": "Sertãozinho / SP", "Valor": 50000.0, 
             "Prob": 0.20, "Vendedor": "Lucas Mendes", "Perda": "",
@@ -221,7 +228,7 @@ def carregar_dados_crm():
             "Historico": "[01/09/2026 10:00] Primeiro contato realizado."
         },
         {
-            "id": 2, "Empresa": "Sistemas Sigma", "Cliente": "QV Energia Solar", "Etapa": "1. Contatado", 
+            "id": 2, "Empresa": "Sistemas Sigma", "Cliente": "QV Energia Solar", "Etapa": "1. Prospecção", 
             "Contato": "Patricia Lima", "Cargo": "Gerente de Compras", "Telefone": "(16) 99765-4321", 
             "Email": "patricia@sigmasistemas.com.br", "Cidade": "Ribeirão Preto / SP", "Valor": 35000.0, 
             "Prob": 0.20, "Vendedor": "Lucas Mendes", "Perda": "",
@@ -230,7 +237,7 @@ def carregar_dados_crm():
             "Historico": "[02/09/2026 14:30] E-mail enviado."
         },
         {
-            "id": 3, "Empresa": "Indústria Omega", "Cliente": "Elleven", "Etapa": "2. Conversando", 
+            "id": 3, "Empresa": "Indústria Omega", "Cliente": "Elleven", "Etapa": "2. Qualificação", 
             "Contato": "Fernando Souza", "Cargo": "Sócio-Proprietário", "Telefone": "(11) 98123-4567", 
             "Email": "fernando@omegaind.com.br", "Cidade": "São Paulo / SP", "Valor": 80000.0, 
             "Prob": 0.40, "Vendedor": "Gabriel Silva", "Perda": "",
@@ -1097,7 +1104,7 @@ elif aba_selecionada == "Relatório Executivo":
 
         sub_m = df_crm_base[df_crm_base["Mês/Ano"] == mes_atual_str]
         
-        leads_q = len(sub_m[sub_m["Etapa"].isin(["1. Contatado", "2. Conversando", "3. Reunião Agendada", "4. Proposta Enviada", "5. Fechado"])])
+        leads_q = len(sub_m[sub_m["Etapa"].isin(["1. Prospecção", "2. Qualificação", "3. Reunião Agendada", "4. Proposta Enviada", "5. Fechado"])])
         reunioes = len(sub_m[sub_m["Etapa"] == "3. Reunião Agendada"])
         propostas = len(sub_m[sub_m["Etapa"] == "4. Proposta Enviada"])
         fechados = len(sub_m[sub_m["Etapa"] == "5. Fechado"])
