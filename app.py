@@ -744,7 +744,16 @@ if aba_selecionada == "Gerenciamento de Tarefas":
 # ABA 2: FUNIL DE VENDAS
 # =========================================================
 elif aba_selecionada == "Funil de Vendas":
-    st.subheader(titulo_funil)
+    # Layout do topo com Título à esquerda e Barra de Pesquisa logo acima do mini-card na direita
+    col_topo_titulo, col_topo_busca = st.columns([2, 1])
+    with col_topo_titulo:
+        st.subheader(titulo_funil)
+    with col_topo_busca:
+        termo_busca = st.text_input(
+            "Pesquisar cliente", 
+            placeholder="🔍 Buscar por empresa, contato...", 
+            label_visibility="collapsed"
+        )
 
     if st.session_state.cliente_editando_id is not None:
         cliente_edit_id = st.session_state.cliente_editando_id
@@ -869,6 +878,16 @@ elif aba_selecionada == "Funil de Vendas":
             st.markdown("</div>", unsafe_allow_html=True)
             st.divider()
 
+    # Aplica o filtro de pesquisa, se houver termo digitado
+    df_funil_exibicao = df_filtered.copy()
+    if termo_busca:
+        termo_limpo = termo_busca.lower()
+        df_funil_exibicao = df_funil_exibicao[
+            df_funil_exibicao["Empresa"].astype(str).str.lower().str.contains(termo_limpo) |
+            df_funil_exibicao["Contato"].astype(str).str.lower().str.contains(termo_limpo) |
+            df_funil_exibicao["Telefone"].astype(str).str.lower().str.contains(termo_limpo)
+        ]
+
     etapas = list(PROB_MAP.keys())
     cols = st.columns(len(etapas))
     
@@ -885,7 +904,7 @@ elif aba_selecionada == "Funil de Vendas":
                 unsafe_allow_html=True
             )
             
-            sub_df = df_filtered[df_filtered["Etapa"] == etapa]
+            sub_df = df_funil_exibicao[df_funil_exibicao["Etapa"] == etapa]
             
             for _, row in sub_df.iterrows():
                 st_code, st_label, st_icon = calcular_status_followup(row.get("Followup_Data", ""))
