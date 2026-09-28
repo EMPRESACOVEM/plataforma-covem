@@ -186,7 +186,6 @@ conn = get_gsheets_connection()
 
 def carregar_dados_crm():
     try:
-        # Garante que substitui \\n literais por quebras de linha reais caso venham do TOML
         if "connections" in st.secrets and "gsheets" in st.secrets["connections"]:
             if "private_key" in st.secrets["connections"]["gsheets"]:
                 pk = st.secrets["connections"]["gsheets"]["private_key"]
@@ -207,7 +206,6 @@ def carregar_dados_crm():
             df_loaded["Prob"] = pd.to_numeric(df_loaded["Prob"], errors="coerce").fillna(0.2)
             df_loaded["Perda"] = df_loaded["Perda"].fillna("").astype(str)
             
-            # Migração automática caso venha do modelo antigo
             df_loaded["Etapa"] = df_loaded["Etapa"].replace({
                 "1. Contatado": "1. Prospecção",
                 "2. Conversando": "2. Qualificação"
@@ -431,7 +429,7 @@ st.markdown("""
 aba_selecionada = st.session_state.menu_ativo
 
 # ---------------------------------------------------------
-# FUNÇÃO DE RENDERIZAÇÃO DA AGENDA DA SEMANA
+# FUNÇÃO DE RENDERIZAÇÃO DA AGENDA DA SEMANA (COM TELEFONE)
 # ---------------------------------------------------------
 def exibir_agenda_semana(df_tarefas, df_crm):
     st.markdown('<div style="margin-top: 4px;"></div>', unsafe_allow_html=True)
@@ -500,7 +498,14 @@ def exibir_agenda_semana(df_tarefas, df_crm):
                 with st.expander("Ver Tarefas Atrasadas"):
                     if not atrasadas.empty:
                         for _, row in atrasadas.iterrows():
-                            st.write(f"- **{row['Titulo']}** | Cliente: `{row.get('Cliente', 'N/A')}` | Vencimento: {row['Data_Vencimento'].strftime('%d/%m/%Y')}")
+                            cli_nome = str(row.get('Cliente', 'N/A'))
+                            tel_encontrado = "Não informado"
+                            if not df_crm.empty and cli_nome != "Nenhum / Tarefa Geral":
+                                match_cli = df_crm[df_crm["Empresa"].astype(str).str.lower() == cli_nome.lower()]
+                                if not match_cli.empty:
+                                    tel_encontrado = match_cli.iloc[0].get("Telefone", "Não informado")
+                            
+                            st.markdown(f"- **{row['Titulo']}** | Cliente: `{cli_nome}` | Tel: <span class=\"phone-highlight\">{tel_encontrado}</span> | Venc: {row['Data_Vencimento'].strftime('%d/%m/%Y')}", unsafe_allow_html=True)
                     else:
                         st.write("Nenhuma tarefa atrasada.")
 
@@ -509,7 +514,14 @@ def exibir_agenda_semana(df_tarefas, df_crm):
                 with st.expander("Ver Tarefas para Hoje"):
                     if not hoje_tarefas.empty:
                         for _, row in hoje_tarefas.iterrows():
-                            st.write(f"- **{row['Titulo']}** | Cliente: `{row.get('Cliente', 'N/A')}`")
+                            cli_nome = str(row.get('Cliente', 'N/A'))
+                            tel_encontrado = "Não informado"
+                            if not df_crm.empty and cli_nome != "Nenhum / Tarefa Geral":
+                                match_cli = df_crm[df_crm["Empresa"].astype(str).str.lower() == cli_nome.lower()]
+                                if not match_cli.empty:
+                                    tel_encontrado = match_cli.iloc[0].get("Telefone", "Não informado")
+
+                            st.markdown(f"- **{row['Titulo']}** | Cliente: `{cli_nome}` | Tel: <span class=\"phone-highlight\">{tel_encontrado}</span>", unsafe_allow_html=True)
                     else:
                         st.write("Nenhuma tarefa para hoje.")
 
@@ -539,7 +551,9 @@ def exibir_agenda_semana(df_tarefas, df_crm):
                                 dt_f_br = dt.strptime(raw_dt, "%Y-%m-%d").strftime("%d/%m/%Y")
                             except:
                                 dt_f_br = "Data Inválida"
-                            st.write(f"- **{row['Empresa']}** | Contato: `{row['Contato']}` | Data: {dt_f_br}")
+                            
+                            tel_cli = row.get('Telefone', 'Não informado')
+                            st.markdown(f"- **{row['Empresa']}** | Contato: `{row['Contato']}` | Tel: <span class=\"phone-highlight\">{tel_cli}</span> | Data: {dt_f_br}", unsafe_allow_html=True)
                     else:
                         st.write("Nenhum follow-up atrasado.")
 
@@ -548,7 +562,8 @@ def exibir_agenda_semana(df_tarefas, df_crm):
                 with st.expander("Ver Follow-ups para Hoje"):
                     if not c_hoje.empty:
                         for _, row in c_hoje.iterrows():
-                            st.write(f"- **{row['Empresa']}** | Contato: `{row['Contato']}`")
+                            tel_cli = row.get('Telefone', 'Não informado')
+                            st.markdown(f"- **{row['Empresa']}** | Contato: `{row['Contato']}` | Tel: <span class=\"phone-highlight\">{tel_cli}</span>", unsafe_allow_html=True)
                     else:
                         st.write("Nenhum follow-up para hoje.")
 
@@ -744,7 +759,6 @@ if aba_selecionada == "Gerenciamento de Tarefas":
 # ABA 2: FUNIL DE VENDAS
 # =========================================================
 elif aba_selecionada == "Funil de Vendas":
-    # Layout do topo com Título à esquerda e Barra de Pesquisa logo acima do mini-card na direita
     col_topo_titulo, col_topo_busca = st.columns([2, 1])
     with col_topo_titulo:
         st.subheader(titulo_funil)
@@ -878,7 +892,6 @@ elif aba_selecionada == "Funil de Vendas":
             st.markdown("</div>", unsafe_allow_html=True)
             st.divider()
 
-    # Aplica o filtro de pesquisa, se houver termo digitado
     df_funil_exibicao = df_filtered.copy()
     if termo_busca:
         termo_limpo = termo_busca.lower()
@@ -1410,7 +1423,7 @@ elif aba_selecionada == "+ Novo Cadastro":
                     "Cidade": nova_cidade if nova_cidade else "Não informado",
                     "Valor": nova_valor,
                     "Prob": PROB_MAP[nova_etapa],
-                    "Vendedor": novo_vendedor if novo_vendedor else "Não informado",
+                    "Vendedor": vendedore_resp if 'vendedore_resp' in locals() and vendedore_resp else (novo_vendedor if novo_vendedor else "Não informado"),
                     "Perda": str(motivo_perda) if "Perdido" in nova_etapa else "",
                     "Data_Cadastro": str(date.today()),
                     "Followup_Data": str(f_data_ini) if f_nota_ini else "",
