@@ -828,7 +828,7 @@ elif aba_selecionada == "Funil de Vendas":
                 st.markdown("**Adicionar Nota Rápida na Linha do Tempo:**")
                 col_t1, col_t2 = st.columns([3, 1])
                 with col_t1:
-                    nova_nota_timeline = st.text_input("Escreva o que foi conversado / alinhado:", placeholder="Ex: Cliente pediu para retornar na próxima terça para fechar o contrato.")
+                    nova_nota_timeline = st.text_input("Escreva o que foi conversado / alinhado:", placeholder="Ex: Cliente pediu para retornar na próxima terça para fechar o contrato.", key="input_timeline_edit")
                 with col_t2:
                     st.markdown("<br>", unsafe_allow_html=True)
                     adicionar_timeline_btn = st.form_submit_button("+ Registrar na Timeline", use_container_width=True)
@@ -852,44 +852,47 @@ elif aba_selecionada == "Funil de Vendas":
                 with bcol3:
                     btn_excluir = st.form_submit_button("Excluir Cliente", use_container_width=True)
                     
-                idx_df = st.session_state.df_crm[st.session_state.df_crm["id"] == cliente_edit_id].index
+                idx_df = st.session_state.df_crm.index[st.session_state.df_crm["id"] == cliente_edit_id]
                 
-                if adicionar_timeline_btn and nova_nota_timeline.strip():
-                    timestamp_atual = dt.now().strftime("%d/%m/%Y %H:%M")
-                    novo_registro_timeline = f"[{timestamp_atual}] {nova_nota_timeline.strip()}"
+                if len(idx_df) > 0:
+                    idx_real = idx_df[0]
                     
-                    if historico_atual.strip():
-                        historico_atualizado = novo_registro_timeline + "\n" + historico_atual
-                    else:
-                        historico_atualizado = novo_registro_timeline
+                    if adicionar_timeline_btn and nova_nota_timeline.strip():
+                        timestamp_atual = dt.now().strftime("%d/%m/%Y %H:%M")
+                        novo_registro_timeline = f"[{timestamp_atual}] {nova_nota_timeline.strip()}"
                         
-                    st.session_state.df_crm.loc[idx_df, "Historico"] = historico_atualizado
-                    salvar_dados_crm(st.session_state.df_crm)
-                    st.success("Nota adicionada na linha do tempo com sucesso!")
-                    st.rerun()
+                        if historico_atual.strip():
+                            historico_atualizado = novo_registro_timeline + "\n" + historico_atual
+                        else:
+                            historico_atualizado = novo_registro_timeline
+                            
+                        st.session_state.df_crm.loc[idx_real, "Historico"] = historico_atualizado
+                        salvar_dados_crm(st.session_state.df_crm)
+                        st.success("Nota adicionada na linha do tempo com sucesso!")
+                        st.rerun()
 
-                if btn_salvar_alt:
-                    st.session_state.df_crm.loc[idx_df, "Etapa"] = edit_etapa
-                    st.session_state.df_crm.loc[idx_df, "Prob"] = PROB_MAP[edit_etapa]
-                    st.session_state.df_crm.loc[idx_df, "Empresa"] = edit_empresa
-                    st.session_state.df_crm.loc[idx_df, "Contato"] = edit_contato
-                    st.session_state.df_crm.loc[idx_df, "Cargo"] = edit_cargo
-                    st.session_state.df_crm.loc[idx_df, "Telefone"] = edit_tel
-                    st.session_state.df_crm.loc[idx_df, "Email"] = edit_email
-                    st.session_state.df_crm.loc[idx_df, "Cidade"] = edit_cidade
-                    st.session_state.df_crm.loc[idx_df, "Valor"] = edit_valor
-                    st.session_state.df_crm.loc[idx_df, "Vendedor"] = edit_vendedor
-                    st.session_state.df_crm.loc[idx_df, "Followup_Data"] = str(edit_fu_data)
-                    st.session_state.df_crm.loc[idx_df, "Followup_Nota"] = edit_fu_nota
-                    
-                    st.session_state.df_crm["Perda"] = st.session_state.df_crm["Perda"].astype(str)
-                    st.session_state.df_crm.loc[idx_df, "Perda"] = str(edit_motivo_perda)
-                    
-                    salvar_dados_crm(st.session_state.df_crm)
-                    st.session_state.cliente_editando_id = None
-                    st.success("Alterações salvas com sucesso!")
-                    st.rerun()
-                    
+                    if btn_salvar_alt:
+                        st.session_state.df_crm.loc[idx_real, "Etapa"] = edit_etapa
+                        st.session_state.df_crm.loc[idx_real, "Prob"] = PROB_MAP[edit_etapa]
+                        st.session_state.df_crm.loc[idx_real, "Empresa"] = edit_empresa
+                        st.session_state.df_crm.loc[idx_real, "Contato"] = edit_contato
+                        st.session_state.df_crm.loc[idx_real, "Cargo"] = edit_cargo
+                        st.session_state.df_crm.loc[idx_real, "Telefone"] = edit_tel
+                        st.session_state.df_crm.loc[idx_real, "Email"] = edit_email
+                        st.session_state.df_crm.loc[idx_real, "Cidade"] = edit_cidade
+                        st.session_state.df_crm.loc[idx_real, "Valor"] = edit_valor
+                        st.session_state.df_crm.loc[idx_real, "Vendedor"] = edit_vendedor
+                        st.session_state.df_crm.loc[idx_real, "Followup_Data"] = str(edit_fu_data)
+                        st.session_state.df_crm.loc[idx_real, "Followup_Nota"] = edit_fu_nota
+                        
+                        st.session_state.df_crm["Perda"] = st.session_state.df_crm["Perda"].astype(str)
+                        st.session_state.df_crm.loc[idx_real, "Perda"] = str(edit_motivo_perda)
+                        
+                        salvar_dados_crm(st.session_state.df_crm)
+                        st.session_state.cliente_editando_id = None
+                        st.success("Alterações salvas com sucesso!")
+                        st.rerun()
+                        
                 if btn_fechar_modal:
                     st.session_state.cliente_editando_id = None
                     st.rerun()
@@ -1431,7 +1434,7 @@ elif aba_selecionada == "+ Novo Cadastro":
                     "Contato": novo_contato if novo_contato else "Não informado",
                     "Cargo": novo_cargo if novo_cargo else "Não informado",
                     "Telefone": novo_telefone if novo_telefone else "Não informado",
-                    "Email": novo_email if novo_email else "Não informado",
+                    "Email": nova_email if nova_email else "Não informado",
                     "Cidade": nova_cidade if nova_cidade else "Não informado",
                     "Valor": nova_valor,
                     "Prob": PROB_MAP[nova_etapa],
