@@ -1423,7 +1423,7 @@ elif aba_selecionada == "+ Novo Cadastro":
                     "Cidade": nova_cidade if nova_cidade else "Não informado",
                     "Valor": nova_valor,
                     "Prob": PROB_MAP[nova_etapa],
-                    "Vendedor": novo_vendedor if novo_vendedor else "Não informado",
+                    "Vendedor": vendedore_resp if 'vendedore_resp' in locals() and vendedore_resp else (novo_vendedor if novo_vendedor else "Não informado"),
                     "Perda": str(motivo_perda) if "Perdido" in nova_etapa else "",
                     "Data_Cadastro": str(date.today()),
                     "Followup_Data": str(f_data_ini) if f_nota_ini else "",
