@@ -195,7 +195,7 @@ def carregar_dados_crm():
         df_loaded = conn.read(worksheet="Página1", ttl=0)
         df_loaded = df_loaded.dropna(how="all")
         
-        colunas_esperadas = ["id", "Empresa", "Cliente", "Etapa", "Contato", "Cargo", "Telefone", "Email", "Cidade", "Valor", "Prob", "Vendedor", "Perda", "Data_Cadastro", "Followup_Data", "Followup_Nota", "Historico"]
+        colunas_esperadas = ["id", "Empresa", "Cliente", "Etapa", "Contato", "Cargo", "Telefone", "Email", "Cidade", "Valor", "Prob", "Vendedor", "Perda", "Temperatura", "Data_Cadastro", "Followup_Data", "Followup_Nota", "Historico"]
         for col in colunas_esperadas:
             if col not in df_loaded.columns:
                 df_loaded[col] = ""
@@ -205,6 +205,7 @@ def carregar_dados_crm():
             df_loaded["Valor"] = pd.to_numeric(df_loaded["Valor"], errors="coerce").fillna(0.0)
             df_loaded["Prob"] = pd.to_numeric(df_loaded["Prob"], errors="coerce").fillna(0.2)
             df_loaded["Perda"] = df_loaded["Perda"].fillna("").astype(str)
+            df_loaded["Temperatura"] = df_loaded["Temperatura"].fillna("Frio").astype(str)
             
             df_loaded["Etapa"] = df_loaded["Etapa"].replace({
                 "1. Contatado": "1. Prospecção",
@@ -220,7 +221,7 @@ def carregar_dados_crm():
             "id": 1, "Empresa": "Grupo Delta", "Cliente": "BraClean", "Etapa": "1. Prospecção", 
             "Contato": "Roberto Alves", "Cargo": "Diretor Comercial", "Telefone": "(16) 99876-5432", 
             "Email": "roberto@grupodelta.com.br", "Cidade": "Sertãozinho / SP", "Valor": 50000.0, 
-            "Prob": 0.20, "Vendedor": "Lucas Mendes", "Perda": "",
+            "Prob": 0.20, "Vendedor": "Lucas Mendes", "Perda": "", "Temperatura": "Morno",
             "Data_Cadastro": str(date.today()),
             "Followup_Data": str(date.today() - timedelta(days=2)), "Followup_Nota": "Enviar apresentação institucional atualizada.", 
             "Historico": "[01/09/2026 10:00] Primeiro contato realizado."
@@ -229,7 +230,7 @@ def carregar_dados_crm():
             "id": 2, "Empresa": "Sistemas Sigma", "Cliente": "QV Energia Solar", "Etapa": "1. Prospecção", 
             "Contato": "Patricia Lima", "Cargo": "Gerente de Compras", "Telefone": "(16) 99765-4321", 
             "Email": "patricia@sigmasistemas.com.br", "Cidade": "Ribeirão Preto / SP", "Valor": 35000.0, 
-            "Prob": 0.20, "Vendedor": "Lucas Mendes", "Perda": "",
+            "Prob": 0.20, "Vendedor": "Lucas Mendes", "Perda": "", "Temperatura": "Frio",
             "Data_Cadastro": str(date.today()),
             "Followup_Data": str(date.today()), "Followup_Nota": "Ligar para confirmar se recebeu o e-mail.", 
             "Historico": "[02/09/2026 14:30] E-mail enviado."
@@ -238,7 +239,7 @@ def carregar_dados_crm():
             "id": 3, "Empresa": "Indústria Omega", "Cliente": "Elleven", "Etapa": "2. Qualificação", 
             "Contato": "Fernando Souza", "Cargo": "Sócio-Proprietário", "Telefone": "(11) 98123-4567", 
             "Email": "fernando@omegaind.com.br", "Cidade": "São Paulo / SP", "Valor": 80000.0, 
-            "Prob": 0.40, "Vendedor": "Gabriel Silva", "Perda": "",
+            "Prob": 0.40, "Vendedor": "Gabriel Silva", "Perda": "", "Temperatura": "Quente",
             "Data_Cadastro": str(date.today()),
             "Followup_Data": str(date.today() + timedelta(days=3)), "Followup_Nota": "Alinhar escopo do projeto técnico.", 
             "Historico": "[30/08/2026 09:15] Reunião inicial realizada."
@@ -247,7 +248,7 @@ def carregar_dados_crm():
             "id": 4, "Empresa": "Tecnologia Beta", "Cliente": "BraClean", "Etapa": "6. Perdido", 
             "Contato": "Carlos Eduardo", "Cargo": "Comprador", "Telefone": "(16) 98888-7777", 
             "Email": "carlos@betatech.com", "Cidade": "Sertãozinho / SP", "Valor": 25000.0, 
-            "Prob": 0.00, "Vendedor": "Lucas Mendes", "Perda": "Preço / Orçamento",
+            "Prob": 0.00, "Vendedor": "Lucas Mendes", "Perda": "Preço / Orçamento", "Temperatura": "Frio",
             "Data_Cadastro": str(date.today()),
             "Followup_Data": "", "Followup_Nota": "", 
             "Historico": "[25/08/2026 16:45] Achou o valor acima do orçamento."
@@ -338,43 +339,20 @@ def calcular_status_followup(data_str):
     except:
         return "sem_data", "Sem Follow-up", '<span style="height: 10px; width: 10px; background-color: #94A3B8; border-radius: 50%; display: inline-block;" title="Sem Data"></span>'
 
-def classificar_status_lead(row):
+def obter_cor_temperatura(temperatura):
     """
-    Classifica o lead com base na data de follow-up e na etapa/probabilidade:
-    - Quente: Follow-up para hoje/atrasado ou alta probabilidade.
-    - Morno: Follow-up nos próximos 7 dias.
-    - Frio: Sem follow-up próximo ou etapas iniciais.
+    Retorna a cor da bolinha com base na temperatura escolhida:
+    - Azul: Frio
+    - Amarelo: Morno
+    - Vermelho: Quente
     """
-    follow_str = str(row.get("Followup_Data", "")).strip()
-    etapa = str(row.get("Etapa", ""))
-    prob = float(row.get("Prob", 0.0))
-    hoje = date.today()
-    
-    if "Fechado" in etapa:
-        return "Fechado", "#86EFAC"
-    if "Perdido" in etapa:
-        return "Perdido", "#FCA5A5"
-        
-    try:
-        if follow_str and follow_str not in ["nan", "NaT", ""]:
-            dt_follow = dt.strptime(follow_str[:10], "%Y-%m-%d").date()
-            dias_diff = (dt_follow - hoje).days
-            
-            if dias_diff <= 0 or prob >= 0.60:
-                return "Quente", "#EF4444"
-            elif dias_diff <= 7:
-                return "Morno", "#F59E0B"
-            else:
-                return "Frio", "#3B82F6"
-    except:
-        pass
-        
-    if prob >= 0.60:
-        return "Quente", "#EF4444"
-    elif prob >= 0.40:
-        return "Morno", "#F59E0B"
-    
-    return "Frio", "#3B82F6"
+    temp_str = str(temperatura).strip().capitalize()
+    if temp_str == "Quente":
+        return "#EF4444"  # Vermelho
+    elif temp_str == "Morno":
+        return "#EAB308"  # Amarelo
+    else:
+        return "#3B82F6"  # Azul (Frio por padrão)
 
 # ---------------------------------------------------------
 # BARRA LATERAL (FILTROS E CONFIGURAÇÕES)
@@ -456,7 +434,7 @@ st.markdown("""
 aba_selecionada = st.session_state.menu_ativo
 
 # ---------------------------------------------------------
-# FUNÇÃO DE RENDERIZAÇÃO DA AGENDA DA SEMANA (COM STATUS DE LEADS)
+# FUNÇÃO DE RENDERIZAÇÃO DA AGENDA DA SEMANA
 # ---------------------------------------------------------
 def exibir_agenda_semana(df_tarefas, df_crm):
     st.markdown('<div style="margin-top: 4px;"></div>', unsafe_allow_html=True)
@@ -555,26 +533,13 @@ def exibir_agenda_semana(df_tarefas, df_crm):
             st.info("Nenhum cliente no CRM.")
         else:
             crm_temp = df_crm.copy()
-            status_list = []
-            classif_list = []
-            
-            for _, r in crm_temp.iterrows():
-                st_code, st_label, st_icon = calcular_status_followup(r.get("Followup_Data", ""))
-                status_list.append(st_code)
-                
-                status_lead_txt, _ = classificar_status_lead(r)
-                classif_list.append(status_lead_txt)
-                
-            crm_temp["status_fu"] = status_list
-            crm_temp["status_lead"] = classif_list
-
-            c_quentes = crm_temp[crm_temp["status_lead"] == "Quente"]
-            c_mornos = crm_temp[crm_temp["status_lead"] == "Morno"]
+            c_quentes = crm_temp[crm_temp["Temperatura"].astype(str).str.capitalize() == "Quente"]
+            c_mornos = crm_temp[crm_temp["Temperatura"].astype(str).str.capitalize() == "Morno"]
 
             col_q, col_m = st.columns(2)
 
             with col_q:
-                st.markdown(f'<div class="badge-atrasada">{len(c_quentes)} Leads Quentes (Atenção Imediata)</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="badge-atrasada">{len(c_quentes)} Leads Quentes (Vermelho)</div>', unsafe_allow_html=True)
                 with st.expander("Ver Leads Quentes"):
                     if not c_quentes.empty:
                         for _, row in c_quentes.iterrows():
@@ -584,7 +549,7 @@ def exibir_agenda_semana(df_tarefas, df_crm):
                         st.write("Nenhum lead quente no momento.")
 
             with col_m:
-                st.markdown(f'<div class="badge-hoje">{len(c_mornos)} Leads Mornos (Acompanhamento)</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="badge-hoje">{len(c_mornos)} Leads Mornos (Amarelo)</div>', unsafe_allow_html=True)
                 with st.expander("Ver Leads Mornos"):
                     if not c_mornos.empty:
                         for _, row in c_mornos.iterrows():
@@ -650,7 +615,7 @@ if aba_selecionada == "Gerenciamento de Tarefas":
                 st.rerun()
 
 # =========================================================
-# ABA 2: FUNIL DE VENDAS (COM BADGES DE QUENTE/MORNO/FRIO)
+# ABA 2: FUNIL DE VENDAS (COM BOLINHA DE TEMPERATURA NOS MINI CARDS)
 # =========================================================
 elif aba_selecionada == "Funil de Vendas":
     col_topo_titulo, col_topo_busca = st.columns([2, 1])
@@ -691,6 +656,17 @@ elif aba_selecionada == "Funil de Vendas":
                     edit_valor = st.number_input("Valor (R$)", value=float(row_edit["Valor"]), step=1000.0)
                     edit_vendedor = st.text_input("Vendedor", value=row_edit["Vendedor"])
                     
+                    # Opção de editar a temperatura rapidamente
+                    opcoes_temp = ["Frio", "Morno", "Quente"]
+                    temp_atual_str = str(row_edit.get("Temperatura", "Frio")).capitalize()
+                    if temp_atual_str not in opcoes_temp:
+                        temp_atual_str = "Frio"
+                    edit_temperatura = st.selectbox(
+                        "Temperatura do Lead", 
+                        options=opcoes_temp, 
+                        index=opcoes_temp.index(temp_atual_str)
+                    )
+                    
                     try:
                         dt_parse = dt.strptime(str(row_edit["Followup_Data"]).strip()[:10], "%Y-%m-%d").date() if row_edit["Followup_Data"] and str(row_edit["Followup_Data"]).strip() not in ["nan", "NaT", ""] else date.today()
                     except:
@@ -725,6 +701,7 @@ elif aba_selecionada == "Funil de Vendas":
                     st.session_state.df_crm.loc[idx_df, "Cidade"] = edit_cidade
                     st.session_state.df_crm.loc[idx_df, "Valor"] = edit_valor
                     st.session_state.df_crm.loc[idx_df, "Vendedor"] = edit_vendedor
+                    st.session_state.df_crm.loc[idx_df, "Temperatura"] = edit_temperatura
                     st.session_state.df_crm.loc[idx_df, "Followup_Data"] = str(edit_fu_data)
                     st.session_state.df_crm.loc[idx_df, "Followup_Nota"] = edit_fu_nota
                     st.session_state.df_crm["Perda"] = st.session_state.df_crm["Perda"].astype(str)
@@ -777,19 +754,21 @@ elif aba_selecionada == "Funil de Vendas":
             
             for _, row in sub_df.iterrows():
                 cliente_id = int(row['id'])
-                status_lead_txt, cor_status = classificar_status_lead(row)
+                temperatura_val = row.get("Temperatura", "Frio")
+                cor_bolinha = obter_cor_temperatura(temperatura_val)
                 
+                # Renderiza o card com a bolinha colorida indicando a temperatura (Azul = Frio, Amarelo = Morno, Vermelho = Quente)
                 st.markdown(f"""
-                    <div style="border-left: 4px solid {cor_status}; background-color: #111C31; border: 1px solid #1E293B; border-radius: 4px; margin-bottom: 6px; padding: 4px;">
+                    <div style="border-left: 4px solid {cor_bolinha}; background-color: #111C31; border: 1px solid #1E293B; border-radius: 4px; margin-bottom: 6px; padding: 4px;">
                 """, unsafe_allow_html=True)
                 
-                with st.expander(f"{row['Empresa']} ({status_lead_txt})"):
+                with st.expander(f"{row['Empresa']}"):
                     st.markdown(
                         f"""
                         <div style="line-height: 1.4; font-size: 12px;">
                             <b>Contato:</b> {row['Contato']}<br>
                             <b>Tel:</b> <span class="phone-highlight">{row.get('Telefone', 'N/A')}</span><br>
-                            <b>Status:</b> <span style="color: {cor_status}; font-weight: bold;">{status_lead_txt}</span>
+                            <b>Temperatura:</b> <span style="height: 10px; width: 10px; background-color: {cor_bolinha}; border-radius: 50%; display: inline-block; margin-right: 4px;"></span> {str(temperatura_val).capitalize()}
                         </div>
                         """,
                         unsafe_allow_html=True
@@ -831,7 +810,7 @@ elif aba_selecionada == "Relatório Executivo":
     st.info("Visão consolidada do histórico de atividades e faturamento.")
 
 # =========================================================
-# ABA 5: + NOVO CADASTRO
+# ABA 5: + NOVO CADASTRO (COM OPÇÃO DE TEMPERATURA)
 # =========================================================
 elif aba_selecionada == "+ Novo Cadastro":
     st.subheader("+ Novo Cadastro de Oportunidade")
@@ -848,6 +827,7 @@ elif aba_selecionada == "+ Novo Cadastro":
         with col_f2:
             nova_valor = st.number_input("Valor da Oportunidade (R$)", min_value=0.0, step=1000.0)
             nova_etapa = st.selectbox("Etapa Inicial *", list(PROB_MAP.keys()))
+            nova_temperatura = st.selectbox("Temperatura do Lead", options=["Frio", "Morno", "Quente"], index=0)
             f_data_ini = st.date_input("Data de Follow-up", value=date.today())
 
         btn_salvar = st.form_submit_button("Salvar Oportunidade")
@@ -871,6 +851,7 @@ elif aba_selecionada == "+ Novo Cadastro":
                     "Prob": PROB_MAP[nova_etapa],
                     "Vendedor": "Não informado",
                     "Perda": "",
+                    "Temperatura": nova_temperatura,
                     "Data_Cadastro": str(date.today()),
                     "Followup_Data": str(f_data_ini),
                     "Followup_Nota": "Novo cadastro sincronizado.",
