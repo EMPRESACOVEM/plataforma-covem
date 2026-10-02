@@ -195,7 +195,7 @@ def carregar_dados_crm():
         df_loaded = conn.read(worksheet="Página1", ttl=0)
         df_loaded = df_loaded.dropna(how="all")
         
-        colunas_esperadas = ["id", "Empresa", "Cliente", "Etapa", "Contato", "Cargo", "Telefone", "Email", "Cidade", "Valor", "Prob", "Vendedor", "Perda", "Data_Cadastro", "Followup_Data", "Followup_Nota", "Historico"]
+        colunas_esperadas = ["id", "Empresa", "Cliente", "Etapa", "Contato", "Cargo", "Telefone", "Email", "Cidade", "Valor", "Prob", "Vendedor", "Perda", "Temperatura", "Data_Cadastro", "Followup_Data", "Followup_Nota", "Historico"]
         for col in colunas_esperadas:
             if col not in df_loaded.columns:
                 df_loaded[col] = ""
@@ -205,6 +205,7 @@ def carregar_dados_crm():
             df_loaded["Valor"] = pd.to_numeric(df_loaded["Valor"], errors="coerce").fillna(0.0)
             df_loaded["Prob"] = pd.to_numeric(df_loaded["Prob"], errors="coerce").fillna(0.2)
             df_loaded["Perda"] = df_loaded["Perda"].fillna("").astype(str)
+            df_loaded["Temperatura"] = df_loaded["Temperatura"].fillna("Morno").astype(str)
             
             df_loaded["Etapa"] = df_loaded["Etapa"].replace({
                 "1. Contatado": "1. Prospecção",
@@ -220,7 +221,7 @@ def carregar_dados_crm():
             "id": 1, "Empresa": "Grupo Delta", "Cliente": "BraClean", "Etapa": "1. Prospecção", 
             "Contato": "Roberto Alves", "Cargo": "Diretor Comercial", "Telefone": "(16) 99876-5432", 
             "Email": "roberto@grupodelta.com.br", "Cidade": "Sertãozinho / SP", "Valor": 50000.0, 
-            "Prob": 0.20, "Vendedor": "Lucas Mendes", "Perda": "",
+            "Prob": 0.20, "Vendedor": "Lucas Mendes", "Perda": "", "Temperatura": "Quente",
             "Data_Cadastro": str(date.today()),
             "Followup_Data": str(date.today() - timedelta(days=2)), "Followup_Nota": "Enviar apresentação institucional atualizada.", 
             "Historico": "[01/09/2026 10:00] Primeiro contato realizado."
@@ -229,7 +230,7 @@ def carregar_dados_crm():
             "id": 2, "Empresa": "Sistemas Sigma", "Cliente": "QV Energia Solar", "Etapa": "1. Prospecção", 
             "Contato": "Patricia Lima", "Cargo": "Gerente de Compras", "Telefone": "(16) 99765-4321", 
             "Email": "patricia@sigmasistemas.com.br", "Cidade": "Ribeirão Preto / SP", "Valor": 35000.0, 
-            "Prob": 0.20, "Vendedor": "Lucas Mendes", "Perda": "",
+            "Prob": 0.20, "Vendedor": "Lucas Mendes", "Perda": "", "Temperatura": "Morno",
             "Data_Cadastro": str(date.today()),
             "Followup_Data": str(date.today()), "Followup_Nota": "Ligar para confirmar se recebeu o e-mail.", 
             "Historico": "[02/09/2026 14:30] E-mail enviado."
@@ -238,7 +239,7 @@ def carregar_dados_crm():
             "id": 3, "Empresa": "Indústria Omega", "Cliente": "Elleven", "Etapa": "2. Qualificação", 
             "Contato": "Fernando Souza", "Cargo": "Sócio-Proprietário", "Telefone": "(11) 98123-4567", 
             "Email": "fernando@omegaind.com.br", "Cidade": "São Paulo / SP", "Valor": 80000.0, 
-            "Prob": 0.40, "Vendedor": "Gabriel Silva", "Perda": "",
+            "Prob": 0.40, "Vendedor": "Gabriel Silva", "Perda": "", "Temperatura": "Quente",
             "Data_Cadastro": str(date.today()),
             "Followup_Data": str(date.today() + timedelta(days=3)), "Followup_Nota": "Alinhar escopo do projeto técnico.", 
             "Historico": "[30/08/2026 09:15] Reunião inicial realizada."
@@ -247,7 +248,7 @@ def carregar_dados_crm():
             "id": 4, "Empresa": "Tecnologia Beta", "Cliente": "BraClean", "Etapa": "6. Perdido", 
             "Contato": "Carlos Eduardo", "Cargo": "Comprador", "Telefone": "(16) 98888-7777", 
             "Email": "carlos@betatech.com", "Cidade": "Sertãozinho / SP", "Valor": 25000.0, 
-            "Prob": 0.00, "Vendedor": "Lucas Mendes", "Perda": "Preço / Orçamento",
+            "Prob": 0.00, "Vendedor": "Lucas Mendes", "Perda": "Preço / Orçamento", "Temperatura": "Frio",
             "Data_Cadastro": str(date.today()),
             "Followup_Data": "", "Followup_Nota": "", 
             "Historico": "[25/08/2026 16:45] Achou o valor acima do orçamento."
@@ -337,6 +338,23 @@ def calcular_status_followup(data_str):
             return "em_dia", "Em Dia", '<span style="height: 10px; width: 10px; background-color: #22C55E; border-radius: 50%; display: inline-block;" title="Em Dia"></span>'
     except:
         return "sem_data", "Sem Follow-up", '<span style="height: 10px; width: 10px; background-color: #94A3B8; border-radius: 50%; display: inline-block;" title="Sem Data"></span>'
+
+# ---------------------------------------------------------
+# FUNÇÃO PARA GERAR O HTML DA BOLINHA DE TEMPERATURA
+# ---------------------------------------------------------
+def obter_bolinha_temperatura(temperatura):
+    temp_str = str(temperatura).strip().capitalize()
+    if temp_str == "Quente":
+        cor = "#EF4444"  # Vermelho
+        label = "Lead Quente"
+    elif temp_str == "Frio":
+        cor = "#38BDF8"  # Azul
+        label = "Lead Frio"
+    else:
+        cor = "#EAB308"  # Amarelo (Morno padrão)
+        label = "Lead Morno"
+    
+    return f'<span style="height: 8px; width: 8px; background-color: {cor}; border-radius: 50%; display: inline-block; margin-left: 6px; vertical-align: middle;" title="{label}"></span>'
 
 # ---------------------------------------------------------
 # BARRA LATERAL (FILTROS E CONFIGURAÇÕES)
@@ -798,6 +816,12 @@ elif aba_selecionada == "Funil de Vendas":
                     edit_valor = st.number_input("Valor (R$)", value=float(row_edit["Valor"]), step=1000.0)
                     edit_vendedor = st.text_input("Vendedor", value=row_edit["Vendedor"])
                     
+                    opcoes_temp = ["Quente", "Morno", "Frio"]
+                    temp_atual_cli = str(row_edit.get("Temperatura", "Morno")).capitalize()
+                    if temp_atual_cli not in opcoes_temp:
+                        temp_atual_cli = "Morno"
+                    edit_temperatura = st.selectbox("Temperatura do Lead", options=opcoes_temp, index=opcoes_temp.index(temp_atual_cli))
+                    
                     try:
                         dt_parse = dt.strptime(str(row_edit["Followup_Data"]).strip()[:10], "%Y-%m-%d").date() if row_edit["Followup_Data"] and str(row_edit["Followup_Data"]).strip() not in ["nan", "NaT", ""] else date.today()
                     except:
@@ -867,6 +891,7 @@ elif aba_selecionada == "Funil de Vendas":
                     st.session_state.df_crm.loc[idx_df, "Cidade"] = edit_cidade
                     st.session_state.df_crm.loc[idx_df, "Valor"] = edit_valor
                     st.session_state.df_crm.loc[idx_df, "Vendedor"] = edit_vendedor
+                    st.session_state.df_crm.loc[idx_df, "Temperatura"] = edit_temperatura
                     st.session_state.df_crm.loc[idx_df, "Followup_Data"] = str(edit_fu_data)
                     st.session_state.df_crm.loc[idx_df, "Followup_Nota"] = edit_fu_nota
                     
@@ -922,12 +947,13 @@ elif aba_selecionada == "Funil de Vendas":
             for _, row in sub_df.iterrows():
                 st_code, st_label, st_icon = calcular_status_followup(row.get("Followup_Data", ""))
                 cliente_id = int(row['id'])
+                bolinha_temp = obter_bolinha_temperatura(row.get("Temperatura", "Morno"))
                 
                 st.markdown(f"""
                     <div style="border-left: 4px solid {cor_header}; background-color: #111C31; border-top: 1px solid #1E293B; border-right: 1px solid #1E293B; border-bottom: 1px solid #1E293B; border-radius: 4px; margin-bottom: 6px; padding: 2px;">
                 """, unsafe_allow_html=True)
                 
-                with st.expander(f"{row['Empresa']}"):
+                with st.expander(f"{row['Empresa']} {bolinha_temp}"):
                     dt_f_exib = row.get('Followup_Data', '')
                     
                     try:
@@ -939,7 +965,7 @@ elif aba_selecionada == "Funil de Vendas":
                     st.markdown(
                         f"""
                         <div style="line-height: 1.4; margin-bottom: 8px;">
-                            <span style="font-size: 13px;"><b>{row['Empresa']}</b></span><br>
+                            <span style="font-size: 13px;"><b>{row['Empresa']}</b></span> {bolinha_temp}<br>
                             <span style="font-size: 12px; color: #94A3B8;">Contato: {row['Contato']}</span><br>
                             <span class="phone-highlight" style="font-size: 12px;">{row.get('Telefone', 'Não informado')}</span><br>
                             <hr style="margin: 6px 0; border-color: #334155;">
@@ -1344,6 +1370,8 @@ elif aba_selecionada == "+ Novo Cadastro":
             rapido_carteira = st.selectbox("Carteira *", CARTEIRAS_COVEM, key="rapido_carteira")
             rapido_etapa = st.selectbox("Etapa da Venda *", list(PROB_MAP.keys()), key="rapido_etapa")
 
+        rapido_temperatura = st.selectbox("Temperatura do Lead", options=["Morno", "Quente", "Frio"], key="rapido_temp")
+
         btn_salvar_rapido = st.form_submit_button("Cadastrar Rapidamente", use_container_width=True)
 
         if btn_salvar_rapido:
@@ -1365,6 +1393,7 @@ elif aba_selecionada == "+ Novo Cadastro":
                     "Prob": PROB_MAP[rapido_etapa],
                     "Vendedor": "Não informado",
                     "Perda": "",
+                    "Temperatura": rapido_temperatura,
                     "Data_Cadastro": str(date.today()),
                     "Followup_Data": str(date.today()),
                     "Followup_Nota": "Novo cadastro rápido efetuado.",
@@ -1397,6 +1426,7 @@ elif aba_selecionada == "+ Novo Cadastro":
             novo_vendedor = st.text_input("Vendedor / Responsável")
             nova_valor = st.number_input("Valor da Oportunidade (R$)", min_value=0.0, step=1000.0, format="%.2f")
             nova_etapa = st.selectbox("Etapa Inicial *", list(PROB_MAP.keys()))
+            nova_temperatura = st.selectbox("Temperatura Inicial", options=["Morno", "Quente", "Frio"], key="completo_temp")
             motivo_perda = st.selectbox("Motivo de Perda (Se for '6. Perdido')", [""] + MOTIVOS_PERDA_PADRAO)
             
         st.divider()
@@ -1425,6 +1455,7 @@ elif aba_selecionada == "+ Novo Cadastro":
                     "Prob": PROB_MAP[nova_etapa],
                     "Vendedor": vendedore_resp if 'vendedore_resp' in locals() and vendedore_resp else (novo_vendedor if novo_vendedor else "Não informado"),
                     "Perda": str(motivo_perda) if "Perdido" in nova_etapa else "",
+                    "Temperatura": nova_temperatura,
                     "Data_Cadastro": str(date.today()),
                     "Followup_Data": str(f_data_ini) if f_nota_ini else "",
                     "Followup_Nota": f_nota_ini,
