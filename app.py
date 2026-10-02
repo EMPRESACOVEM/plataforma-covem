@@ -186,7 +186,6 @@ conn = get_gsheets_connection()
 
 def carregar_dados_crm():
     try:
-        # Garante que substitui \\n literais por quebras de linha reais caso venham do TOML
         if "connections" in st.secrets and "gsheets" in st.secrets["connections"]:
             if "private_key" in st.secrets["connections"]["gsheets"]:
                 pk = st.secrets["connections"]["gsheets"]["private_key"]
@@ -207,7 +206,6 @@ def carregar_dados_crm():
             df_loaded["Prob"] = pd.to_numeric(df_loaded["Prob"], errors="coerce").fillna(0.2)
             df_loaded["Perda"] = df_loaded["Perda"].fillna("").astype(str)
             
-            # Migração automática caso venha do modelo antigo
             df_loaded["Etapa"] = df_loaded["Etapa"].replace({
                 "1. Contatado": "1. Prospecção",
                 "2. Conversando": "2. Qualificação"
@@ -431,9 +429,9 @@ st.markdown("""
 aba_selecionada = st.session_state.menu_ativo
 
 # ---------------------------------------------------------
-# FUNÇÃO DE RENDERIZAÇÃO DA AGENDA DA SEMANA
+# FUNÇÃO DE RENDERIZAÇÃO DA AGENDA DA SEMANA (FILTRADA POR EMPRESA SELECIONADA)
 # ---------------------------------------------------------
-def exibir_agenda_semana(df_tarefas, df_crm):
+def exibir_agenda_semana(df_tarefas, df_crm, cliente_selecionado):
     st.markdown('<div style="margin-top: 4px;"></div>', unsafe_allow_html=True)
     
     sub_abas = ["Tarefas", "Follow-up"]
@@ -487,6 +485,13 @@ def exibir_agenda_semana(df_tarefas, df_crm):
         else:
             hoje = datetime.date.today()
             df_temp = df_tarefas.copy()
+            
+            # Filtra tarefas vinculadas à carteira selecionada se não for TODOS
+            if cliente_selecionado != "TODOS":
+                # Mapeia as empresas pertencentes a esta carteira no CRM
+                empresas_da_carteira = df_crm[df_crm["Cliente"] == cliente_selecionado]["Empresa"].tolist()
+                df_temp = df_temp[df_temp["Cliente"].isin(empresas_da_carteira) | (df_temp["Cliente"] == cliente_selecionado)]
+
             df_temp["Data_Vencimento"] = pd.to_datetime(df_temp["Data_Vencimento"], errors="coerce").dt.date
 
             pendentes = df_temp[df_temp["Status"] != "Concluído"]
@@ -517,7 +522,7 @@ def exibir_agenda_semana(df_tarefas, df_crm):
         if df_crm.empty:
             st.info("Nenhum cliente no CRM.")
         else:
-            crm_temp = df_crm.copy()
+            crm_temp = df_filtered.copy() # Usa o df_filtered que já respeita a carteira selecionada na sidebar
             status_list = []
             for _, r in crm_temp.iterrows():
                 st_code, st_label, st_icon = calcular_status_followup(r.get("Followup_Data", ""))
@@ -558,14 +563,18 @@ def exibir_agenda_semana(df_tarefas, df_crm):
 # ABA 1: GERENCIADOR DE TAREFAS & CALENDÁRIO FUTURO
 # =========================================================
 if aba_selecionada == "Gerenciamento de Tarefas":
-    st.subheader("Gerenciamento de Tarefas")
-    exibir_agenda_semana(st.session_state.df_tarefas, st.session_state.df_crm)
+    st.subheader(f"Gerenciamento de Tarefas — {cliente_sel}")
+    exibir_agenda_semana(st.session_state.df_tarefas, st.session_state.df_crm, cliente_sel)
 
-    lista_clientes = (
-        ["Nenhum / Tarefa Geral"] + st.session_state.df_crm["Empresa"].dropna().tolist()
-        if not st.session_state.df_crm.empty
-        else ["Nenhum / Tarefa Geral"]
-    )
+    # Lista de clientes filtrada para o selectbox dependendo da carteira selecionada
+    if cliente_sel != "TODOS":
+        lista_clientes = ["Nenhum / Tarefa Geral"] + df_filtered["Empresa"].dropna().tolist()
+    else:
+        lista_clientes = (
+            ["Nenhum / Tarefa Geral"] + st.session_state.df_crm["Empresa"].dropna().tolist()
+            if not st.session_state.df_crm.empty
+            else ["Nenhum / Tarefa Geral"]
+        )
 
     with st.expander("Criar Nova Tarefa", expanded=False):
         with st.form(key="form_nova_tarefa_crm", clear_on_submit=True):
@@ -640,8 +649,14 @@ if aba_selecionada == "Gerenciamento de Tarefas":
 
     eventos_futuros = []
 
-    if not st.session_state.df_tarefas.empty:
-        for idx_t, t in st.session_state.df_tarefas.iterrows():
+    # Filtrar tarefas baseadas na carteira selecionada
+    df_tarefas_exibicao = st.session_state.df_tarefas.copy()
+    if cliente_sel != "TODOS":
+        empresas_da_carteira = df_filtered["Empresa"].tolist()
+        df_tarefas_exibicao = df_tarefas_exibicao[df_tarefas_exibicao["Cliente"].isin(empresas_da_carteira) | (df_tarefas_exibicao["Cliente"] == cliente_sel)]
+
+    if not df_tarefas_exibicao.empty:
+        for idx_t, t in df_tarefas_exibicao.iterrows():
             if pd.notna(t.get("Data_Vencimento")):
                 try:
                     dt_v = dt.strptime(str(t["Data_Vencimento"])[:10], "%Y-%m-%d").date()
@@ -744,7 +759,6 @@ if aba_selecionada == "Gerenciamento de Tarefas":
 # ABA 2: FUNIL DE VENDAS
 # =========================================================
 elif aba_selecionada == "Funil de Vendas":
-    # Layout do topo com Título à esquerda e Barra de Pesquisa logo acima do mini-card na direita
     col_topo_titulo, col_topo_busca = st.columns([2, 1])
     with col_topo_titulo:
         st.subheader(titulo_funil)
@@ -771,6 +785,17 @@ elif aba_selecionada == "Funil de Vendas":
             )
             
             with st.form(key=f"form_full_edit_horizontal_{cliente_edit_id}"):
+                etapas = list(PROB_MAP.keys())
+                
+                # ADICIONADO: Card / seletor de etapa do funil na página de edição geral
+                edit_etapa = st.selectbox(
+                    "Etapa do Funil de Vendas", 
+                    options=etapas, 
+                    index=etapas.index(row_edit["Etapa"]) if row_edit["Etapa"] in etapas else 0
+                )
+                
+                st.divider()
+
                 hc1, hc2, hc3 = st.columns(3)
                 with hc1:
                     edit_empresa = st.text_input("Empresa", value=row_edit["Empresa"])
@@ -845,6 +870,8 @@ elif aba_selecionada == "Funil de Vendas":
                     st.rerun()
 
                 if btn_salvar_alt:
+                    st.session_state.df_crm.loc[idx_df, "Etapa"] = edit_etapa
+                    st.session_state.df_crm.loc[idx_df, "Prob"] = PROB_MAP[edit_etapa]
                     st.session_state.df_crm.loc[idx_df, "Empresa"] = edit_empresa
                     st.session_state.df_crm.loc[idx_df, "Contato"] = edit_contato
                     st.session_state.df_crm.loc[idx_df, "Cargo"] = edit_cargo
@@ -878,7 +905,6 @@ elif aba_selecionada == "Funil de Vendas":
             st.markdown("</div>", unsafe_allow_html=True)
             st.divider()
 
-    # Aplica o filtro de pesquisa, se houver termo digitado
     df_funil_exibicao = df_filtered.copy()
     if termo_busca:
         termo_limpo = termo_busca.lower()
@@ -1403,7 +1429,7 @@ elif aba_selecionada == "+ Novo Cadastro":
                     "Empresa": nova_empresa,
                     "Cliente": novo_cliente,
                     "Etapa": nova_etapa,
-                    "Contato": novo_contato if novo_contato else "Não informado",
+                    "Contato": nova_contato if nova_contato else "Não informado",
                     "Cargo": novo_cargo if novo_cargo else "Não informado",
                     "Telefone": novo_telefone if novo_telefone else "Não informado",
                     "Email": nova_email if nova_email else "Não informado",
