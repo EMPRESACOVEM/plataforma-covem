@@ -787,7 +787,6 @@ elif aba_selecionada == "Funil de Vendas":
             with st.form(key=f"form_full_edit_horizontal_{cliente_edit_id}"):
                 etapas = list(PROB_MAP.keys())
                 
-                # ADICIONADO: Card / seletor de etapa do funil na página de edição geral
                 edit_etapa = st.selectbox(
                     "Etapa do Funil de Vendas", 
                     options=etapas, 
@@ -1403,7 +1402,7 @@ elif aba_selecionada == "+ Novo Cadastro":
             novo_contato = st.text_input("Contato / Nome")
             novo_cargo = st.text_input("Cargo")
             novo_telefone = st.text_input("Telefone de Contato *")
-            nova_email = st.text_input("E-mail Comercial")
+            novo_email = st.text_input("E-mail Comercial")
             
         with col_f2:
             nova_cidade = st.text_input("Cidade / Estado")
@@ -1429,10 +1428,10 @@ elif aba_selecionada == "+ Novo Cadastro":
                     "Empresa": nova_empresa,
                     "Cliente": novo_cliente,
                     "Etapa": nova_etapa,
-                    "Contato": nova_contato if nova_contato else "Não informado",
+                    "Contato": novo_contato if novo_contato else "Não informado",
                     "Cargo": novo_cargo if novo_cargo else "Não informado",
                     "Telefone": novo_telefone if novo_telefone else "Não informado",
-                    "Email": nova_email if nova_email else "Não informado",
+                    "Email": novo_email if novo_email else "Não informado",
                     "Cidade": nova_cidade if nova_cidade else "Não informado",
                     "Valor": nova_valor,
                     "Prob": PROB_MAP[nova_etapa],
