@@ -794,13 +794,19 @@ elif aba_selecionada == "Funil de Vendas":
                 hc1, hc2, hc3 = st.columns(3)
                 with hc1:
                     edit_empresa = st.text_input("Empresa", value=row_edit["Empresa"])
+                    
+                    # NOVO: Seleção de Carteira no Modal de Edição para corrigir caso salve errado
+                    carteira_atual_cliente = row_edit.get("Cliente", CARTEIRAS_COVEM[0])
+                    idx_carteira_edit = CARTEIRAS_COVEM.index(carteira_atual_cliente) if carteira_atual_cliente in CARTEIRAS_COVEM else 0
+                    edit_carteira = st.selectbox("Carteira / Marca", options=CARTEIRAS_COVEM, index=idx_carteira_edit)
+
                     edit_contato = st.text_input("Contato", value=row_edit["Contato"])
-                    edit_cargo = st.text_input("Cargo", value=row_edit["Cargo"])
                 with hc2:
+                    edit_cargo = st.text_input("Cargo", value=row_edit["Cargo"])
                     edit_tel = st.text_input("Telefone", value=row_edit["Telefone"])
                     edit_email = st.text_input("E-mail", value=row_edit["Email"])
-                    edit_cidade = st.text_input("Cidade", value=row_edit["Cidade"])
                 with hc3:
+                    edit_cidade = st.text_input("Cidade", value=row_edit["Cidade"])
                     edit_valor = st.number_input("Valor (R$)", value=float(row_edit["Valor"]), step=1000.0)
                     edit_vendedor = st.text_input("Vendedor", value=row_edit["Vendedor"])
                     
@@ -871,6 +877,7 @@ elif aba_selecionada == "Funil de Vendas":
                         st.session_state.df_crm.loc[idx_real, "Etapa"] = edit_etapa
                         st.session_state.df_crm.loc[idx_real, "Prob"] = PROB_MAP[edit_etapa]
                         st.session_state.df_crm.loc[idx_real, "Empresa"] = edit_empresa
+                        st.session_state.df_crm.loc[idx_real, "Cliente"] = edit_carteira  # Salvando a nova carteira escolhida
                         st.session_state.df_crm.loc[idx_real, "Contato"] = edit_contato
                         st.session_state.df_crm.loc[idx_real, "Cargo"] = edit_cargo
                         st.session_state.df_crm.loc[idx_real, "Telefone"] = edit_tel
@@ -951,6 +958,7 @@ elif aba_selecionada == "Funil de Vendas":
                         f"""
                         <div style="line-height: 1.4; margin-bottom: 8px;">
                             <span style="font-size: 13px;"><b>{row['Empresa']}</b></span><br>
+                            <span style="font-size: 11px; color: #38BDF8;">Carteira: {row.get('Cliente', 'N/A')}</span><br>
                             <span style="font-size: 12px; color: #94A3B8;">Contato: {row['Contato']}</span><br>
                             <span class="phone-highlight" style="font-size: 12px;">{row.get('Telefone', 'Não informado')}</span><br>
                             <hr style="margin: 6px 0; border-color: #334155;">
@@ -1338,10 +1346,15 @@ elif aba_selecionada == "Relatório Executivo":
             st.info("Nenhum valor em propostas ou projetos fechados para exibir no gráfico financeiro.")
 
 # =========================================================
-# ABA 5: + NOVO CADASTRO
+# ABA 5: + NOVO CADASTRO (SINCRONIZADO COM A CARTEIRA DA BARRA LATERAL)
 # =========================================================
 elif aba_selecionada == "+ Novo Cadastro":
-    st.subheader("+ Novo Cadastro Rápido")
+    # Lógica de Sincronização Automática da Carteira
+    default_carteira_idx = 0
+    if cliente_sel != "TODOS" and cliente_sel in CARTEIRAS_COVEM:
+        default_carteira_idx = CARTEIRAS_COVEM.index(cliente_sel)
+
+    st.subheader(f"+ Novo Cadastro Rápido ({f'Sincronizado com: {cliente_sel}' if cliente_sel != 'TODOS' else 'Geral'})")
     st.caption("Cadastre rapidamente uma nova empresa informando apenas os dados fundamentais.")
 
     with st.form("form_cadastro_rapido", clear_on_submit=True):
@@ -1352,7 +1365,7 @@ elif aba_selecionada == "+ Novo Cadastro":
             rapido_telefone = st.text_input("Telefone *")
 
         with col_r2:
-            rapido_carteira = st.selectbox("Carteira *", CARTEIRAS_COVEM, key="rapido_carteira")
+            rapido_carteira = st.selectbox("Carteira *", CARTEIRAS_COVEM, index=default_carteira_idx, key="rapido_carteira")
             rapido_etapa = st.selectbox("Etapa da Venda *", list(PROB_MAP.keys()), key="rapido_etapa")
 
         btn_salvar_rapido = st.form_submit_button("Cadastrar Rapidamente", use_container_width=True)
@@ -1363,7 +1376,6 @@ elif aba_selecionada == "+ Novo Cadastro":
             else:
                 novo_id = int(df["id"].max() + 1) if not df.empty and pd.notna(df["id"].max()) else 1
                 
-                # Variáveis opcionais / fallback seguras para cadastro rápido
                 nova_linha_rapida = {
                     "id": novo_id,
                     "Empresa": rapido_empresa,
@@ -1392,14 +1404,14 @@ elif aba_selecionada == "+ Novo Cadastro":
                 st.rerun()
 
     st.write("---")
-    st.subheader("Cadastrar Oportunidade Completa")
+    st.subheader(f"Cadastrar Oportunidade Completa ({f'Sincronizado com: {cliente_sel}' if cliente_sel != 'TODOS' else 'Geral'})")
     
     with st.form("form_oportunidade", clear_on_submit=True):
         col_f1, col_f2 = st.columns(2)
         
         with col_f1:
             nova_empresa = st.text_input("Nome da Empresa / Cliente *")
-            novo_cliente = st.selectbox("Marca / Carteira *", CARTEIRAS_COVEM)
+            novo_cliente = st.selectbox("Marca / Carteira *", CARTEIRAS_COVEM, index=default_carteira_idx, key="completo_carteira")
             novo_contato = st.text_input("Contato / Nome")
             novo_cargo = st.text_input("Cargo")
             novo_telefone = st.text_input("Telefone de Contato *")
@@ -1425,7 +1437,6 @@ elif aba_selecionada == "+ Novo Cadastro":
             else:
                 novo_id = int(df["id"].max() + 1) if not df.empty and pd.notna(df["id"].max()) else 1
                 
-                # Garantindo valores seguros (fallbacks) para variáveis de texto caso venham vazias do form
                 email_valido = nova_email if 'nova_email' in locals() and nova_email else "Não informado"
                 contato_valido = novo_contato if 'novo_contato' in locals() and novo_contato else "Não informado"
                 cargo_valido = novo_cargo if 'novo_cargo' in locals() and novo_cargo else "Não informado"
