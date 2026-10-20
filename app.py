@@ -80,28 +80,6 @@ st.markdown("""
             letter-spacing: -0.4px !important;
         }
 
-        /* Força a estilização completa e prioritária para os botões do Menu Principal */
-        div[data-testid="horizontal-block"] div[data-testid="column"] div.stButton > button,
-        div[data-testid="stHorizontalBlock"] div[data-testid="column"] div.stButton > button {
-            background-color: #000000 !important;
-            color: #FFFFFF !important;
-            border: 1px solid #1E293B !important;
-            border-top: 3px solid #38BDF8 !important;
-            min-height: 60px !important;
-            font-size: 15px !important;
-            font-weight: 700 !important;
-            border-radius: 8px !important;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3) !important;
-            width: 100% !important;
-        }
-
-        div[data-testid="horizontal-block"] div[data-testid="column"] div.stButton > button:hover,
-        div[data-testid="stHorizontalBlock"] div[data-testid="column"] div.stButton > button:hover {
-            background-color: #111827 !important;
-            border-color: #38BDF8 !important;
-            color: #38BDF8 !important;
-        }
-
         .badge-atrasada {
             background-color: #4A2024;
             color: #FCA5A5;
@@ -407,11 +385,10 @@ for i, nome_aba in enumerate(abas_disponiveis):
                 f"""
                 <style>
                 div[data-testid="column"]:nth-of-type({i+1}) div.stButton > button {{
-                    background-color: #111827 !important;
-                    color: #38BDF8 !important;
-                    border: 1px solid #38BDF8 !important;
-                    border-top: 3px solid #38BDF8 !important;
-                    font-weight: 700 !important;
+                    background-color: #26334D !important;
+                    color: #94A3B8 !important;
+                    border: 1px solid #475569 !important;
+                    font-weight: 500 !important;
                 }}
                 </style>
                 """,
@@ -797,6 +774,7 @@ elif aba_selecionada == "Funil de Vendas":
                 with hc1:
                     edit_empresa = st.text_input("Empresa", value=row_edit["Empresa"])
                     
+                    # NOVO: Seleção de Carteira no Modal de Edição para corrigir caso salve errado
                     carteira_atual_cliente = row_edit.get("Cliente", CARTEIRAS_COVEM[0])
                     idx_carteira_edit = CARTEIRAS_COVEM.index(carteira_atual_cliente) if carteira_atual_cliente in CARTEIRAS_COVEM else 0
                     edit_carteira = st.selectbox("Carteira / Marca", options=CARTEIRAS_COVEM, index=idx_carteira_edit)
@@ -878,7 +856,7 @@ elif aba_selecionada == "Funil de Vendas":
                         st.session_state.df_crm.loc[idx_real, "Etapa"] = edit_etapa
                         st.session_state.df_crm.loc[idx_real, "Prob"] = PROB_MAP[edit_etapa]
                         st.session_state.df_crm.loc[idx_real, "Empresa"] = edit_empresa
-                        st.session_state.df_crm.loc[idx_real, "Cliente"] = edit_carteira
+                        st.session_state.df_crm.loc[idx_real, "Cliente"] = edit_carteira  # Salvando a nova carteira escolhida
                         st.session_state.df_crm.loc[idx_real, "Contato"] = edit_contato
                         st.session_state.df_crm.loc[idx_real, "Cargo"] = edit_cargo
                         st.session_state.df_crm.loc[idx_real, "Telefone"] = edit_tel
@@ -1350,6 +1328,7 @@ elif aba_selecionada == "Relatório Executivo":
 # ABA 5: + NOVO CADASTRO (SINCRONIZADO COM A CARTEIRA DA BARRA LATERAL)
 # =========================================================
 elif aba_selecionada == "+ Novo Cadastro":
+    # Lógica de Sincronização Automática da Carteira
     default_carteira_idx = 0
     if cliente_sel != "TODOS" and cliente_sel in CARTEIRAS_COVEM:
         default_carteira_idx = CARTEIRAS_COVEM.index(cliente_sel)
