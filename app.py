@@ -28,7 +28,7 @@ COVEM_NAME = "GRUPO COVEM"
 CARTEIRAS_COVEM = ["BraClean", "QV Energia Solar", "Elleven"]
 
 # ---------------------------------------------------------
-# PALETA COVEM & ESTILIZAÇÃO CSS (MINICARDS EM PRETO E BRANCO, BADGES COM TRANSPARÊNCIA)
+# PALETA COVEM & ESTILIZAÇÃO CSS
 # ---------------------------------------------------------
 DEFAULT_COLORS = {
     "1. Prospecção": "#F472B6",          # Rosa Pastel suave
@@ -80,7 +80,7 @@ st.markdown("""
             letter-spacing: -0.4px !important;
         }
 
-        /* Estilização global de botões (minicards e botões do sistema) em Preto com Texto Branco */
+        /* Estilização global de botões em Preto com Texto Branco */
         div.stButton > button {
             background-color: #000000 !important;
             color: #FFFFFF !important;
@@ -91,6 +91,20 @@ st.markdown("""
             background-color: #1a1a1a !important;
             color: #FFFFFF !important;
             border: 1px solid #555555 !important;
+        }
+
+        /* Estilização específica para os botões de Excluir e Editar na Agenda Inferior (Cor Cinza com texto branco) */
+        div[data-testid="stVerticalBlock"] div[data-testid="column"] div.stButton > button {
+            background-color: #374151 !important;
+            color: #FFFFFF !important;
+            border: 1px solid #4B5563 !important;
+            font-weight: 600 !important;
+        }
+
+        div[data-testid="stVerticalBlock"] div[data-testid="column"] div.stButton > button:hover {
+            background-color: #4B5563 !important;
+            color: #FFFFFF !important;
+            border: 1px solid #6B7280 !important;
         }
 
         /* Estilização para Expanders */
@@ -507,7 +521,6 @@ def exibir_agenda_semana(df_tarefas, df_crm, cliente_selecionado):
                 with st.expander("Ver Tarefas Atrasadas"):
                     if not atrasadas.empty:
                         for _, row in atrasadas.iterrows():
-                            # Buscando o telefone correspondente à empresa/cliente da tarefa no CRM
                             nome_cli = row.get('Cliente', 'N/A')
                             telefone_resp = "Não informado"
                             match_crm = df_crm[(df_crm['Empresa'] == nome_cli) | (df_crm['Cliente'] == nome_cli)]
