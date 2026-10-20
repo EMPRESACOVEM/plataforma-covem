@@ -66,8 +66,10 @@ st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
+        /* Fundo geral da aplicação ajustado para combinar com o preto da logo */
         html, body, [class*="css"] {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+            background-color: #0E1117 !important;
         }
 
         .notranslate, [data-testid="stSidebar"], [data-baseweb="select"] {
@@ -355,11 +357,11 @@ st.sidebar.download_button(
 )
 
 # ---------------------------------------------------------
-# 1. LOGO CENTRALIZADA DA COVEM
+# 1. LOGO CENTRALIZADA MAIOR
 # ---------------------------------------------------------
 col_l1, col_l2, col_l3 = st.columns([1, 2, 1])
 with col_l2:
-    st.image("logo.jpeg", use_container_width=True)
+    st.image("logo.jpeg", width=400)
 
 st.divider()
 
