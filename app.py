@@ -28,7 +28,7 @@ COVEM_NAME = "GRUPO COVEM"
 CARTEIRAS_COVEM = ["BraClean", "QV Energia Solar", "Elleven"]
 
 # ---------------------------------------------------------
-# PALETA COVEM & ESTILIZAÇÃO CSS (Fundo Forçado)
+# PALETA COVEM & ESTILIZAÇÃO CSS
 # ---------------------------------------------------------
 DEFAULT_COLORS = {
     "1. Prospecção": "#F472B6",          # Rosa Pastel suave
@@ -65,11 +65,6 @@ if 'editando_agenda_idx' not in st.session_state:
 st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-
-        /* Força o fundo escuro padrão em toda a aplicação Streamlit */
-        .stApp {
-            background-color: #0E1117 !important;
-        }
 
         html, body, [class*="css"] {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
@@ -360,9 +355,9 @@ st.sidebar.download_button(
 )
 
 # ---------------------------------------------------------
-# 1. LOGO CENTRALIZADA BEM MAIOR
+# 1. LOGO CENTRALIZADA DA COVEM
 # ---------------------------------------------------------
-col_l1, col_l2, col_l3 = st.columns([1, 3, 1])
+col_l1, col_l2, col_l3 = st.columns([1, 2, 1])
 with col_l2:
     st.image("logo.jpeg", use_container_width=True)
 
@@ -487,7 +482,13 @@ def exibir_agenda_semana(df_tarefas, df_crm, cliente_selecionado):
                 with st.expander("Ver Tarefas Atrasadas"):
                     if not atrasadas.empty:
                         for _, row in atrasadas.iterrows():
-                            st.write(f"- **{row['Titulo']}** | Cliente: `{row.get('Cliente', 'N/A')}` | Vencimento: {row['Data_Vencimento'].strftime('%d/%m/%Y')}")
+                            # Busca o telefone do cliente correspondente no CRM
+                            tel_contato = "Não informado"
+                            match_crm = df_crm[df_crm["Empresa"].str.lower() == str(row.get('Cliente', '')).lower()]
+                            if not match_crm.empty:
+                                tel_contato = match_crm.iloc[0].get("Telefone", "Não informado")
+                            
+                            st.write(f"- **{row['Titulo']}** | Cliente: `{row.get('Cliente', 'N/A')}` | Tel: `{tel_contato}` | Vencimento: {row['Data_Vencimento'].strftime('%d/%m/%Y')}")
                     else:
                         st.write("Nenhuma tarefa atrasada.")
 
@@ -496,7 +497,13 @@ def exibir_agenda_semana(df_tarefas, df_crm, cliente_selecionado):
                 with st.expander("Ver Tarefas para Hoje"):
                     if not hoje_tarefas.empty:
                         for _, row in hoje_tarefas.iterrows():
-                            st.write(f"- **{row['Titulo']}** | Cliente: `{row.get('Cliente', 'N/A')}`")
+                            # Busca o telefone do cliente correspondente no CRM
+                            tel_contato = "Não informado"
+                            match_crm = df_crm[df_crm["Empresa"].str.lower() == str(row.get('Cliente', '')).lower()]
+                            if not match_crm.empty:
+                                tel_contato = match_crm.iloc[0].get("Telefone", "Não informado")
+                                
+                            st.write(f"- **{row['Titulo']}** | Cliente: `{row.get('Cliente', 'N/A')}` | Tel: `{tel_contato}`")
                     else:
                         st.write("Nenhuma tarefa para hoje.")
 
@@ -526,7 +533,8 @@ def exibir_agenda_semana(df_tarefas, df_crm, cliente_selecionado):
                                 dt_f_br = dt.strptime(raw_dt, "%Y-%m-%d").strftime("%d/%m/%Y")
                             except:
                                 dt_f_br = "Data Inválida"
-                            st.write(f"- **{row['Empresa']}** | Contato: `{row['Contato']}` | Data: {dt_f_br}")
+                            tel_contato = row.get('Telefone', 'Não informado')
+                            st.write(f"- **{row['Empresa']}** | Contato: `{row['Contato']}` | Tel: `{tel_contato}` | Data: {dt_f_br}")
                     else:
                         st.write("Nenhum follow-up atrasado.")
 
@@ -535,7 +543,8 @@ def exibir_agenda_semana(df_tarefas, df_crm, cliente_selecionado):
                 with st.expander("Ver Follow-ups para Hoje"):
                     if not c_hoje.empty:
                         for _, row in c_hoje.iterrows():
-                            st.write(f"- **{row['Empresa']}** | Contato: `{row['Contato']}`")
+                            tel_contato = row.get('Telefone', 'Não informado')
+                            st.write(f"- **{row['Empresa']}** | Contato: `{row['Contato']}` | Tel: `{tel_contato}`")
                     else:
                         st.write("Nenhum follow-up para hoje.")
 
@@ -641,13 +650,19 @@ if aba_selecionada == "Gerenciamento de Tarefas":
                 try:
                     dt_v = dt.strptime(str(t["Data_Vencimento"])[:10], "%Y-%m-%d").date()
                     if hoje <= dt_v <= limite_data:
+                        # Busca o telefone correspondente
+                        tel_vinc = "Não informado"
+                        match_crm = st.session_state.df_crm[st.session_state.df_crm["Empresa"].str.lower() == str(t.get('Cliente', '')).lower()]
+                        if not match_crm.empty:
+                            tel_vinc = match_crm.iloc[0].get("Telefone", "Não informado")
+
                         eventos_futuros.append({
                             "origem": "tarefa",
                             "index_original": idx_t,
                             "Data_Formatada": dt_v.strftime("%d/%m/%Y"),
                             "Tipo": "Tarefa",
                             "Título / Ação": t["Titulo"],
-                            "Vinculado a": f"Cliente: {t.get('Cliente', 'Geral')}",
+                            "Vinculado a": f"Cliente: {t.get('Cliente', 'Geral')} | Tel: {tel_vinc}",
                             "Prioridade / Status": f"Prioridade: {t.get('Prioridade', 'Normal')}"
                         })
                 except:
@@ -666,7 +681,7 @@ if aba_selecionada == "Gerenciamento de Tarefas":
                             "Data_Formatada": dt_f.strftime("%d/%m/%Y"),
                             "Tipo": "Follow-up CRM",
                             "Título / Ação": c.get("Followup_Nota", "Contato Comercial"),
-                            "Vinculado a": f"Empresa: {c['Empresa']} ({c.get('Contato', 'Não informado')})",
+                            "Vinculado a": f"Empresa: {c['Empresa']} ({c.get('Contato', 'Não informado')}) | Tel: {c.get('Telefone', 'Não informado')}",
                             "Prioridade / Status": f"Etapa: {c['Etapa']}"
                         })
                 except:
@@ -779,7 +794,6 @@ elif aba_selecionada == "Funil de Vendas":
                 with hc1:
                     edit_empresa = st.text_input("Empresa", value=row_edit["Empresa"])
                     
-                    # NOVO: Seleção de Carteira no Modal de Edição para corrigir caso salve errado
                     carteira_atual_cliente = row_edit.get("Cliente", CARTEIRAS_COVEM[0])
                     idx_carteira_edit = CARTEIRAS_COVEM.index(carteira_atual_cliente) if carteira_atual_cliente in CARTEIRAS_COVEM else 0
                     edit_carteira = st.selectbox("Carteira / Marca", options=CARTEIRAS_COVEM, index=idx_carteira_edit)
@@ -861,7 +875,7 @@ elif aba_selecionada == "Funil de Vendas":
                         st.session_state.df_crm.loc[idx_real, "Etapa"] = edit_etapa
                         st.session_state.df_crm.loc[idx_real, "Prob"] = PROB_MAP[edit_etapa]
                         st.session_state.df_crm.loc[idx_real, "Empresa"] = edit_empresa
-                        st.session_state.df_crm.loc[idx_real, "Cliente"] = edit_carteira  # Salvando a nova carteira escolhida
+                        st.session_state.df_crm.loc[idx_real, "Cliente"] = edit_carteira
                         st.session_state.df_crm.loc[idx_real, "Contato"] = edit_contato
                         st.session_state.df_crm.loc[idx_real, "Cargo"] = edit_cargo
                         st.session_state.df_crm.loc[idx_real, "Telefone"] = edit_tel
@@ -1333,7 +1347,6 @@ elif aba_selecionada == "Relatório Executivo":
 # ABA 5: + NOVO CADASTRO (SINCRONIZADO COM A CARTEIRA DA BARRA LATERAL)
 # =========================================================
 elif aba_selecionada == "+ Novo Cadastro":
-    # Lógica de Sincronização Automática da Carteira
     default_carteira_idx = 0
     if cliente_sel != "TODOS" and cliente_sel in CARTEIRAS_COVEM:
         default_carteira_idx = CARTEIRAS_COVEM.index(cliente_sel)
