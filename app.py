@@ -475,6 +475,18 @@ def exibir_agenda_semana(df_tarefas, df_crm, cliente_selecionado):
             atrasadas = pendentes[pendentes["Data_Vencimento"] < hoje]
             hoje_tarefas = pendentes[pendentes["Data_Vencimento"] == hoje]
 
+            # Função auxiliar para buscar o telefone no CRM correspondente à empresa/cliente da tarefa
+            def buscar_telefone(nome_cliente):
+                if pd.isna(nome_cliente) or not nome_cliente:
+                    return "Não informado"
+                match = df_crm[df_crm["Empresa"].astype(str).str.lower() == str(nome_cliente).lower()]
+                if not match.empty:
+                    return match.iloc[0].get("Telefone", "Não informado")
+                match_contato = df_crm[df_crm["Contato"].astype(str).str.lower() == str(nome_cliente).lower()]
+                if not match_contato.empty:
+                    return match_contato.iloc[0].get("Telefone", "Não informado")
+                return "Não informado"
+
             col_atraso, col_hoje = st.columns(2)
 
             with col_atraso:
@@ -482,7 +494,9 @@ def exibir_agenda_semana(df_tarefas, df_crm, cliente_selecionado):
                 with st.expander("Ver Tarefas Atrasadas"):
                     if not atrasadas.empty:
                         for _, row in atrasadas.iterrows():
-                            st.write(f"- **{row['Titulo']}** | Cliente: `{row.get('Cliente', 'N/A')}` | Vencimento: {row['Data_Vencimento'].strftime('%d/%m/%Y')}")
+                            cli = row.get('Cliente', 'N/A')
+                            tel = buscar_telefone(cli)
+                            st.markdown(f"- **{row['Titulo']}** | Cliente: `{cli}` | Tel: <span class='phone-highlight'>{tel}</span> | Vencimento: {row['Data_Vencimento'].strftime('%d/%m/%Y')}", unsafe_allow_html=True)
                     else:
                         st.write("Nenhuma tarefa atrasada.")
 
@@ -491,7 +505,9 @@ def exibir_agenda_semana(df_tarefas, df_crm, cliente_selecionado):
                 with st.expander("Ver Tarefas para Hoje"):
                     if not hoje_tarefas.empty:
                         for _, row in hoje_tarefas.iterrows():
-                            st.write(f"- **{row['Titulo']}** | Cliente: `{row.get('Cliente', 'N/A')}`")
+                            cli = row.get('Cliente', 'N/A')
+                            tel = buscar_telefone(cli)
+                            st.markdown(f"- **{row['Titulo']}** | Cliente: `{cli}` | Tel: <span class='phone-highlight'>{tel}</span>", unsafe_allow_html=True)
                     else:
                         st.write("Nenhuma tarefa para hoje.")
 
@@ -521,7 +537,8 @@ def exibir_agenda_semana(df_tarefas, df_crm, cliente_selecionado):
                                 dt_f_br = dt.strptime(raw_dt, "%Y-%m-%d").strftime("%d/%m/%Y")
                             except:
                                 dt_f_br = "Data Inválida"
-                            st.write(f"- **{row['Empresa']}** | Contato: `{row['Contato']}` | Data: {dt_f_br}")
+                            tel = row.get('Telefone', 'Não informado')
+                            st.markdown(f"- **{row['Empresa']}** | Contato: `{row['Contato']}` | Tel: <span class='phone-highlight'>{tel}</span> | Data: {dt_f_br}", unsafe_allow_html=True)
                     else:
                         st.write("Nenhum follow-up atrasado.")
 
@@ -530,7 +547,8 @@ def exibir_agenda_semana(df_tarefas, df_crm, cliente_selecionado):
                 with st.expander("Ver Follow-ups para Hoje"):
                     if not c_hoje.empty:
                         for _, row in c_hoje.iterrows():
-                            st.write(f"- **{row['Empresa']}** | Contato: `{row['Contato']}`")
+                            tel = row.get('Telefone', 'Não informado')
+                            st.markdown(f"- **{row['Empresa']}** | Contato: `{row['Contato']}` | Tel: <span class='phone-highlight'>{tel}</span>", unsafe_allow_html=True)
                     else:
                         st.write("Nenhum follow-up para hoje.")
 
@@ -774,7 +792,6 @@ elif aba_selecionada == "Funil de Vendas":
                 with hc1:
                     edit_empresa = st.text_input("Empresa", value=row_edit["Empresa"])
                     
-                    # NOVO: Seleção de Carteira no Modal de Edição para corrigir caso salve errado
                     carteira_atual_cliente = row_edit.get("Cliente", CARTEIRAS_COVEM[0])
                     idx_carteira_edit = CARTEIRAS_COVEM.index(carteira_atual_cliente) if carteira_atual_cliente in CARTEIRAS_COVEM else 0
                     edit_carteira = st.selectbox("Carteira / Marca", options=CARTEIRAS_COVEM, index=idx_carteira_edit)
@@ -856,7 +873,7 @@ elif aba_selecionada == "Funil de Vendas":
                         st.session_state.df_crm.loc[idx_real, "Etapa"] = edit_etapa
                         st.session_state.df_crm.loc[idx_real, "Prob"] = PROB_MAP[edit_etapa]
                         st.session_state.df_crm.loc[idx_real, "Empresa"] = edit_empresa
-                        st.session_state.df_crm.loc[idx_real, "Cliente"] = edit_carteira  # Salvando a nova carteira escolhida
+                        st.session_state.df_crm.loc[idx_real, "Cliente"] = edit_carteira
                         st.session_state.df_crm.loc[idx_real, "Contato"] = edit_contato
                         st.session_state.df_crm.loc[idx_real, "Cargo"] = edit_cargo
                         st.session_state.df_crm.loc[idx_real, "Telefone"] = edit_tel
@@ -1328,7 +1345,6 @@ elif aba_selecionada == "Relatório Executivo":
 # ABA 5: + NOVO CADASTRO (SINCRONIZADO COM A CARTEIRA DA BARRA LATERAL)
 # =========================================================
 elif aba_selecionada == "+ Novo Cadastro":
-    # Lógica de Sincronização Automática da Carteira
     default_carteira_idx = 0
     if cliente_sel != "TODOS" and cliente_sel in CARTEIRAS_COVEM:
         default_carteira_idx = CARTEIRAS_COVEM.index(cliente_sel)
