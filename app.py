@@ -5,6 +5,7 @@ import io
 import os
 import urllib.parse
 import datetime
+import base64
 from datetime import datetime as dt, date, timedelta
 from pathlib import Path
 from streamlit_gsheets import GSheetsConnection
@@ -15,11 +16,12 @@ st.set_page_config(
     layout="wide"
 )
 
-# Caminho para arquivos secundários locais (Tarefas, Histórico, Financeiro)
+# Caminho para arquivos secundários locais
 BASE_DIR = Path(__file__).parent if "__file__" in locals() else Path.cwd()
 ARQUIVO_TAREFAS = BASE_DIR / "banco_tarefas_covem.xlsx"
 ARQUIVO_HISTORICO = BASE_DIR / "banco_historico_covem.xlsx"
 ARQUIVO_FINANCEIRO = BASE_DIR / "banco_financeiro_covem.xlsx"
+ARQUIVO_FUNDO = BASE_DIR / "fundo plataforma.jpg"
 
 # Nome Oficial do Grupo
 COVEM_NAME = "GRUPO COVEM"
@@ -28,7 +30,7 @@ COVEM_NAME = "GRUPO COVEM"
 CARTEIRAS_COVEM = ["BraClean", "QV Energia Solar", "Elleven"]
 
 # ---------------------------------------------------------
-# PALETA COVEM & ESTILIZAÇÃO CSS
+# PALETA COVEM & ESTILIZAÇÃO CSS (COM IMAGEM DE FUNDO LOCAL)
 # ---------------------------------------------------------
 DEFAULT_COLORS = {
     "1. Prospecção": "#F472B6",          # Rosa Pastel suave
@@ -50,96 +52,124 @@ CORES_PERDAS = {
 if 'funnel_colors' not in st.session_state:
     st.session_state.funnel_colors = DEFAULT_COLORS.copy()
 
-# Inicializa o estado da aba ativa se não existir
 if 'menu_ativo' not in st.session_state:
     st.session_state.menu_ativo = "Gerenciamento de Tarefas"
 
-# Inicializa o estado da sub-aba em Tarefas se não existir
 if 'sub_menu_tarefas' not in st.session_state:
     st.session_state.sub_menu_tarefas = "Tarefas"
 
-# Inicializa o estado de edição da tabela de agenda se não existir
 if 'editando_agenda_idx' not in st.session_state:
     st.session_state.editando_agenda_idx = None
 
-st.markdown("""
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+# Função para carregar a imagem de fundo local via Base64
+def aplicar_fundo_personalizado(image_path):
+    css_fundo = ""
+    if image_path.exists():
+        try:
+            with open(image_path, "rb") as f:
+                data = f.read()
+            encoded = base64.b64encode(data).decode()
+            css_fundo = f"""
+            .stApp {{
+                background-image: linear-gradient(rgba(5, 11, 24, 0.80), rgba(5, 11, 24, 0.80)), url("data:image/jpeg;base64,{encoded}");
+                background-size: cover;
+                background-position: center;
+                background-repeat: no-repeat;
+                background-attachment: fixed;
+            }}
+            """
+        except Exception:
+            pass
+            
+    # Estilização geral do aplicativo
+    st.markdown(f"""
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
-        html, body, [class*="css"] {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
-        }
+            html, body, [class*="css"] {{
+                font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+            }}
 
-        .notranslate, [data-testid="stSidebar"], [data-baseweb="select"] {
-            translate: no !important;
-        }
+            .notranslate, [data-testid="stSidebar"], [data-baseweb="select"] {{
+                translate: no !important;
+            }}
 
-        h1, h2, h3, h4 {
-            font-family: 'Inter', sans-serif !important;
-            font-weight: 700 !important;
-            letter-spacing: -0.4px !important;
-        }
+            {css_fundo}
 
-        .badge-atrasada {
-            background-color: #4A2024;
-            color: #FCA5A5;
-            border: 1px solid #EF4444;
-            padding: 8px 16px;
-            border-radius: 6px;
-            font-size: 13px;
-            font-weight: 600;
-            display: inline-block;
-            text-align: center;
-            width: 100%;
-        }
+            h1, h2, h3, h4, h5, h6, p, label, .streamlit-expanderHeader {{
+                font-family: 'Inter', sans-serif !important;
+                font-weight: 700 !important;
+                letter-spacing: -0.4px !important;
+                color: #FFFFFF !important;
+            }}
 
-        .badge-hoje {
-            background-color: #3F2E04;
-            color: #FDE047;
-            border: 1px solid #EAB308;
-            padding: 8px 16px;
-            border-radius: 6px;
-            font-size: 13px;
-            font-weight: 600;
-            display: inline-block;
-            text-align: center;
-            width: 100%;
-        }
+            [data-testid="stSidebar"] {{
+                background-color: rgba(15, 23, 42, 0.92) !important;
+            }}
 
-        .phone-highlight {
-            color: #38BDF8;
-            font-weight: 600;
-        }
+            .badge-atrasada {{
+                background-color: #4A2024;
+                color: #FCA5A5;
+                border: 1px solid #EF4444;
+                padding: 8px 16px;
+                border-radius: 6px;
+                font-size: 13px;
+                font-weight: 600;
+                display: inline-block;
+                text-align: center;
+                width: 100%;
+            }}
 
-        div[data-testid="stVerticalBlock"] {
-            gap: 2px !important;
-        }
-        
-        div[data-testid="stExpander"] {
-            margin-top: 12px !important;
-            margin-bottom: 8px !important;
-            border: 1px solid #334155 !important;
-            background-color: #0F172A !important;
-        }
+            .badge-hoje {{
+                background-color: #3F2E04;
+                color: #FDE047;
+                border: 1px solid #EAB308;
+                padding: 8px 16px;
+                border-radius: 6px;
+                font-size: 13px;
+                font-weight: 600;
+                display: inline-block;
+                text-align: center;
+                width: 100%;
+            }}
 
-        div[data-testid="stExpander"] details summary {
-            padding-top: 8px !important;
-            padding-bottom: 8px !important;
-        }
+            .phone-highlight {{
+                color: #38BDF8;
+                font-weight: 600;
+            }}
 
-        div[data-testid="stMetricValue"] {
-            font-family: 'Inter', sans-serif !important;
-            font-size: 22px !important;
-            font-weight: 700 !important;
-            color: #FFFFFF !important;
-        }
+            div[data-testid="stVerticalBlock"] {{
+                gap: 2px !important;
+            }}
+            
+            div[data-testid="stExpander"] {{
+                margin-top: 12px !important;
+                margin-bottom: 8px !important;
+                border: 1px solid #334155 !important;
+                background-color: rgba(15, 23, 42, 0.85) !important;
+            }}
 
-        div[data-testid="stMetricLabel"] {
-            font-family: 'Inter', sans-serif !important;
-            font-size: 12px !important;
-        }
-    </style>
-""", unsafe_allow_html=True)
+            div[data-testid="stExpander"] details summary {{
+                padding-top: 8px !important;
+                padding-bottom: 8px !important;
+            }}
+
+            div[data-testid="stMetricValue"] {{
+                font-family: 'Inter', sans-serif !important;
+                font-size: 22px !important;
+                font-weight: 700 !important;
+                color: #FFFFFF !important;
+            }}
+
+            div[data-testid="stMetricLabel"] {{
+                font-family: 'Inter', sans-serif !important;
+                font-size: 12px !important;
+            }}
+        </style>
+    """, unsafe_allow_html=True)
+
+# Aplica o fundo e os estilos
+aplicar_fundo_personalizado(ARQUIVO_FUNDO)
 
 PROB_MAP = {
     "1. Prospecção": 0.20,
@@ -408,7 +438,7 @@ st.markdown("""
 aba_selecionada = st.session_state.menu_ativo
 
 # ---------------------------------------------------------
-# FUNÇÃO DE RENDERIZAÇÃO DA AGENDA DA SEMANA (FILTRADA POR EMPRESA SELECIONADA)
+# FUNÇÃO DE RENDERIZAÇÃO DA AGENDA DA SEMANA
 # ---------------------------------------------------------
 def exibir_agenda_semana(df_tarefas, df_crm, cliente_selecionado):
     st.markdown('<div style="margin-top: 4px;"></div>', unsafe_allow_html=True)
@@ -475,18 +505,6 @@ def exibir_agenda_semana(df_tarefas, df_crm, cliente_selecionado):
             atrasadas = pendentes[pendentes["Data_Vencimento"] < hoje]
             hoje_tarefas = pendentes[pendentes["Data_Vencimento"] == hoje]
 
-            # Função auxiliar para buscar o telefone no CRM correspondente à empresa/cliente da tarefa
-            def buscar_telefone(nome_cliente):
-                if pd.isna(nome_cliente) or not nome_cliente:
-                    return "Não informado"
-                match = df_crm[df_crm["Empresa"].astype(str).str.lower() == str(nome_cliente).lower()]
-                if not match.empty:
-                    return match.iloc[0].get("Telefone", "Não informado")
-                match_contato = df_crm[df_crm["Contato"].astype(str).str.lower() == str(nome_cliente).lower()]
-                if not match_contato.empty:
-                    return match_contato.iloc[0].get("Telefone", "Não informado")
-                return "Não informado"
-
             col_atraso, col_hoje = st.columns(2)
 
             with col_atraso:
@@ -494,9 +512,7 @@ def exibir_agenda_semana(df_tarefas, df_crm, cliente_selecionado):
                 with st.expander("Ver Tarefas Atrasadas"):
                     if not atrasadas.empty:
                         for _, row in atrasadas.iterrows():
-                            cli = row.get('Cliente', 'N/A')
-                            tel = buscar_telefone(cli)
-                            st.markdown(f"- **{row['Titulo']}** | Cliente: `{cli}` | Tel: <span class='phone-highlight'>{tel}</span> | Vencimento: {row['Data_Vencimento'].strftime('%d/%m/%Y')}", unsafe_allow_html=True)
+                            st.write(f"- **{row['Titulo']}** | Cliente: `{row.get('Cliente', 'N/A')}` | Vencimento: {row['Data_Vencimento'].strftime('%d/%m/%Y')}")
                     else:
                         st.write("Nenhuma tarefa atrasada.")
 
@@ -505,9 +521,7 @@ def exibir_agenda_semana(df_tarefas, df_crm, cliente_selecionado):
                 with st.expander("Ver Tarefas para Hoje"):
                     if not hoje_tarefas.empty:
                         for _, row in hoje_tarefas.iterrows():
-                            cli = row.get('Cliente', 'N/A')
-                            tel = buscar_telefone(cli)
-                            st.markdown(f"- **{row['Titulo']}** | Cliente: `{cli}` | Tel: <span class='phone-highlight'>{tel}</span>", unsafe_allow_html=True)
+                            st.write(f"- **{row['Titulo']}** | Cliente: `{row.get('Cliente', 'N/A')}`")
                     else:
                         st.write("Nenhuma tarefa para hoje.")
 
@@ -537,8 +551,7 @@ def exibir_agenda_semana(df_tarefas, df_crm, cliente_selecionado):
                                 dt_f_br = dt.strptime(raw_dt, "%Y-%m-%d").strftime("%d/%m/%Y")
                             except:
                                 dt_f_br = "Data Inválida"
-                            tel = row.get('Telefone', 'Não informado')
-                            st.markdown(f"- **{row['Empresa']}** | Contato: `{row['Contato']}` | Tel: <span class='phone-highlight'>{tel}</span> | Data: {dt_f_br}", unsafe_allow_html=True)
+                            st.write(f"- **{row['Empresa']}** | Contato: `{row['Contato']}` | Data: {dt_f_br}")
                     else:
                         st.write("Nenhum follow-up atrasado.")
 
@@ -547,8 +560,7 @@ def exibir_agenda_semana(df_tarefas, df_crm, cliente_selecionado):
                 with st.expander("Ver Follow-ups para Hoje"):
                     if not c_hoje.empty:
                         for _, row in c_hoje.iterrows():
-                            tel = row.get('Telefone', 'Não informado')
-                            st.markdown(f"- **{row['Empresa']}** | Contato: `{row['Contato']}` | Tel: <span class='phone-highlight'>{tel}</span>", unsafe_allow_html=True)
+                            st.write(f"- **{row['Empresa']}** | Contato: `{row['Contato']}`")
                     else:
                         st.write("Nenhum follow-up para hoje.")
 
@@ -771,7 +783,7 @@ elif aba_selecionada == "Funil de Vendas":
             
             st.markdown(
                 f"""
-                <div style="background-color: #0F172A; border: 2px solid #38BDF8; padding: 25px; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 4px 12px rgba(56, 189, 248, 0.15);">
+                <div style="background-color: rgba(15, 23, 42, 0.95); border: 2px solid #38BDF8; padding: 25px; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 4px 12px rgba(56, 189, 248, 0.15);">
                     <h3 style="color: #38BDF8; margin-top: 0; margin-bottom: 20px; font-weight: 700;">Ficha Completa & Linha do Tempo: {row_edit['Empresa']}</h3>
                 """,
                 unsafe_allow_html=True
@@ -924,7 +936,7 @@ elif aba_selecionada == "Funil de Vendas":
         with cols[idx]:
             st.markdown(
                 f"""
-                <div style="background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%); border: 1px solid #334155; border-top: 4px solid {cor_header}; padding: 8px; border-radius: 6px; text-align: center; margin-bottom: 16px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
+                <div style="background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.9) 100%); border: 1px solid #334155; border-top: 4px solid {cor_header}; padding: 8px; border-radius: 6px; text-align: center; margin-bottom: 16px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
                     <b style="color: #F8FAFC; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">{etapa}</b>
                 </div>
                 """, 
@@ -938,7 +950,7 @@ elif aba_selecionada == "Funil de Vendas":
                 cliente_id = int(row['id'])
                 
                 st.markdown(f"""
-                    <div style="border-left: 4px solid {cor_header}; background-color: #111C31; border-top: 1px solid #1E293B; border-right: 1px solid #1E293B; border-bottom: 1px solid #1E293B; border-radius: 4px; margin-bottom: 6px; padding: 2px;">
+                    <div style="border-left: 4px solid {cor_header}; background-color: rgba(17, 28, 49, 0.85); border-top: 1px solid #1E293B; border-right: 1px solid #1E293B; border-bottom: 1px solid #1E293B; border-radius: 4px; margin-bottom: 6px; padding: 2px;">
                 """, unsafe_allow_html=True)
                 
                 with st.expander(f"{row['Empresa']}"):
@@ -1041,7 +1053,7 @@ elif aba_selecionada == "Dashboard":
         with cols_m[i]:
             st.markdown(
                 f"""
-                <div style="background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%); border: 1px solid #334155; border-top: 4px solid {cor_header}; padding: 10px; border-radius: 8px; text-align: center; margin-bottom: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+                <div style="background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.9) 100%); border: 1px solid #334155; border-top: 4px solid {cor_header}; padding: 10px; border-radius: 8px; text-align: center; margin-bottom: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
                     <b style="color: #F8FAFC; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">{etapa}</b>
                 </div>
                 """, 
@@ -1052,7 +1064,7 @@ elif aba_selecionada == "Dashboard":
     with cols_m[-1]:
         st.markdown(
             """
-            <div style="background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%); border: 1px solid #334155; border-top: 4px solid #FFFFFF; padding: 10px; border-radius: 8px; text-align: center; margin-bottom: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+            <div style="background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.9) 100%); border: 1px solid #334155; border-top: 4px solid #FFFFFF; padding: 10px; border-radius: 8px; text-align: center; margin-bottom: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
                 <b style="color: #F8FAFC; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">TOTAL</b>
             </div>
             """, 
@@ -1082,8 +1094,8 @@ elif aba_selecionada == "Dashboard":
         )
         fig_pizza.update_layout(
             template="plotly_dark",
-            paper_bgcolor="#1E293B",
-            plot_bgcolor="#1E293B",
+            paper_bgcolor="rgba(30, 41, 59, 0.75)",
+            plot_bgcolor="rgba(30, 41, 59, 0.75)",
             font=dict(color="#FFFFFF", size=13),
             height=440
         )
@@ -1112,8 +1124,8 @@ elif aba_selecionada == "Dashboard":
             )
             fig_perda.update_layout(
                 template="plotly_dark",
-                paper_bgcolor="#1E293B",
-                plot_bgcolor="#1E293B",
+                paper_bgcolor="rgba(30, 41, 59, 0.75)",
+                plot_bgcolor="rgba(30, 41, 59, 0.75)",
                 font=dict(color="#FFFFFF", size=13),
                 height=380,
                 xaxis_title="Motivo de Perda",
@@ -1230,8 +1242,8 @@ elif aba_selecionada == "Relatório Executivo":
         )
         fig_linha_atv.update_layout(
             template="plotly_dark",
-            paper_bgcolor="#1E293B",
-            plot_bgcolor="#1E293B",
+            paper_bgcolor="rgba(30, 41, 59, 0.75)",
+            plot_bgcolor="rgba(30, 41, 59, 0.75)",
             font=dict(color="#FFFFFF", size=13),
             xaxis_title="MÊS / ANO",
             yaxis_title="QUANTIDADE",
@@ -1328,8 +1340,8 @@ elif aba_selecionada == "Relatório Executivo":
             )
             fig_linha_fin.update_layout(
                 template="plotly_dark",
-                paper_bgcolor="#1E293B",
-                plot_bgcolor="#1E293B",
+                paper_bgcolor="rgba(30, 41, 59, 0.75)",
+                plot_bgcolor="rgba(30, 41, 59, 0.75)",
                 font=dict(color="#FFFFFF", size=13),
                 xaxis_title="MÊS / ANO",
                 yaxis_title="VALOR (R$)",
@@ -1342,7 +1354,7 @@ elif aba_selecionada == "Relatório Executivo":
             st.info("Nenhum valor em propostas ou projetos fechados para exibir no gráfico financeiro.")
 
 # =========================================================
-# ABA 5: + NOVO CADASTRO (SINCRONIZADO COM A CARTEIRA DA BARRA LATERAL)
+# ABA 5: + NOVO CADASTRO
 # =========================================================
 elif aba_selecionada == "+ Novo Cadastro":
     default_carteira_idx = 0
