@@ -80,7 +80,7 @@ st.markdown("""
             letter-spacing: -0.4px !important;
         }
 
-        /* Estilização global de botões em Preto com Texto Branco */
+        /* Estilização global de botões padrão em Preto com Texto Branco */
         div.stButton > button {
             background-color: #000000 !important;
             color: #FFFFFF !important;
@@ -93,7 +93,7 @@ st.markdown("""
             border: 1px solid #555555 !important;
         }
 
-        /* Padronização dos botões/cards de Excluir e Editar para a cor padrão do popover (#262730) */
+        /* Padronização específica para o botão Excluir e o popover Editar na Agenda Inferior */
         div[data-testid="stVerticalBlock"] div[data-testid="column"] div.stButton > button,
         div[data-testid="stVerticalBlock"] div[data-testid="column"] div[data-testid="stPopover"] > button {
             background-color: #262730 !important;
