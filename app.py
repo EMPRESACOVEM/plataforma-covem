@@ -28,7 +28,7 @@ COVEM_NAME = "GRUPO COVEM"
 CARTEIRAS_COVEM = ["BraClean", "QV Energia Solar", "Elleven"]
 
 # ---------------------------------------------------------
-# PALETA COVEM & ESTILIZAÇÃO CSS
+# PALETA COVEM & ESTILIZAÇÃO CSS (MINICARDS E BOTÕES EM PRETO E BRANCO)
 # ---------------------------------------------------------
 DEFAULT_COLORS = {
     "1. Prospecção": "#F472B6",          # Rosa Pastel suave
@@ -80,9 +80,44 @@ st.markdown("""
             letter-spacing: -0.4px !important;
         }
 
+        /* Estilização global de botões (minicards e botões do sistema) em Preto com Texto Branco */
+        div.stButton > button {
+            background-color: #000000 !important;
+            color: #FFFFFF !important;
+            border: 1px solid #333333 !important;
+        }
+        
+        div.stButton > button:hover {
+            background-color: #1a1a1a !important;
+            color: #FFFFFF !important;
+            border: 1px solid #555555 !important;
+        }
+
+        /* Estilização para Expanders (Ver tarefas atrasadas, Ver tarefas para hoje, Criar nova tarefa, etc.) */
+        div[data-testid="stExpander"] {
+            margin-top: 12px !important;
+            margin-bottom: 8px !important;
+            border: 1px solid #333333 !important;
+            background-color: #000000 !important;
+            color: #FFFFFF !important;
+            border-radius: 6px !important;
+        }
+
+        div[data-testid="stExpander"] details summary {
+            padding-top: 8px !important;
+            padding-bottom: 8px !important;
+            background-color: #000000 !important;
+            color: #FFFFFF !important;
+        }
+
+        div[data-testid="stExpander"] details summary p, 
+        div[data-testid="stExpander"] details summary span {
+            color: #FFFFFF !important;
+        }
+
         .badge-atrasada {
-            background-color: #4A2024;
-            color: #FCA5A5;
+            background-color: #000000;
+            color: #FFFFFF;
             border: 1px solid #EF4444;
             padding: 8px 16px;
             border-radius: 6px;
@@ -94,8 +129,8 @@ st.markdown("""
         }
 
         .badge-hoje {
-            background-color: #3F2E04;
-            color: #FDE047;
+            background-color: #000000;
+            color: #FFFFFF;
             border: 1px solid #EAB308;
             padding: 8px 16px;
             border-radius: 6px;
@@ -113,18 +148,6 @@ st.markdown("""
 
         div[data-testid="stVerticalBlock"] {
             gap: 2px !important;
-        }
-        
-        div[data-testid="stExpander"] {
-            margin-top: 12px !important;
-            margin-bottom: 8px !important;
-            border: 1px solid #334155 !important;
-            background-color: #0F172A !important;
-        }
-
-        div[data-testid="stExpander"] details summary {
-            padding-top: 8px !important;
-            padding-bottom: 8px !important;
         }
 
         div[data-testid="stMetricValue"] {
@@ -385,10 +408,10 @@ for i, nome_aba in enumerate(abas_disponiveis):
                 f"""
                 <style>
                 div[data-testid="column"]:nth-of-type({i+1}) div.stButton > button {{
-                    background-color: #26334D !important;
-                    color: #94A3B8 !important;
-                    border: 1px solid #475569 !important;
-                    font-weight: 500 !important;
+                    background-color: #000000 !important;
+                    color: #FFFFFF !important;
+                    border: 2px solid #FFFFFF !important;
+                    font-weight: 700 !important;
                 }}
                 </style>
                 """,
@@ -423,10 +446,10 @@ def exibir_agenda_semana(df_tarefas, df_crm, cliente_selecionado):
                 """
                 <style>
                 div[data-testid="column"]:nth-of-type(1) div.stButton > button {
-                    background-color: #26334D !important;
-                    color: #94A3B8 !important;
-                    border: 1px solid #475569 !important;
-                    font-weight: 500 !important;
+                    background-color: #000000 !important;
+                    color: #FFFFFF !important;
+                    border: 2px solid #FFFFFF !important;
+                    font-weight: 700 !important;
                 }
                 </style>
                 """,
@@ -443,10 +466,10 @@ def exibir_agenda_semana(df_tarefas, df_crm, cliente_selecionado):
                 """
                 <style>
                 div[data-testid="column"]:nth-of-type(2) div.stButton > button {
-                    background-color: #26334D !important;
-                    color: #94A3B8 !important;
-                    border: 1px solid #475569 !important;
-                    font-weight: 500 !important;
+                    background-color: #000000 !important;
+                    color: #FFFFFF !important;
+                    border: 2px solid #FFFFFF !important;
+                    font-weight: 700 !important;
                 }
                 </style>
                 """,
@@ -482,13 +505,7 @@ def exibir_agenda_semana(df_tarefas, df_crm, cliente_selecionado):
                 with st.expander("Ver Tarefas Atrasadas"):
                     if not atrasadas.empty:
                         for _, row in atrasadas.iterrows():
-                            # Busca o telefone do cliente correspondente no CRM
-                            tel_contato = "Não informado"
-                            match_crm = df_crm[df_crm["Empresa"].str.lower() == str(row.get('Cliente', '')).lower()]
-                            if not match_crm.empty:
-                                tel_contato = match_crm.iloc[0].get("Telefone", "Não informado")
-                            
-                            st.write(f"- **{row['Titulo']}** | Cliente: `{row.get('Cliente', 'N/A')}` | Tel: `{tel_contato}` | Vencimento: {row['Data_Vencimento'].strftime('%d/%m/%Y')}")
+                            st.write(f"- **{row['Titulo']}** | Cliente: `{row.get('Cliente', 'N/A')}` | Vencimento: {row['Data_Vencimento'].strftime('%d/%m/%Y')}")
                     else:
                         st.write("Nenhuma tarefa atrasada.")
 
@@ -497,13 +514,7 @@ def exibir_agenda_semana(df_tarefas, df_crm, cliente_selecionado):
                 with st.expander("Ver Tarefas para Hoje"):
                     if not hoje_tarefas.empty:
                         for _, row in hoje_tarefas.iterrows():
-                            # Busca o telefone do cliente correspondente no CRM
-                            tel_contato = "Não informado"
-                            match_crm = df_crm[df_crm["Empresa"].str.lower() == str(row.get('Cliente', '')).lower()]
-                            if not match_crm.empty:
-                                tel_contato = match_crm.iloc[0].get("Telefone", "Não informado")
-                                
-                            st.write(f"- **{row['Titulo']}** | Cliente: `{row.get('Cliente', 'N/A')}` | Tel: `{tel_contato}`")
+                            st.write(f"- **{row['Titulo']}** | Cliente: `{row.get('Cliente', 'N/A')}`")
                     else:
                         st.write("Nenhuma tarefa para hoje.")
 
@@ -533,8 +544,7 @@ def exibir_agenda_semana(df_tarefas, df_crm, cliente_selecionado):
                                 dt_f_br = dt.strptime(raw_dt, "%Y-%m-%d").strftime("%d/%m/%Y")
                             except:
                                 dt_f_br = "Data Inválida"
-                            tel_contato = row.get('Telefone', 'Não informado')
-                            st.write(f"- **{row['Empresa']}** | Contato: `{row['Contato']}` | Tel: `{tel_contato}` | Data: {dt_f_br}")
+                            st.write(f"- **{row['Empresa']}** | Contato: `{row['Contato']}` | Data: {dt_f_br}")
                     else:
                         st.write("Nenhum follow-up atrasado.")
 
@@ -543,8 +553,7 @@ def exibir_agenda_semana(df_tarefas, df_crm, cliente_selecionado):
                 with st.expander("Ver Follow-ups para Hoje"):
                     if not c_hoje.empty:
                         for _, row in c_hoje.iterrows():
-                            tel_contato = row.get('Telefone', 'Não informado')
-                            st.write(f"- **{row['Empresa']}** | Contato: `{row['Contato']}` | Tel: `{tel_contato}`")
+                            st.write(f"- **{row['Empresa']}** | Contato: `{row['Contato']}`")
                     else:
                         st.write("Nenhum follow-up para hoje.")
 
@@ -650,19 +659,13 @@ if aba_selecionada == "Gerenciamento de Tarefas":
                 try:
                     dt_v = dt.strptime(str(t["Data_Vencimento"])[:10], "%Y-%m-%d").date()
                     if hoje <= dt_v <= limite_data:
-                        # Busca o telefone correspondente
-                        tel_vinc = "Não informado"
-                        match_crm = st.session_state.df_crm[st.session_state.df_crm["Empresa"].str.lower() == str(t.get('Cliente', '')).lower()]
-                        if not match_crm.empty:
-                            tel_vinc = match_crm.iloc[0].get("Telefone", "Não informado")
-
                         eventos_futuros.append({
                             "origem": "tarefa",
                             "index_original": idx_t,
                             "Data_Formatada": dt_v.strftime("%d/%m/%Y"),
                             "Tipo": "Tarefa",
                             "Título / Ação": t["Titulo"],
-                            "Vinculado a": f"Cliente: {t.get('Cliente', 'Geral')} | Tel: {tel_vinc}",
+                            "Vinculado a": f"Cliente: {t.get('Cliente', 'Geral')}",
                             "Prioridade / Status": f"Prioridade: {t.get('Prioridade', 'Normal')}"
                         })
                 except:
@@ -681,7 +684,7 @@ if aba_selecionada == "Gerenciamento de Tarefas":
                             "Data_Formatada": dt_f.strftime("%d/%m/%Y"),
                             "Tipo": "Follow-up CRM",
                             "Título / Ação": c.get("Followup_Nota", "Contato Comercial"),
-                            "Vinculado a": f"Empresa: {c['Empresa']} ({c.get('Contato', 'Não informado')}) | Tel: {c.get('Telefone', 'Não informado')}",
+                            "Vinculado a": f"Empresa: {c['Empresa']} ({c.get('Contato', 'Não informado')})",
                             "Prioridade / Status": f"Etapa: {c['Etapa']}"
                         })
                 except:
