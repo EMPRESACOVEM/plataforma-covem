@@ -968,11 +968,11 @@ elif aba_selecionada == "Funil de Vendas":
         cor_header = st.session_state.funnel_colors.get(etapa, "#3B82F6")
         
         with cols[idx]:
-            # Card do cabeçalho da etapa com fundo mais claro e elegante
+            # Cabeçalho da etapa com fonte maior e mais destacada
             st.markdown(
                 f"""
-                <div style="background: linear-gradient(135deg, rgba(30, 58, 95, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%); border: 1px solid #334155; border-top: 4px solid {cor_header}; padding: 10px; border-radius: 6px; text-align: center; margin-bottom: 16px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);">
-                    <b style="color: #FFFFFF; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">{etapa}</b>
+                <div style="background: linear-gradient(135deg, rgba(30, 58, 95, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%); border: 1px solid #334155; border-top: 5px solid {cor_header}; padding: 14px 10px; border-radius: 6px; text-align: center; margin-bottom: 16px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);">
+                    <b style="color: #FFFFFF; font-size: 13px; text-transform: uppercase; letter-spacing: 0.8px;">{etapa}</b>
                 </div>
                 """, 
                 unsafe_allow_html=True
