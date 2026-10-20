@@ -80,29 +80,6 @@ st.markdown("""
             letter-spacing: -0.4px !important;
         }
 
-        .title-covem {
-            font-family: 'Inter', sans-serif;
-            font-size: 42px;
-            font-weight: 800;
-            letter-spacing: 1.5px;
-            color: #F1F5F9;
-            text-align: center;
-            margin-bottom: 2px;
-            margin-top: -20px;
-            text-transform: uppercase;
-        }
-
-        .subtitle-covem {
-            font-family: 'Inter', sans-serif;
-            font-size: 14px;
-            font-weight: 500;
-            color: #94A3B8;
-            text-align: center;
-            letter-spacing: 0.5px;
-            margin-bottom: 25px;
-            text-transform: uppercase;
-        }
-
         .badge-atrasada {
             background-color: #4A2024;
             color: #FCA5A5;
@@ -378,10 +355,12 @@ st.sidebar.download_button(
 )
 
 # ---------------------------------------------------------
-# 1. TÍTULO PRINCIPAL: GRUPO COVEM
+# 1. LOGO CENTRALIZADA DA COVEM
 # ---------------------------------------------------------
-st.markdown(f'<div class="title-covem">{COVEM_NAME}</div>', unsafe_allow_html=True)
-st.markdown('<div class="subtitle-covem">Plataforma Executiva de Gestão Comercial e Operacional</div>', unsafe_allow_html=True)
+col_l1, col_l2, col_l3 = st.columns([1, 2, 1])
+with col_l2:
+    st.image("logo.jpeg", use_container_width=True)
+
 st.divider()
 
 # ---------------------------------------------------------
