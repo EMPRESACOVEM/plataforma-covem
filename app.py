@@ -380,9 +380,9 @@ st.sidebar.download_button(
 )
 
 # ---------------------------------------------------------
-# 1. LOGO CENTRALIZADA DA COVEM
+# 1. LOGO CENTRALIZADA DA COVEM (TAMANHO MAIOR)
 # ---------------------------------------------------------
-col_l1, col_l2, col_l3 = st.columns([1, 2, 1])
+col_l1, col_l2, col_l3 = st.columns([0.5, 3, 0.5])
 with col_l2:
     st.image("logo.jpeg", use_container_width=True)
 
@@ -507,7 +507,14 @@ def exibir_agenda_semana(df_tarefas, df_crm, cliente_selecionado):
                 with st.expander("Ver Tarefas Atrasadas"):
                     if not atrasadas.empty:
                         for _, row in atrasadas.iterrows():
-                            st.write(f"- **{row['Titulo']}** | Cliente: `{row.get('Cliente', 'N/A')}` | Vencimento: {row['Data_Vencimento'].strftime('%d/%m/%Y')}")
+                            # Buscando o contato correspondente à empresa/cliente da tarefa no CRM
+                            nome_cli = row.get('Cliente', 'N/A')
+                            contato_resp = "Não informado"
+                            match_crm = df_crm[(df_crm['Empresa'] == nome_cli) | (df_crm['Cliente'] == nome_cli)]
+                            if not match_crm.empty:
+                                contato_resp = match_crm.iloc[0].get('Contato', 'Não informado')
+                            
+                            st.write(f"- **{row['Titulo']}** | Empresa/Cliente: `{nome_cli}` | Contato: **{contato_resp}** | Vencimento: {row['Data_Vencimento'].strftime('%d/%m/%Y')}")
                     else:
                         st.write("Nenhuma tarefa atrasada.")
 
@@ -516,7 +523,13 @@ def exibir_agenda_semana(df_tarefas, df_crm, cliente_selecionado):
                 with st.expander("Ver Tarefas para Hoje"):
                     if not hoje_tarefas.empty:
                         for _, row in hoje_tarefas.iterrows():
-                            st.write(f"- **{row['Titulo']}** | Cliente: `{row.get('Cliente', 'N/A')}`")
+                            nome_cli = row.get('Cliente', 'N/A')
+                            contato_resp = "Não informado"
+                            match_crm = df_crm[(df_crm['Empresa'] == nome_cli) | (df_crm['Cliente'] == nome_cli)]
+                            if not match_crm.empty:
+                                contato_resp = match_crm.iloc[0].get('Contato', 'Não informado')
+
+                            st.write(f"- **{row['Titulo']}** | Empresa/Cliente: `{nome_cli}` | Contato: **{contato_resp}**")
                     else:
                         st.write("Nenhuma tarefa para hoje.")
 
@@ -546,7 +559,8 @@ def exibir_agenda_semana(df_tarefas, df_crm, cliente_selecionado):
                                 dt_f_br = dt.strptime(raw_dt, "%Y-%m-%d").strftime("%d/%m/%Y")
                             except:
                                 dt_f_br = "Data Inválida"
-                            st.write(f"- **{row['Empresa']}** | Contato: `{row['Contato']}` | Data: {dt_f_br}")
+                            contato_resp = row.get('Contato', 'Não informado')
+                            st.write(f"- **{row['Empresa']}** | Contato: **{contato_resp}** | Data: {dt_f_br}")
                     else:
                         st.write("Nenhum follow-up atrasado.")
 
@@ -555,7 +569,8 @@ def exibir_agenda_semana(df_tarefas, df_crm, cliente_selecionado):
                 with st.expander("Ver Follow-ups para Hoje"):
                     if not c_hoje.empty:
                         for _, row in c_hoje.iterrows():
-                            st.write(f"- **{row['Empresa']}** | Contato: `{row['Contato']}`")
+                            contato_resp = row.get('Contato', 'Não informado')
+                            st.write(f"- **{row['Empresa']}** | Contato: **{contato_resp}**")
                     else:
                         st.write("Nenhum follow-up para hoje.")
 
