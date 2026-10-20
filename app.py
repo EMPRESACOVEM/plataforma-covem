@@ -93,18 +93,21 @@ st.markdown("""
             border: 1px solid #555555 !important;
         }
 
-        /* Estilização específica para os botões de Excluir e Editar na Agenda Inferior (Cor Cinza com texto branco) */
-        div[data-testid="stVerticalBlock"] div[data-testid="column"] div.stButton > button {
-            background-color: #374151 !important;
+        /* Padronização dos botões/cards de Excluir e Editar para a cor padrão do popover (#262730) */
+        div[data-testid="stVerticalBlock"] div[data-testid="column"] div.stButton > button,
+        div[data-testid="stVerticalBlock"] div[data-testid="column"] div[data-testid="stPopover"] > button {
+            background-color: #262730 !important;
             color: #FFFFFF !important;
-            border: 1px solid #4B5563 !important;
-            font-weight: 600 !important;
+            border: 1px solid rgba(250, 250, 250, 0.2) !important;
+            font-weight: 500 !important;
+            border-radius: 8px !important;
         }
 
-        div[data-testid="stVerticalBlock"] div[data-testid="column"] div.stButton > button:hover {
-            background-color: #4B5563 !important;
+        div[data-testid="stVerticalBlock"] div[data-testid="column"] div.stButton > button:hover,
+        div[data-testid="stVerticalBlock"] div[data-testid="column"] div[data-testid="stPopover"] > button:hover {
+            background-color: #31333F !important;
             color: #FFFFFF !important;
-            border: 1px solid #6B7280 !important;
+            border: 1px solid rgba(250, 250, 250, 0.3) !important;
         }
 
         /* Estilização para Expanders */
