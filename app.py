@@ -28,7 +28,7 @@ COVEM_NAME = "GRUPO COVEM"
 CARTEIRAS_COVEM = ["BraClean", "QV Energia Solar", "Elleven"]
 
 # ---------------------------------------------------------
-# PALETA COVEM & ESTILIZAÇÃO CSS
+# PALETA COVEM & ESTILIZAÇÃO CSS (Fundo Forçado)
 # ---------------------------------------------------------
 DEFAULT_COLORS = {
     "1. Prospecção": "#F472B6",          # Rosa Pastel suave
@@ -65,6 +65,11 @@ if 'editando_agenda_idx' not in st.session_state:
 st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+        /* Força o fundo escuro padrão em toda a aplicação Streamlit */
+        .stApp {
+            background-color: #0E1117 !important;
+        }
 
         html, body, [class*="css"] {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
@@ -355,9 +360,9 @@ st.sidebar.download_button(
 )
 
 # ---------------------------------------------------------
-# 1. LOGO CENTRALIZADA DA COVEM
+# 1. LOGO CENTRALIZADA BEM MAIOR
 # ---------------------------------------------------------
-col_l1, col_l2, col_l3 = st.columns([1, 2, 1])
+col_l1, col_l2, col_l3 = st.columns([1, 3, 1])
 with col_l2:
     st.image("logo.jpeg", use_container_width=True)
 
