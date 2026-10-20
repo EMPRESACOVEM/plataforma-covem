@@ -80,61 +80,8 @@ st.markdown("""
             letter-spacing: -0.4px !important;
         }
 
-        /* Estilização global de botões padrão em Preto com Texto Branco */
-        div.stButton > button {
-            background-color: #000000 !important;
-            color: #FFFFFF !important;
-            border: 1px solid #333333 !important;
-        }
-        
-        div.stButton > button:hover {
-            background-color: #1a1a1a !important;
-            color: #FFFFFF !important;
-            border: 1px solid #555555 !important;
-        }
-
-        /* Padronização exata e prioritária para os botões e popovers da Agenda Inferior */
-        div[data-testid="stVerticalBlock"] div[data-testid="column"] div.stButton > button,
-        div[data-testid="stVerticalBlock"] div[data-testid="column"] div[data-testid="stPopover"] > button {
-            background-color: #262730 !important;
-            color: #FFFFFF !important;
-            border: 1px solid rgba(250, 250, 250, 0.2) !important;
-            font-weight: 500 !important;
-            border-radius: 8px !important;
-        }
-
-        div[data-testid="stVerticalBlock"] div[data-testid="column"] div.stButton > button:hover,
-        div[data-testid="stVerticalBlock"] div[data-testid="column"] div[data-testid="stPopover"] > button:hover {
-            background-color: #31333F !important;
-            color: #FFFFFF !important;
-            border: 1px solid rgba(250, 250, 250, 0.3) !important;
-        }
-
-        /* Estilização para Expanders */
-        div[data-testid="stExpander"] {
-            margin-top: 12px !important;
-            margin-bottom: 8px !important;
-            border: 1px solid #333333 !important;
-            background-color: #000000 !important;
-            color: #FFFFFF !important;
-            border-radius: 6px !important;
-        }
-
-        div[data-testid="stExpander"] details summary {
-            padding-top: 8px !important;
-            padding-bottom: 8px !important;
-            background-color: #000000 !important;
-            color: #FFFFFF !important;
-        }
-
-        div[data-testid="stExpander"] details summary p, 
-        div[data-testid="stExpander"] details summary span {
-            color: #FFFFFF !important;
-        }
-
-        /* Vermelho transparente para Tarefas Atrasadas */
         .badge-atrasada {
-            background-color: rgba(239, 68, 68, 0.25);
+            background-color: #4A2024;
             color: #FCA5A5;
             border: 1px solid #EF4444;
             padding: 8px 16px;
@@ -146,9 +93,8 @@ st.markdown("""
             width: 100%;
         }
 
-        /* Amarelo transparente para Tarefas para Hoje */
         .badge-hoje {
-            background-color: rgba(234, 179, 8, 0.25);
+            background-color: #3F2E04;
             color: #FDE047;
             border: 1px solid #EAB308;
             padding: 8px 16px;
@@ -167,6 +113,18 @@ st.markdown("""
 
         div[data-testid="stVerticalBlock"] {
             gap: 2px !important;
+        }
+        
+        div[data-testid="stExpander"] {
+            margin-top: 12px !important;
+            margin-bottom: 8px !important;
+            border: 1px solid #334155 !important;
+            background-color: #0F172A !important;
+        }
+
+        div[data-testid="stExpander"] details summary {
+            padding-top: 8px !important;
+            padding-bottom: 8px !important;
         }
 
         div[data-testid="stMetricValue"] {
@@ -397,9 +355,9 @@ st.sidebar.download_button(
 )
 
 # ---------------------------------------------------------
-# 1. LOGO CENTRALIZADA DA COVEM (TAMANHO MAIOR)
+# 1. LOGO CENTRALIZADA DA COVEM
 # ---------------------------------------------------------
-col_l1, col_l2, col_l3 = st.columns([0.5, 3, 0.5])
+col_l1, col_l2, col_l3 = st.columns([1, 2, 1])
 with col_l2:
     st.image("logo.jpeg", use_container_width=True)
 
@@ -427,10 +385,10 @@ for i, nome_aba in enumerate(abas_disponiveis):
                 f"""
                 <style>
                 div[data-testid="column"]:nth-of-type({i+1}) div.stButton > button {{
-                    background-color: #000000 !important;
-                    color: #FFFFFF !important;
-                    border: 2px solid #FFFFFF !important;
-                    font-weight: 700 !important;
+                    background-color: #26334D !important;
+                    color: #94A3B8 !important;
+                    border: 1px solid #475569 !important;
+                    font-weight: 500 !important;
                 }}
                 </style>
                 """,
@@ -465,10 +423,10 @@ def exibir_agenda_semana(df_tarefas, df_crm, cliente_selecionado):
                 """
                 <style>
                 div[data-testid="column"]:nth-of-type(1) div.stButton > button {
-                    background-color: #000000 !important;
-                    color: #FFFFFF !important;
-                    border: 2px solid #FFFFFF !important;
-                    font-weight: 700 !important;
+                    background-color: #26334D !important;
+                    color: #94A3B8 !important;
+                    border: 1px solid #475569 !important;
+                    font-weight: 500 !important;
                 }
                 </style>
                 """,
@@ -485,10 +443,10 @@ def exibir_agenda_semana(df_tarefas, df_crm, cliente_selecionado):
                 """
                 <style>
                 div[data-testid="column"]:nth-of-type(2) div.stButton > button {
-                    background-color: #000000 !important;
-                    color: #FFFFFF !important;
-                    border: 2px solid #FFFFFF !important;
-                    font-weight: 700 !important;
+                    background-color: #26334D !important;
+                    color: #94A3B8 !important;
+                    border: 1px solid #475569 !important;
+                    font-weight: 500 !important;
                 }
                 </style>
                 """,
@@ -524,13 +482,7 @@ def exibir_agenda_semana(df_tarefas, df_crm, cliente_selecionado):
                 with st.expander("Ver Tarefas Atrasadas"):
                     if not atrasadas.empty:
                         for _, row in atrasadas.iterrows():
-                            nome_cli = row.get('Cliente', 'N/A')
-                            telefone_resp = "Não informado"
-                            match_crm = df_crm[(df_crm['Empresa'] == nome_cli) | (df_crm['Cliente'] == nome_cli)]
-                            if not match_crm.empty:
-                                telefone_resp = match_crm.iloc[0].get('Telefone', 'Não informado')
-                            
-                            st.write(f"- **{row['Titulo']}** | Empresa/Cliente: `{nome_cli}` | Telefone: **{telefone_resp}** | Vencimento: {row['Data_Vencimento'].strftime('%d/%m/%Y')}")
+                            st.write(f"- **{row['Titulo']}** | Cliente: `{row.get('Cliente', 'N/A')}` | Vencimento: {row['Data_Vencimento'].strftime('%d/%m/%Y')}")
                     else:
                         st.write("Nenhuma tarefa atrasada.")
 
@@ -539,13 +491,7 @@ def exibir_agenda_semana(df_tarefas, df_crm, cliente_selecionado):
                 with st.expander("Ver Tarefas para Hoje"):
                     if not hoje_tarefas.empty:
                         for _, row in hoje_tarefas.iterrows():
-                            nome_cli = row.get('Cliente', 'N/A')
-                            telefone_resp = "Não informado"
-                            match_crm = df_crm[(df_crm['Empresa'] == nome_cli) | (df_crm['Cliente'] == nome_cli)]
-                            if not match_crm.empty:
-                                telefone_resp = match_crm.iloc[0].get('Telefone', 'Não informado')
-
-                            st.write(f"- **{row['Titulo']}** | Empresa/Cliente: `{nome_cli}` | Telefone: **{telefone_resp}**")
+                            st.write(f"- **{row['Titulo']}** | Cliente: `{row.get('Cliente', 'N/A')}`")
                     else:
                         st.write("Nenhuma tarefa para hoje.")
 
@@ -575,8 +521,7 @@ def exibir_agenda_semana(df_tarefas, df_crm, cliente_selecionado):
                                 dt_f_br = dt.strptime(raw_dt, "%Y-%m-%d").strftime("%d/%m/%Y")
                             except:
                                 dt_f_br = "Data Inválida"
-                            telefone_resp = row.get('Telefone', 'Não informado')
-                            st.write(f"- **{row['Empresa']}** | Telefone: **{telefone_resp}** | Data: {dt_f_br}")
+                            st.write(f"- **{row['Empresa']}** | Contato: `{row['Contato']}` | Data: {dt_f_br}")
                     else:
                         st.write("Nenhum follow-up atrasado.")
 
@@ -585,8 +530,7 @@ def exibir_agenda_semana(df_tarefas, df_crm, cliente_selecionado):
                 with st.expander("Ver Follow-ups para Hoje"):
                     if not c_hoje.empty:
                         for _, row in c_hoje.iterrows():
-                            telefone_resp = row.get('Telefone', 'Não informado')
-                            st.write(f"- **{row['Empresa']}** | Telefone: **{telefone_resp}**")
+                            st.write(f"- **{row['Empresa']}** | Contato: `{row['Contato']}`")
                     else:
                         st.write("Nenhum follow-up para hoje.")
 
@@ -830,6 +774,7 @@ elif aba_selecionada == "Funil de Vendas":
                 with hc1:
                     edit_empresa = st.text_input("Empresa", value=row_edit["Empresa"])
                     
+                    # NOVO: Seleção de Carteira no Modal de Edição para corrigir caso salve errado
                     carteira_atual_cliente = row_edit.get("Cliente", CARTEIRAS_COVEM[0])
                     idx_carteira_edit = CARTEIRAS_COVEM.index(carteira_atual_cliente) if carteira_atual_cliente in CARTEIRAS_COVEM else 0
                     edit_carteira = st.selectbox("Carteira / Marca", options=CARTEIRAS_COVEM, index=idx_carteira_edit)
@@ -911,7 +856,7 @@ elif aba_selecionada == "Funil de Vendas":
                         st.session_state.df_crm.loc[idx_real, "Etapa"] = edit_etapa
                         st.session_state.df_crm.loc[idx_real, "Prob"] = PROB_MAP[edit_etapa]
                         st.session_state.df_crm.loc[idx_real, "Empresa"] = edit_empresa
-                        st.session_state.df_crm.loc[idx_real, "Cliente"] = edit_carteira
+                        st.session_state.df_crm.loc[idx_real, "Cliente"] = edit_carteira  # Salvando a nova carteira escolhida
                         st.session_state.df_crm.loc[idx_real, "Contato"] = edit_contato
                         st.session_state.df_crm.loc[idx_real, "Cargo"] = edit_cargo
                         st.session_state.df_crm.loc[idx_real, "Telefone"] = edit_tel
@@ -1383,6 +1328,7 @@ elif aba_selecionada == "Relatório Executivo":
 # ABA 5: + NOVO CADASTRO (SINCRONIZADO COM A CARTEIRA DA BARRA LATERAL)
 # =========================================================
 elif aba_selecionada == "+ Novo Cadastro":
+    # Lógica de Sincronização Automática da Carteira
     default_carteira_idx = 0
     if cliente_sel != "TODOS" and cliente_sel in CARTEIRAS_COVEM:
         default_carteira_idx = CARTEIRAS_COVEM.index(cliente_sel)
