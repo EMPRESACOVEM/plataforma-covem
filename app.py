@@ -93,7 +93,7 @@ st.markdown("""
             border: 1px solid #555555 !important;
         }
 
-        /* Padronização específica para o botão Excluir e o popover Editar na Agenda Inferior */
+        /* Padronização exata e prioritária para os botões e popovers da Agenda Inferior */
         div[data-testid="stVerticalBlock"] div[data-testid="column"] div.stButton > button,
         div[data-testid="stVerticalBlock"] div[data-testid="column"] div[data-testid="stPopover"] > button {
             background-color: #262730 !important;
