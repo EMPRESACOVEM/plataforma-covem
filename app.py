@@ -81,7 +81,6 @@ def aplicar_fundo_personalizado(image_path):
         except Exception:
             pass
             
-    # Estilização geral do aplicativo
     st.markdown(f"""
         <style>
             @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
@@ -168,7 +167,6 @@ def aplicar_fundo_personalizado(image_path):
         </style>
     """, unsafe_allow_html=True)
 
-# Aplica o fundo e os estilos
 aplicar_fundo_personalizado(ARQUIVO_FUNDO)
 
 PROB_MAP = {
@@ -183,7 +181,7 @@ PROB_MAP = {
 MOTIVOS_PERDA_PADRAO = list(CORES_PERDAS.keys())
 
 # ---------------------------------------------------------
-# CONEXÃO COM O GOOGLE SHEETS (PERSISTÊNCIA NA NUVEM)
+# CONEXÃO COM O GOOGLE SHEETS
 # ---------------------------------------------------------
 @st.cache_resource
 def get_gsheets_connection():
@@ -438,12 +436,11 @@ st.markdown("""
 aba_selecionada = st.session_state.menu_ativo
 
 # ---------------------------------------------------------
-# FUNÇÃO DE RENDERIZAÇÃO DA AGENDA DA SEMANA
+# FUNÇÃO DE RENDERIZAÇÃO DA AGENDA DA SEMANA (COM TELEFONES)
 # ---------------------------------------------------------
 def exibir_agenda_semana(df_tarefas, df_crm, cliente_selecionado):
     st.markdown('<div style="margin-top: 4px;"></div>', unsafe_allow_html=True)
     
-    sub_abas = ["Tarefas", "Follow-up"]
     c_sub1, c_sub2 = st.columns(2)
     
     with c_sub1:
@@ -488,6 +485,16 @@ def exibir_agenda_semana(df_tarefas, df_crm, cliente_selecionado):
 
     st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
 
+    # Função auxiliar para buscar telefone na base de CRM pelo nome da empresa/cliente
+    def obter_telefone_por_empresa(nome_empresa):
+        if not nome_empresa or nome_empresa == "Nenhum / Tarefa Geral":
+            return "Não vinculado"
+        match = df_crm[df_crm["Empresa"].str.lower() == str(nome_empresa).lower()]
+        if not match.empty:
+            tel = match.iloc[0].get("Telefone", "")
+            return tel if tel else "Não informado"
+        return "Não cadastrado no CRM"
+
     if st.session_state.sub_menu_tarefas == "Tarefas":
         if df_tarefas.empty or "Data_Vencimento" not in df_tarefas.columns:
             st.info("Nenhuma tarefa cadastrada.")
@@ -512,7 +519,15 @@ def exibir_agenda_semana(df_tarefas, df_crm, cliente_selecionado):
                 with st.expander("Ver Tarefas Atrasadas"):
                     if not atrasadas.empty:
                         for _, row in atrasadas.iterrows():
-                            st.write(f"- **{row['Titulo']}** | Cliente: `{row.get('Cliente', 'N/A')}` | Vencimento: {row['Data_Vencimento'].strftime('%d/%m/%Y')}")
+                            emp_vinculada = row.get('Cliente', 'N/A')
+                            tel_contato = obter_telefone_por_empresa(emp_vinculada)
+                            st.markdown(f"""
+                                - **{row['Titulo']}**<br>
+                                &nbsp;&nbsp;&nbsp;&nbsp;Empresa/Cliente: `{emp_vinculada}`<br>
+                                &nbsp;&nbsp;&nbsp;&nbsp;📞 Telefone: <span class="phone-highlight">{tel_contato}</span><br>
+                                &nbsp;&nbsp;&nbsp;&nbsp;Vencimento: {row['Data_Vencimento'].strftime('%d/%m/%Y')}
+                                <hr style="margin: 4px 0; border-color: #334155;">
+                            """, unsafe_allow_html=True)
                     else:
                         st.write("Nenhuma tarefa atrasada.")
 
@@ -521,7 +536,14 @@ def exibir_agenda_semana(df_tarefas, df_crm, cliente_selecionado):
                 with st.expander("Ver Tarefas para Hoje"):
                     if not hoje_tarefas.empty:
                         for _, row in hoje_tarefas.iterrows():
-                            st.write(f"- **{row['Titulo']}** | Cliente: `{row.get('Cliente', 'N/A')}`")
+                            emp_vinculada = row.get('Cliente', 'N/A')
+                            tel_contato = obter_telefone_por_empresa(emp_vinculada)
+                            st.markdown(f"""
+                                - **{row['Titulo']}**<br>
+                                &nbsp;&nbsp;&nbsp;&nbsp;Empresa/Cliente: `{emp_vinculada}`<br>
+                                &nbsp;&nbsp;&nbsp;&nbsp;📞 Telefone: <span class="phone-highlight">{tel_contato}</span>
+                                <hr style="margin: 4px 0; border-color: #334155;">
+                            """, unsafe_allow_html=True)
                     else:
                         st.write("Nenhuma tarefa para hoje.")
 
@@ -551,7 +573,14 @@ def exibir_agenda_semana(df_tarefas, df_crm, cliente_selecionado):
                                 dt_f_br = dt.strptime(raw_dt, "%Y-%m-%d").strftime("%d/%m/%Y")
                             except:
                                 dt_f_br = "Data Inválida"
-                            st.write(f"- **{row['Empresa']}** | Contato: `{row['Contato']}` | Data: {dt_f_br}")
+                            tel_crm = row.get('Telefone', 'Não informado')
+                            st.markdown(f"""
+                                - **{row['Empresa']}**<br>
+                                &nbsp;&nbsp;&nbsp;&nbsp;Contato: `{row['Contato']}`<br>
+                                &nbsp;&nbsp;&nbsp;&nbsp;📞 Telefone: <span class="phone-highlight">{tel_crm}</span><br>
+                                &nbsp;&nbsp;&nbsp;&nbsp;Data: {dt_f_br}
+                                <hr style="margin: 4px 0; border-color: #334155;">
+                            """, unsafe_allow_html=True)
                     else:
                         st.write("Nenhum follow-up atrasado.")
 
@@ -560,7 +589,13 @@ def exibir_agenda_semana(df_tarefas, df_crm, cliente_selecionado):
                 with st.expander("Ver Follow-ups para Hoje"):
                     if not c_hoje.empty:
                         for _, row in c_hoje.iterrows():
-                            st.write(f"- **{row['Empresa']}** | Contato: `{row['Contato']}`")
+                            tel_crm = row.get('Telefone', 'Não informado')
+                            st.markdown(f"""
+                                - **{row['Empresa']}**<br>
+                                &nbsp;&nbsp;&nbsp;&nbsp;Contato: `{row['Contato']}`<br>
+                                &nbsp;&nbsp;&nbsp;&nbsp;📞 Telefone: <span class="phone-highlight">{tel_crm}</span>
+                                <hr style="margin: 4px 0; border-color: #334155;">
+                            """, unsafe_allow_html=True)
                     else:
                         st.write("Nenhum follow-up para hoje.")
 
