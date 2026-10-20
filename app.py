@@ -80,6 +80,26 @@ st.markdown("""
             letter-spacing: -0.4px !important;
         }
 
+        /* Estilização personalizada para o Menu Principal (Cards maiores, fundo preto e linha superior azul turquesa) */
+        div[data-testid="column"] div.stButton > button {
+            background-color: #0B0F19 !important;
+            color: #FFFFFF !important;
+            border: 1px solid #1E293B !important;
+            border-top: 3px solid #38BDF8 !important;
+            min-height: 54px !important;
+            font-size: 14px !important;
+            font-weight: 600 !important;
+            border-radius: 8px !important;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2) !important;
+            transition: all 0.2s ease-in-out;
+        }
+
+        div[data-testid="column"] div.stButton > button:hover {
+            background-color: #111827 !important;
+            border-color: #38BDF8 !important;
+            color: #38BDF8 !important;
+        }
+
         .badge-atrasada {
             background-color: #4A2024;
             color: #FCA5A5;
@@ -385,10 +405,11 @@ for i, nome_aba in enumerate(abas_disponiveis):
                 f"""
                 <style>
                 div[data-testid="column"]:nth-of-type({i+1}) div.stButton > button {{
-                    background-color: #26334D !important;
-                    color: #94A3B8 !important;
-                    border: 1px solid #475569 !important;
-                    font-weight: 500 !important;
+                    background-color: #111827 !important;
+                    color: #38BDF8 !important;
+                    border: 1px solid #38BDF8 !important;
+                    border-top: 3px solid #38BDF8 !important;
+                    font-weight: 700 !important;
                 }}
                 </style>
                 """,
