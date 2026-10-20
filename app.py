@@ -28,7 +28,7 @@ COVEM_NAME = "GRUPO COVEM"
 CARTEIRAS_COVEM = ["BraClean", "QV Energia Solar", "Elleven"]
 
 # ---------------------------------------------------------
-# PALETA COVEM & ESTILIZAÇÃO CSS (MINICARDS E BOTÕES EM PRETO E BRANCO)
+# PALETA COVEM & ESTILIZAÇÃO CSS (MINICARDS EM PRETO E BRANCO, BADGES COM TRANSPARÊNCIA)
 # ---------------------------------------------------------
 DEFAULT_COLORS = {
     "1. Prospecção": "#F472B6",          # Rosa Pastel suave
@@ -93,7 +93,7 @@ st.markdown("""
             border: 1px solid #555555 !important;
         }
 
-        /* Estilização para Expanders (Ver tarefas atrasadas, Ver tarefas para hoje, Criar nova tarefa, etc.) */
+        /* Estilização para Expanders */
         div[data-testid="stExpander"] {
             margin-top: 12px !important;
             margin-bottom: 8px !important;
@@ -115,9 +115,10 @@ st.markdown("""
             color: #FFFFFF !important;
         }
 
+        /* Vermelho transparente para Tarefas Atrasadas */
         .badge-atrasada {
-            background-color: #000000;
-            color: #FFFFFF;
+            background-color: rgba(239, 68, 68, 0.25);
+            color: #FCA5A5;
             border: 1px solid #EF4444;
             padding: 8px 16px;
             border-radius: 6px;
@@ -128,9 +129,10 @@ st.markdown("""
             width: 100%;
         }
 
+        /* Amarelo transparente para Tarefas para Hoje */
         .badge-hoje {
-            background-color: #000000;
-            color: #FFFFFF;
+            background-color: rgba(234, 179, 8, 0.25);
+            color: #FDE047;
             border: 1px solid #EAB308;
             padding: 8px 16px;
             border-radius: 6px;
