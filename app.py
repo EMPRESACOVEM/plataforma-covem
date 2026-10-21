@@ -30,7 +30,7 @@ COVEM_NAME = "GRUPO COVEM"
 CARTEIRAS_COVEM = ["BraClean", "QV Energia Solar", "Elleven"]
 
 # ---------------------------------------------------------
-# PALETA COVEM & ESTILIZAÇÃO CSS
+# PALETA COVEM & ESTILIZAÇÃO CSS (ATUALIZADA)
 # ---------------------------------------------------------
 DEFAULT_COLORS = {
     # Pré Funil
@@ -57,14 +57,14 @@ CORES_PERDAS = {
     "Outros": "#D1D5DB"                         # Cinza Claro
 }
 
-# Atualização das cores no estado do Streamlit
+# Força a atualização das cores e estrutura na sessão
 st.session_state.funnel_colors = DEFAULT_COLORS.copy()
 
 if 'menu_ativo' not in st.session_state:
     st.session_state.menu_ativo = "Gerenciamento de Tarefas"
 
-if 'funil_selecionado' not in st.session_state:
-    st.session_state.funil_selecionado = "Funil de Vendas"
+if 'funnel_selecionado' not in st.session_state:
+    st.session_state.funnel_selecionado = "Funil de Vendas"
 
 if 'sub_menu_tarefas' not in st.session_state:
     st.session_state.sub_menu_tarefas = "Tarefas"
@@ -185,14 +185,14 @@ PROB_MAP = {
     "Pré: Novo Lead": 0.05,
     "Pré: Conexão": 0.10,
 
-    # Funil de Vendas Principal (Sem a antiga etapa de Perdido)
+    # Funil de Vendas Principal (Sem Perdido)
     "1. Prospecção": 0.20,
     "2. Qualificação": 0.40,
     "3. Reunião Agendada": 0.60,
     "4. Proposta Enviada": 0.80,
     "5. Fechado": 1.00,
 
-    # Pós Funil (Com Perdido incorporado aqui)
+    # Pós Funil (Com Standby e Perdido)
     "Pós: Standby": 0.00,
     "Pós: Perdido": 0.00
 }
@@ -236,7 +236,7 @@ def carregar_dados_crm():
             df_loaded["Prob"] = pd.to_numeric(df_loaded["Prob"], errors="coerce").fillna(0.2)
             df_loaded["Perda"] = df_loaded["Perda"].fillna("").astype(str)
             
-            # Migração automática de bases antigas para a nova estrutura
+            # Migração automática das etapas antigas para a nova estrutura
             df_loaded["Etapa"] = df_loaded["Etapa"].replace({
                 "1. Contatado": "1. Prospecção",
                 "2. Conversando": "2. Qualificação",
@@ -349,9 +349,6 @@ if 'df_tarefas' not in st.session_state:
 
 if 'cliente_editando_id' not in st.session_state:
     st.session_state.cliente_editando_id = None
-
-if 'funil_selecionado' not in st.session_state:
-    st.session_state.funnel_selecionado = "Funil de Vendas"
 
 df = st.session_state.df_crm
 
@@ -1560,7 +1557,7 @@ elif aba_selecionada == "+ Novo Cadastro":
                 cargo_valido = novo_cargo if 'novo_cargo' in locals() and novo_cargo else "Não informado"
                 telefone_valido = novo_telefone if 'novo_telefone' in locals() and novo_telefone else "Não informado"
                 cidade_valida = nova_cidade if 'nova_cidade' in locals() and nova_cidade else "Não informado"
-                vendedor_valido = novo_vendedor if 'novo_vendedor' in locals() and novo_vendedor else "Não informado"
+                vendedor_valido = novo_vendedor if 'nova_vendedor' in locals() and novo_vendedor else "Não informado"
 
                 nova_linha = {
                     "id": novo_id,
