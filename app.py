@@ -859,7 +859,7 @@ elif aba_selecionada == "Funil de Vendas":
                     unsafe_allow_html=True
                 )
             if st.button(nome_f, key=f"btn_funil_{idx_f}", use_container_width=True):
-                st.session_state.funnel_selecionado = nome_f
+                st.session_state.funil_selecionado = nome_f
                 st.rerun()
 
     st.markdown("<div style='margin-bottom: 20px;'></div>", unsafe_allow_html=True)
@@ -1019,7 +1019,7 @@ elif aba_selecionada == "Funil de Vendas":
         ]
 
     # Filtrar etapas conforme o Funil Ativo
-    funil_atual = st.session_state.funnel_selecionado
+    funil_atual = st.session_state.funil_selecionado
     etapas_visiveis = ESTRUTURA_FUNIS.get(funil_atual, ESTRUTURA_FUNIS["Funil de Vendas"])
     todas_etapas_existentes = list(PROB_MAP.keys())
 
