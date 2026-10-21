@@ -30,24 +30,23 @@ COVEM_NAME = "GRUPO COVEM"
 CARTEIRAS_COVEM = ["BraClean", "QV Energia Solar", "Elleven"]
 
 # ---------------------------------------------------------
-# PALETA COVEM & ESTILIZAÇÃO CSS (CORES ATUALIZADAS)
+# PALETA COVEM & ESTILIZAÇÃO CSS
 # ---------------------------------------------------------
 DEFAULT_COLORS = {
     # Pré Funil
     "Pré: Novo Lead": "#1E3A8A",         # Azul Escuro
     "Pré: Conexão": "#8B5CF6",           # Roxo
 
-    # Funil Principal
+    # Funil Principal (Sem a etapa Perdido)
     "1. Prospecção": "#F472B6",          # Rosa Pastel suave
     "2. Qualificação": "#FDE047",       # Amarelo Pastel suave
     "3. Reunião Agendada": "#FDBA74",  # Laranja Pastel suave
     "4. Proposta Enviada": "#93C5FD",  # Azul Pastel suave
     "5. Fechado": "#86EFAC",           # Verde Pastel suave
-    "6. Perdido": "#FCA5A5",           # Vermelho Pastel suave
 
-    # Pós Funil
+    # Pós Funil (Com Standby e Perdido)
     "Pós: Standby": "#FFFFFF",          # Branco
-    "Pós: Lixeira": "#EF4444"           # Vermelho
+    "Pós: Perdido": "#EF4444"           # Vermelho
 }
 
 CORES_PERDAS = {
@@ -64,8 +63,8 @@ st.session_state.funnel_colors = DEFAULT_COLORS.copy()
 if 'menu_ativo' not in st.session_state:
     st.session_state.menu_ativo = "Gerenciamento de Tarefas"
 
-if 'funnel_selecionado' not in st.session_state:
-    st.session_state.funnel_selecionado = "Funil de Vendas"
+if 'funil_selecionado' not in st.session_state:
+    st.session_state.funil_selecionado = "Funil de Vendas"
 
 if 'sub_menu_tarefas' not in st.session_state:
     st.session_state.sub_menu_tarefas = "Tarefas"
@@ -186,23 +185,22 @@ PROB_MAP = {
     "Pré: Novo Lead": 0.05,
     "Pré: Conexão": 0.10,
 
-    # Funil de Vendas Principal
+    # Funil de Vendas Principal (Sem a antiga etapa de Perdido)
     "1. Prospecção": 0.20,
     "2. Qualificação": 0.40,
     "3. Reunião Agendada": 0.60,
     "4. Proposta Enviada": 0.80,
     "5. Fechado": 1.00,
-    "6. Perdido": 0.00,
 
-    # Pós Funil
+    # Pós Funil (Com Perdido incorporado aqui)
     "Pós: Standby": 0.00,
-    "Pós: Lixeira": 0.00
+    "Pós: Perdido": 0.00
 }
 
 ESTRUTURA_FUNIS = {
     "Pré Funil": ["Pré: Novo Lead", "Pré: Conexão"],
-    "Funil de Vendas": ["1. Prospecção", "2. Qualificação", "3. Reunião Agendada", "4. Proposta Enviada", "5. Fechado", "6. Perdido"],
-    "Pós Funil": ["Pós: Standby", "Pós: Lixeira"]
+    "Funil de Vendas": ["1. Prospecção", "2. Qualificação", "3. Reunião Agendada", "4. Proposta Enviada", "5. Fechado"],
+    "Pós Funil": ["Pós: Standby", "Pós: Perdido"]
 }
 
 MOTIVOS_PERDA_PADRAO = list(CORES_PERDAS.keys())
@@ -238,9 +236,12 @@ def carregar_dados_crm():
             df_loaded["Prob"] = pd.to_numeric(df_loaded["Prob"], errors="coerce").fillna(0.2)
             df_loaded["Perda"] = df_loaded["Perda"].fillna("").astype(str)
             
+            # Migração automática de bases antigas para a nova estrutura
             df_loaded["Etapa"] = df_loaded["Etapa"].replace({
                 "1. Contatado": "1. Prospecção",
-                "2. Conversando": "2. Qualificação"
+                "2. Conversando": "2. Qualificação",
+                "6. Perdido": "Pós: Perdido",
+                "Pós: Lixeira": "Pós: Perdido"
             })
             
             return df_loaded
@@ -348,6 +349,9 @@ if 'df_tarefas' not in st.session_state:
 
 if 'cliente_editando_id' not in st.session_state:
     st.session_state.cliente_editando_id = None
+
+if 'funil_selecionado' not in st.session_state:
+    st.session_state.funnel_selecionado = "Funil de Vendas"
 
 df = st.session_state.df_crm
 
@@ -822,7 +826,7 @@ if aba_selecionada == "Gerenciamento de Tarefas":
         st.info("Nenhuma tarefa ou follow-up agendado para este horizonte de tempo.")
 
 # =========================================================
-# ABA 2: FUNIL DE VENDAS (COM SELEÇÃO DOS 3 FUNIS E CORES EXATAS)
+# ABA 2: FUNIL DE VENDAS (COM SELEÇÃO DOS 3 FUNIS)
 # =========================================================
 elif aba_selecionada == "Funil de Vendas":
     col_topo_titulo, col_topo_busca = st.columns([2, 1])
@@ -1027,7 +1031,6 @@ elif aba_selecionada == "Funil de Vendas":
     
     for idx, etapa in enumerate(etapas_visiveis):
         cor_header = st.session_state.funnel_colors.get(etapa, "#3B82F6")
-        cor_texto_header = "#0F172A" if cor_header == "#FFFFFF" else "#FFFFFF"
         nome_curto_etapa = etapa.replace("Pré: ", "").replace("Pós: ", "")
         
         with cols[idx]:
@@ -1086,7 +1089,7 @@ elif aba_selecionada == "Funil de Vendas":
                         idx_df = st.session_state.df_crm[st.session_state.df_crm["id"] == cliente_id].index
                         st.session_state.df_crm.loc[idx_df, "Etapa"] = nova_etapa_card
                         st.session_state.df_crm.loc[idx_df, "Prob"] = PROB_MAP[nova_etapa_card]
-                        if nova_etapa_card == "6. Perdido" or "Lixeira" in nova_etapa_card:
+                        if "Perdido" in nova_etapa_card:
                             st.session_state.df_crm["Perda"] = st.session_state.df_crm["Perda"].astype(str)
                             st.session_state.df_crm.loc[idx_df, "Perda"] = "Outros"
                         
@@ -1206,7 +1209,7 @@ elif aba_selecionada == "Dashboard":
     st.divider()
 
     st.markdown(f'<div class="notranslate"><h3>Gráfico de Motivo de Perda — {titulo_dinamico}</h3></div>', unsafe_allow_html=True)
-    df_perdidos = df_dash[df_dash["Etapa"].isin(["6. Perdido", "Pós: Lixeira"])].copy()
+    df_perdidos = df_dash[df_dash["Etapa"] == "Pós: Perdido"].copy()
     
     if not df_perdidos.empty and "Perda" in df_perdidos.columns:
         df_perdidos["Perda"] = df_perdidos["Perda"].fillna("").astype(str).str.strip()
@@ -1236,7 +1239,7 @@ elif aba_selecionada == "Dashboard":
         else:
             st.info("Nenhum motivo de perda especificado para os leads perdidos.")
     else:
-        st.info("Nenhum lead registrado em '6. Perdido' ou 'Lixeira' no momento.")
+        st.info("Nenhum lead registrado em 'Pós: Perdido' no momento.")
 
 # =========================================================
 # ABA 4: RELATÓRIO EXECUTIVO
@@ -1572,7 +1575,7 @@ elif aba_selecionada == "+ Novo Cadastro":
                     "Valor": nova_valor,
                     "Prob": PROB_MAP[nova_etapa],
                     "Vendedor": vendedor_valido,
-                    "Perda": str(motivo_perda) if "Perdido" in nova_etapa or "Lixeira" in nova_etapa else "",
+                    "Perda": str(motivo_perda) if "Perdido" in nova_etapa else "",
                     "Data_Cadastro": str(date.today()),
                     "Followup_Data": str(f_data_ini) if f_nota_ini else "",
                     "Followup_Nota": f_nota_ini,
