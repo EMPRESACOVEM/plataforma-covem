@@ -30,7 +30,7 @@ COVEM_NAME = "GRUPO COVEM"
 CARTEIRAS_COVEM = ["BraClean", "QV Energia Solar", "Elleven"]
 
 # ---------------------------------------------------------
-# PALETA COVEM & ESTILIZAÇÃO CSS
+# PALETA COVEM & ESTILIZAÇÃO CSS (CORES ATUALIZADAS)
 # ---------------------------------------------------------
 DEFAULT_COLORS = {
     # Pré Funil
@@ -58,13 +58,12 @@ CORES_PERDAS = {
     "Outros": "#D1D5DB"                         # Cinza Claro
 }
 
-if 'funnel_colors' not in st.session_state:
-    st.session_state.funnel_colors = DEFAULT_COLORS.copy()
+# Atualização das cores no estado do Streamlit
+st.session_state.funnel_colors = DEFAULT_COLORS.copy()
 
 if 'menu_ativo' not in st.session_state:
     st.session_state.menu_ativo = "Gerenciamento de Tarefas"
 
-# CORREÇÃO DO ERRO: Inicializando a chave do funil selecionado na sessão
 if 'funnel_selecionado' not in st.session_state:
     st.session_state.funnel_selecionado = "Funil de Vendas"
 
@@ -823,7 +822,7 @@ if aba_selecionada == "Gerenciamento de Tarefas":
         st.info("Nenhuma tarefa ou follow-up agendado para este horizonte de tempo.")
 
 # =========================================================
-# ABA 2: FUNIL DE VENDAS (COM SELEÇÃO DOS 3 FUNIS)
+# ABA 2: FUNIL DE VENDAS (COM SELEÇÃO DOS 3 FUNIS E CORES EXATAS)
 # =========================================================
 elif aba_selecionada == "Funil de Vendas":
     col_topo_titulo, col_topo_busca = st.columns([2, 1])
@@ -1028,12 +1027,13 @@ elif aba_selecionada == "Funil de Vendas":
     
     for idx, etapa in enumerate(etapas_visiveis):
         cor_header = st.session_state.funnel_colors.get(etapa, "#3B82F6")
+        cor_texto_header = "#0F172A" if cor_header == "#FFFFFF" else "#FFFFFF"
         nome_curto_etapa = etapa.replace("Pré: ", "").replace("Pós: ", "")
         
         with cols[idx]:
             st.markdown(
                 f"""
-                <div style="background: linear-gradient(135deg, rgba(30, 58, 95, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%); border: 1px solid #334155; border-top: 5px solid {cor_header}; padding: 14px 10px; border-radius: 6px; text-align: center; margin-bottom: 16px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);">
+                <div style="background: linear-gradient(135deg, rgba(30, 58, 95, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%); border: 1px solid #334155; border-top: 6px solid {cor_header}; padding: 14px 10px; border-radius: 6px; text-align: center; margin-bottom: 16px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);">
                     <b style="color: #FFFFFF; font-size: 13px; text-transform: uppercase; letter-spacing: 0.8px;">{nome_curto_etapa}</b>
                 </div>
                 """, 
@@ -1047,7 +1047,7 @@ elif aba_selecionada == "Funil de Vendas":
                 cliente_id = int(row['id'])
                 
                 st.markdown(f"""
-                    <div style="border-left: 4px solid {cor_header}; background-color: rgba(17, 28, 49, 0.85); border-top: 1px solid #1E293B; border-right: 1px solid #1E293B; border-bottom: 1px solid #1E293B; border-radius: 4px; margin-bottom: 6px; padding: 2px;">
+                    <div style="border-left: 5px solid {cor_header}; background-color: rgba(17, 28, 49, 0.85); border-top: 1px solid #1E293B; border-right: 1px solid #1E293B; border-bottom: 1px solid #1E293B; border-radius: 4px; margin-bottom: 6px; padding: 2px;">
                 """, unsafe_allow_html=True)
                 
                 with st.expander(f"{row['Empresa']}"):
