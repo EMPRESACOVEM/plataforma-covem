@@ -30,15 +30,24 @@ COVEM_NAME = "GRUPO COVEM"
 CARTEIRAS_COVEM = ["BraClean", "QV Energia Solar", "Elleven"]
 
 # ---------------------------------------------------------
-# PALETA COVEM & ESTILIZAÇÃO CSS (COM IMAGEM DE FUNDO LOCAL)
+# PALETA COVEM & ESTILIZAÇÃO CSS
 # ---------------------------------------------------------
 DEFAULT_COLORS = {
+    # Pré Funil
+    "Pré: 1. Novo Lead": "#1E3A8A",      # Azul Escuro
+    "Pré: 2. Conexão": "#8B5CF6",        # Roxo
+
+    # Funil Principal
     "1. Prospecção": "#F472B6",          # Rosa Pastel suave
     "2. Qualificação": "#FDE047",       # Amarelo Pastel suave
     "3. Reunião Agendada": "#FDBA74",  # Laranja Pastel suave
     "4. Proposta Enviada": "#93C5FD",  # Azul Pastel suave
     "5. Fechado": "#86EFAC",           # Verde Pastel suave
-    "6. Perdido": "#FCA5A5"            # Vermelho Pastel suave
+    "6. Perdido": "#FCA5A5",           # Vermelho Pastel suave
+
+    # Pós Funil
+    "Pós: 1. Standby": "#FFFFFF",       # Faixa Branca
+    "Pós: 2. Lixeira": "#EF4444"        # Faixa Vermelha
 }
 
 CORES_PERDAS = {
@@ -54,6 +63,9 @@ if 'funnel_colors' not in st.session_state:
 
 if 'menu_ativo' not in st.session_state:
     st.session_state.menu_ativo = "Gerenciamento de Tarefas"
+
+if 'sub_funil_ativo' not in st.session_state:
+    st.session_state.sub_funil_ativo = "Funil de Vendas Principal"
 
 if 'sub_menu_tarefas' not in st.session_state:
     st.session_state.sub_menu_tarefas = "Tarefas"
@@ -170,12 +182,27 @@ def aplicar_fundo_personalizado(image_path):
 aplicar_fundo_personalizado(ARQUIVO_FUNDO)
 
 PROB_MAP = {
+    # Pré Funil
+    "Pré: 1. Novo Lead": 0.05,
+    "Pré: 2. Conexão": 0.10,
+
+    # Funil Principal
     "1. Prospecção": 0.20,
     "2. Qualificação": 0.40,
     "3. Reunião Agendada": 0.60,
     "4. Proposta Enviada": 0.80,
     "5. Fechado": 1.00,
-    "6. Perdido": 0.00
+    "6. Perdido": 0.00,
+
+    # Pós Funil
+    "Pós: 1. Standby": 0.00,
+    "Pós: 2. Lixeira": 0.00
+}
+
+ESTUTURA_FUNIS = {
+    "Pré Funil": ["Pré: 1. Novo Lead", "Pré: 2. Conexão"],
+    "Funil de Vendas Principal": ["1. Prospecção", "2. Qualificação", "3. Reunião Agendada", "4. Proposta Enviada", "5. Fechado", "6. Perdido"],
+    "Pós Funil": ["Pós: 1. Standby", "Pós: 2. Lixeira"]
 }
 
 MOTIVOS_PERDA_PADRAO = list(CORES_PERDAS.keys())
@@ -231,13 +258,13 @@ def carregar_dados_crm():
             "Historico": "[01/09/2026 10:00] Primeiro contato realizado."
         },
         {
-            "id": 2, "Empresa": "Sistemas Sigma", "Cliente": "QV Energia Solar", "Etapa": "1. Prospecção", 
+            "id": 2, "Empresa": "Sistemas Sigma", "Cliente": "QV Energia Solar", "Etapa": "Pré: 1. Novo Lead", 
             "Contato": "Patricia Lima", "Cargo": "Gerente de Compras", "Telefone": "(16) 99765-4321", 
             "Email": "patricia@sigmasistemas.com.br", "Cidade": "Ribeirão Preto / SP", "Valor": 35000.0, 
-            "Prob": 0.20, "Vendedor": "Lucas Mendes", "Perda": "",
+            "Prob": 0.05, "Vendedor": "Lucas Mendes", "Perda": "",
             "Data_Cadastro": str(date.today()),
-            "Followup_Data": str(date.today()), "Followup_Nota": "Ligar para confirmar se recebeu o e-mail.", 
-            "Historico": "[02/09/2026 14:30] E-mail enviado."
+            "Followup_Data": str(date.today()), "Followup_Nota": "Ligar para apresentar produto.", 
+            "Historico": "[02/09/2026 14:30] Prospecção fria inicial."
         },
         {
             "id": 3, "Empresa": "Indústria Omega", "Cliente": "Elleven", "Etapa": "2. Qualificação", 
@@ -249,13 +276,13 @@ def carregar_dados_crm():
             "Historico": "[30/08/2026 09:15] Reunião inicial realizada."
         },
         {
-            "id": 4, "Empresa": "Tecnologia Beta", "Cliente": "BraClean", "Etapa": "6. Perdido", 
+            "id": 4, "Empresa": "Tecnologia Beta", "Cliente": "BraClean", "Etapa": "Pós: 1. Standby", 
             "Contato": "Carlos Eduardo", "Cargo": "Comprador", "Telefone": "(16) 98888-7777", 
             "Email": "carlos@betatech.com", "Cidade": "Sertãozinho / SP", "Valor": 25000.0, 
-            "Prob": 0.00, "Vendedor": "Lucas Mendes", "Perda": "Preço / Orçamento",
+            "Prob": 0.00, "Vendedor": "Lucas Mendes", "Perda": "Sem Orçamento no Momento",
             "Data_Cadastro": str(date.today()),
             "Followup_Data": "", "Followup_Nota": "", 
-            "Historico": "[25/08/2026 16:45] Achou o valor acima do orçamento."
+            "Historico": "[25/08/2026 16:45] Pediu para retornar no próximo semestre."
         }
     ])
     try:
@@ -352,16 +379,16 @@ cliente_sel = st.sidebar.selectbox("Clientes COVEM:", opcoes_filtro)
 if cliente_sel != "TODOS":
     df_filtered = df[df["Cliente"] == cliente_sel]
     titulo_dinamico = f"Dashboard - {cliente_sel}"
-    titulo_funil = f"Funil de Vendas — {cliente_sel}"
+    titulo_funil = f"Gestão de Funis — {cliente_sel}"
 else:
     df_filtered = df
     titulo_dinamico = f"Dashboard - {COVEM_NAME}"
-    titulo_funil = f"Funil de Vendas — {COVEM_NAME}"
+    titulo_funil = f"Gestão de Funis — {COVEM_NAME}"
 
 st.sidebar.divider()
 
 with st.sidebar.expander("Personalizar Cores das Etapas", expanded=False):
-    st.caption("Altere as cores das etapas do funil:")
+    st.caption("Altere as cores das etapas dos funis:")
     for etapa_nome in PROB_MAP.keys():
         cor_atual = st.session_state.funnel_colors.get(etapa_nome, "#3B82F6")
         nova_cor = st.color_picker(f"Cor: {etapa_nome}", cor_atual, key=f"picker_{etapa_nome}")
@@ -795,7 +822,7 @@ if aba_selecionada == "Gerenciamento de Tarefas":
         st.info("Nenhuma tarefa ou follow-up agendado para este horizonte de tempo.")
 
 # =========================================================
-# ABA 2: FUNIL DE VENDAS
+# ABA 2: FUNIL DE VENDAS (COM PRÉ FUNIL E PÓS FUNIL)
 # =========================================================
 elif aba_selecionada == "Funil de Vendas":
     col_topo_titulo, col_topo_busca = st.columns([2, 1])
@@ -807,6 +834,18 @@ elif aba_selecionada == "Funil de Vendas":
             placeholder="🔍 Buscar por empresa, contato...", 
             label_visibility="collapsed"
         )
+
+    # Selector para Alternar entre os 3 Funis
+    sub_funis = list(ESTUTURA_FUNIS.keys())
+    funil_selecionado = st.radio(
+        "Selecione a visualização do Funil:",
+        options=sub_funis,
+        horizontal=True,
+        index=sub_funis.index(st.session_state.sub_funil_ativo)
+    )
+    st.session_state.sub_funil_ativo = funil_selecionado
+
+    st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
 
     if st.session_state.cliente_editando_id is not None:
         cliente_edit_id = st.session_state.cliente_editando_id
@@ -827,7 +866,7 @@ elif aba_selecionada == "Funil de Vendas":
                 etapas = list(PROB_MAP.keys())
                 
                 edit_etapa = st.selectbox(
-                    "Etapa do Funil de Vendas", 
+                    "Etapa do Funil (Pré, Principal ou Pós)", 
                     options=etapas, 
                     index=etapas.index(row_edit["Etapa"]) if row_edit["Etapa"] in etapas else 0
                 )
@@ -863,7 +902,7 @@ elif aba_selecionada == "Funil de Vendas":
                 
                 edit_perda = str(row_edit.get("Perda", "")).strip()
                 edit_motivo_perda = st.selectbox(
-                    "Motivo de Perda (Se aplicável)", 
+                    "Motivo de Perda / Sem Interesse (Se aplicável)", 
                     options=[""] + MOTIVOS_PERDA_PADRAO,
                     index=(MOTIVOS_PERDA_PADRAO.index(edit_perda) + 1) if edit_perda in MOTIVOS_PERDA_PADRAO else 0
                 )
@@ -961,18 +1000,22 @@ elif aba_selecionada == "Funil de Vendas":
             df_funil_exibicao["Telefone"].astype(str).str.lower().str.contains(termo_limpo)
         ]
 
-    etapas = list(PROB_MAP.keys())
-    cols = st.columns(len(etapas))
+    # Obter apenas as etapas do funil ativo selecionado
+    etapas_visiveis = ESTUTURA_FUNIS[funil_selecionado]
+    todas_etapas = list(PROB_MAP.keys())
     
-    for idx, etapa in enumerate(etapas):
+    cols = st.columns(len(etapas_visiveis))
+    
+    for idx, etapa in enumerate(etapas_visiveis):
         cor_header = st.session_state.funnel_colors.get(etapa, "#3B82F6")
+        nome_exibicao_etapa = etapa.replace("Pré: ", "").replace("Pós: ", "")
         
         with cols[idx]:
-            # Cabeçalho da etapa com fonte maior e mais destacada
+            # Cabeçalho da etapa com faixa colorida customizada
             st.markdown(
                 f"""
                 <div style="background: linear-gradient(135deg, rgba(30, 58, 95, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%); border: 1px solid #334155; border-top: 5px solid {cor_header}; padding: 14px 10px; border-radius: 6px; text-align: center; margin-bottom: 16px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);">
-                    <b style="color: #FFFFFF; font-size: 13px; text-transform: uppercase; letter-spacing: 0.8px;">{etapa}</b>
+                    <b style="color: #FFFFFF; font-size: 13px; text-transform: uppercase; letter-spacing: 0.8px;">{nome_exibicao_etapa}</b>
                 </div>
                 """, 
                 unsafe_allow_html=True
@@ -1012,9 +1055,9 @@ elif aba_selecionada == "Funil de Vendas":
                     )
                     
                     nova_etapa_card = st.selectbox(
-                        "Mover Etapa:", 
-                        options=etapas, 
-                        index=etapas.index(row["Etapa"]), 
+                        "Mover Etapa / Funil:", 
+                        options=todas_etapas, 
+                        index=todas_etapas.index(row["Etapa"]) if row["Etapa"] in todas_etapas else 0, 
                         key=f"mov_etapa_{cliente_id}",
                         label_visibility="collapsed"
                     )
@@ -1023,12 +1066,12 @@ elif aba_selecionada == "Funil de Vendas":
                         idx_df = st.session_state.df_crm[st.session_state.df_crm["id"] == cliente_id].index
                         st.session_state.df_crm.loc[idx_df, "Etapa"] = nova_etapa_card
                         st.session_state.df_crm.loc[idx_df, "Prob"] = PROB_MAP[nova_etapa_card]
-                        if nova_etapa_card == "6. Perdido":
+                        if nova_etapa_card == "6. Perdido" or "Lixeira" in nova_etapa_card:
                             st.session_state.df_crm["Perda"] = st.session_state.df_crm["Perda"].astype(str)
                             st.session_state.df_crm.loc[idx_df, "Perda"] = "Outros"
                         
                         salvar_dados_crm(st.session_state.df_crm)
-                        st.success(f"Movido para {nova_etapa_card}!")
+                        st.success(f"Movido com sucesso!")
                         st.rerun()
 
                     st.markdown("<div style='margin-top: 6px;'></div>", unsafe_allow_html=True)
@@ -1079,17 +1122,20 @@ elif aba_selecionada == "Dashboard":
         contagem_calculada[etapa] = count_real
         
     total_leads = sum(contagem_calculada.values())
+    
+    # Exibir cards de métricas em grade horizontal responsiva
     cols_m = st.columns(len(etapas_crm) + 1)
     
     for i, etapa in enumerate(etapas_crm):
         cor_header = st.session_state.funnel_colors.get(etapa, "#3B82F6")
         qtd = contagem_calculada[etapa]
+        nome_curto_etapa = etapa.replace("Pré: ", "").replace("Pós: ", "")
         
         with cols_m[i]:
             st.markdown(
                 f"""
                 <div style="background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.9) 100%); border: 1px solid #334155; border-top: 4px solid {cor_header}; padding: 10px; border-radius: 8px; text-align: center; margin-bottom: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-                    <b style="color: #F8FAFC; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">{etapa}</b>
+                    <b style="color: #F8FAFC; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px;">{nome_curto_etapa}</b>
                 </div>
                 """, 
                 unsafe_allow_html=True
@@ -1100,7 +1146,7 @@ elif aba_selecionada == "Dashboard":
         st.markdown(
             """
             <div style="background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.9) 100%); border: 1px solid #334155; border-top: 4px solid #FFFFFF; padding: 10px; border-radius: 8px; text-align: center; margin-bottom: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-                <b style="color: #F8FAFC; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">TOTAL</b>
+                <b style="color: #F8FAFC; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px;">TOTAL LEADS</b>
             </div>
             """, 
             unsafe_allow_html=True
@@ -1142,7 +1188,7 @@ elif aba_selecionada == "Dashboard":
     st.divider()
 
     st.markdown(f'<div class="notranslate"><h3>Gráfico de Motivo de Perda — {titulo_dinamico}</h3></div>', unsafe_allow_html=True)
-    df_perdidos = df_dash[df_dash["Etapa"] == "6. Perdido"].copy()
+    df_perdidos = df_dash[df_dash["Etapa"].isin(["6. Perdido", "Pós: 2. Lixeira"])].copy()
     
     if not df_perdidos.empty and "Perda" in df_perdidos.columns:
         df_perdidos["Perda"] = df_perdidos["Perda"].fillna("").astype(str).str.strip()
@@ -1172,7 +1218,7 @@ elif aba_selecionada == "Dashboard":
         else:
             st.info("Nenhum motivo de perda especificado para os leads perdidos.")
     else:
-        st.info("Nenhum lead registrado na etapa '6. Perdido' no momento.")
+        st.info("Nenhum lead registrado nas etapas '6. Perdido' ou 'Lixeira' no momento.")
 
 # =========================================================
 # ABA 4: RELATÓRIO EXECUTIVO
@@ -1408,7 +1454,7 @@ elif aba_selecionada == "+ Novo Cadastro":
 
         with col_r2:
             rapido_carteira = st.selectbox("Carteira *", CARTEIRAS_COVEM, index=default_carteira_idx, key="rapido_carteira")
-            rapido_etapa = st.selectbox("Etapa da Venda *", list(PROB_MAP.keys()), key="rapido_etapa")
+            rapido_etapa = st.selectbox("Etapa Inicial / Funil *", list(PROB_MAP.keys()), key="rapido_etapa")
 
         btn_salvar_rapido = st.form_submit_button("Cadastrar Rapidamente", use_container_width=True)
 
@@ -1464,7 +1510,7 @@ elif aba_selecionada == "+ Novo Cadastro":
             novo_vendedor = st.text_input("Vendedor / Responsável")
             nova_valor = st.number_input("Valor da Oportunidade (R$)", min_value=0.0, step=1000.0, format="%.2f")
             nova_etapa = st.selectbox("Etapa Inicial *", list(PROB_MAP.keys()))
-            motivo_perda = st.selectbox("Motivo de Perda (Se for '6. Perdido')", [""] + MOTIVOS_PERDA_PADRAO)
+            motivo_perda = st.selectbox("Motivo de Perda / Sem Interesse (Se aplicável)", [""] + MOTIVOS_PERDA_PADRAO)
             
         st.divider()
         st.markdown("**Dados Iniciais de Follow-up:**")
@@ -1499,7 +1545,7 @@ elif aba_selecionada == "+ Novo Cadastro":
                     "Valor": nova_valor,
                     "Prob": PROB_MAP[nova_etapa],
                     "Vendedor": vendedor_valido,
-                    "Perda": str(motivo_perda) if "Perdido" in nova_etapa else "",
+                    "Perda": str(motivo_perda) if "Perdido" in nova_etapa or "Lixeira" in nova_etapa else "",
                     "Data_Cadastro": str(date.today()),
                     "Followup_Data": str(f_data_ini) if f_nota_ini else "",
                     "Followup_Nota": f_nota_ini,
