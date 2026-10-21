@@ -64,8 +64,9 @@ if 'funnel_colors' not in st.session_state:
 if 'menu_ativo' not in st.session_state:
     st.session_state.menu_ativo = "Gerenciamento de Tarefas"
 
-if 'funil_selecionado' not in st.session_state:
-    st.session_state.funil_selecionado = "Funil de Vendas"
+# CORREÇÃO DO ERRO: Inicializando a chave do funil selecionado na sessão
+if 'funnel_selecionado' not in st.session_state:
+    st.session_state.funnel_selecionado = "Funil de Vendas"
 
 if 'sub_menu_tarefas' not in st.session_state:
     st.session_state.sub_menu_tarefas = "Tarefas"
@@ -843,7 +844,7 @@ elif aba_selecionada == "Funil de Vendas":
     
     for idx_f, nome_f in enumerate(funis_list):
         with cols_funis[idx_f]:
-            is_funil_active = (st.session_state.funil_selecionado == nome_f)
+            is_funil_active = (st.session_state.funnel_selecionado == nome_f)
             if is_funil_active:
                 st.markdown(
                     f"""
@@ -859,7 +860,7 @@ elif aba_selecionada == "Funil de Vendas":
                     unsafe_allow_html=True
                 )
             if st.button(nome_f, key=f"btn_funil_{idx_f}", use_container_width=True):
-                st.session_state.funil_selecionado = nome_f
+                st.session_state.funnel_selecionado = nome_f
                 st.rerun()
 
     st.markdown("<div style='margin-bottom: 20px;'></div>", unsafe_allow_html=True)
@@ -1019,7 +1020,7 @@ elif aba_selecionada == "Funil de Vendas":
         ]
 
     # Filtrar etapas conforme o Funil Ativo
-    funil_atual = st.session_state.funil_selecionado
+    funil_atual = st.session_state.funnel_selecionado
     etapas_visiveis = ESTRUTURA_FUNIS.get(funil_atual, ESTRUTURA_FUNIS["Funil de Vendas"])
     todas_etapas_existentes = list(PROB_MAP.keys())
 
