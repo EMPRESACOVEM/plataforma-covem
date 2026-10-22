@@ -22,7 +22,7 @@ ARQUIVO_TAREFAS = BASE_DIR / "banco_tarefas_covem.xlsx"
 ARQUIVO_HISTORICO = BASE_DIR / "banco_historico_covem.xlsx"
 ARQUIVO_FINANCEIRO = BASE_DIR / "banco_financeiro_covem.xlsx"
 ARQUIVO_FUNDO = BASE_DIR / "fundo plataforma.jpg"
-ARQUIVO_LOGO = BASE_DIR / "logoCOVEM.png"  # Nova logo PNG atualizada
+ARQUIVO_LOGO = BASE_DIR / "logoCOVEM.png"  # Logo PNG sem fundo
 
 # Nome Oficial do Grupo
 COVEM_NAME = "GRUPO COVEM"
@@ -120,6 +120,15 @@ def aplicar_fundo_personalizado(image_path):
 
             [data-testid="stSidebar"] {{
                 background-color: rgba(10, 14, 39, 0.95) !important;
+            }}
+
+            /* Altura otimizada para manter a largura e exibir o menu sem precisar rolar */
+            .logo-covem-banner img {{
+                max-height: 95px !important;
+                width: 100% !important;
+                object-fit: contain !important;
+                margin: 0 auto !important;
+                display: block !important;
             }}
 
             .badge-atrasada {{
@@ -420,16 +429,16 @@ st.sidebar.download_button(
 )
 
 # ---------------------------------------------------------
-# 1. LOGO CENTRALIZADA DA COVEM (logoCOVEM.png)
+# 1. LOGO COVEM EM LARGURA TOTAL COM ALTURA COMPACTA
 # ---------------------------------------------------------
-col_l1, col_l2, col_l3 = st.columns([1, 2, 1])
-with col_l2:
-    if ARQUIVO_LOGO.exists():
-        st.image(str(ARQUIVO_LOGO), use_container_width=True)
-    else:
-        st.warning("Arquivo 'logoCOVEM.png' não encontrado na pasta do projeto.")
+st.markdown('<div class="logo-covem-banner">', unsafe_allow_html=True)
+if ARQUIVO_LOGO.exists():
+    st.image(str(ARQUIVO_LOGO), use_container_width=True)
+else:
+    st.warning("Arquivo 'logoCOVEM.png' não encontrado na pasta do projeto.")
+st.markdown('</div>', unsafe_allow_html=True)
 
-st.divider()
+st.markdown('<div style="margin-top: 5px; margin-bottom: 5px;"><hr style="border: none; border-top: 1px solid #1E293B;"></div>', unsafe_allow_html=True)
 
 # ---------------------------------------------------------
 # MENU HORIZONTAL PRINCIPAL EM CARDS
@@ -469,7 +478,7 @@ for i, nome_aba in enumerate(abas_disponiveis):
             st.rerun()
 
 st.markdown("""
-    <div style='margin-top: 30px; margin-bottom: 30px;'>
+    <div style='margin-top: 15px; margin-bottom: 20px;'>
         <hr style='border: none; border-top: 1px solid #1E293B;'>
     </div>
 """, unsafe_allow_html=True)
