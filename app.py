@@ -30,36 +30,36 @@ COVEM_NAME = "GRUPO COVEM"
 CARTEIRAS_COVEM = ["BraClean", "QV Energia Solar", "Elleven"]
 
 # ---------------------------------------------------------
-# PALETA NEON / FUTURISTA (INSPIRADA NA IMAGEM)
+# PALETA DE CORES NEON PERSONALIZADA POR ETAPA
 # ---------------------------------------------------------
 DEFAULT_COLORS = {
     # Pré Funil
-    "Pré: Novo Lead": "#00F5FF",         # Ciano Neon
-    "Pré: Conexão": "#0066FF",           # Azul Elétrico
+    "Pré: Novo Lead": "#00E5FF",         # Azul Claro Neon
+    "Pré: Conexão": "#0047AB",           # Azul Escuro Neon
 
     # Funil Principal
-    "Prospecção": "#9D00FF",             # Violeta Neon
-    "Qualificação": "#FF007F",          # Magenta / Rosa Neon
-    "Reunião Agendada": "#FF6600",     # Laranja Neon
-    "Proposta Enviada": "#FFCC00",     # Amarelo Elétrico
+    "Prospecção": "#9D00FF",             # Roxo Neon
+    "Qualificação": "#FF007F",          # Rosa Neon
+    "Reunião Agendada": "#FFEA00",     # Amarelo Neon
+    "Proposta Enviada": "#FF6600",     # Laranja Neon
     "Fechado": "#00FF66",              # Verde Neon
 
     # Pós Funil
-    "Pós: Standby": "#00E5FF",          # Turquesa Neon
+    "Pós: Standby": "#FFFFFF",          # Branco Neon
     "Pós: Perdido": "#FF0033"           # Vermelho Neon
 }
 
 CORES_PERDAS = {
     "Preço / Orçamento": "#FF0033",             # Vermelho Neon
     "Concorrência": "#FF6600",                  # Laranja Neon
-    "Sem Resposta / Sumiu": "#FFCC00",          # Amarelo Neon
-    "Produto / Serviço não Atende": "#00F5FF",  # Ciano Neon
+    "Sem Resposta / Sumiu": "#FFEA00",          # Amarelo Neon
+    "Produto / Serviço não Atende": "#00E5FF",  # Azul Claro Neon
     "Outros": "#9D00FF"                         # Roxo Neon
 }
 
 # Cor de fundo dos gráficos estilo Infográfico Futurista
 FUNDO_GRAFICO_FUTURISTA = "#0A0E27"
-GRID_GRAFICO_FUTURISTA = "rgba(0, 245, 255, 0.12)"
+GRID_GRAFICO_FUTURISTA = "rgba(0, 229, 255, 0.12)"
 
 # Força a atualização das cores e estrutura na sessão
 st.session_state.funnel_colors = DEFAULT_COLORS.copy()
@@ -135,9 +135,9 @@ def aplicar_fundo_personalizado(image_path):
             }}
 
             .badge-hoje {{
-                background-color: rgba(255, 204, 0, 0.2);
-                color: #FFCC00;
-                border: 1px solid #FFCC00;
+                background-color: rgba(255, 234, 0, 0.2);
+                color: #FFEA00;
+                border: 1px solid #FFEA00;
                 padding: 8px 16px;
                 border-radius: 6px;
                 font-size: 13px;
@@ -148,7 +148,7 @@ def aplicar_fundo_personalizado(image_path):
             }}
 
             .phone-highlight {{
-                color: #00F5FF;
+                color: #00E5FF;
                 font-weight: 600;
             }}
 
@@ -373,7 +373,7 @@ def calcular_status_followup(data_str):
         if dt_follow < hoje:
             return "atrasado", "Atrasado", '<span style="height: 10px; width: 10px; background-color: #FF0033; border-radius: 50%; display: inline-block;" title="Atrasado"></span>'
         elif dt_follow == hoje:
-            return "hoje", "Atenção (Hoje)", '<span style="height: 10px; width: 10px; background-color: #FFCC00; border-radius: 50%; display: inline-block;" title="Hoje"></span>'
+            return "hoje", "Atenção (Hoje)", '<span style="height: 10px; width: 10px; background-color: #FFEA00; border-radius: 50%; display: inline-block;" title="Hoje"></span>'
         else:
             return "em_dia", "Em Dia", '<span style="height: 10px; width: 10px; background-color: #00FF66; border-radius: 50%; display: inline-block;" title="Em Dia"></span>'
     except:
@@ -399,7 +399,7 @@ st.sidebar.divider()
 with st.sidebar.expander("Personalizar Cores das Etapas", expanded=False):
     st.caption("Altere as cores das etapas:")
     for etapa_nome in PROB_MAP.keys():
-        cor_atual = st.session_state.funnel_colors.get(etapa_nome, "#00F5FF")
+        cor_atual = st.session_state.funnel_colors.get(etapa_nome, "#00E5FF")
         nova_cor = st.color_picker(f"Cor: {etapa_nome.replace('Pré: ', '').replace('Pós: ', '')}", cor_atual, key=f"picker_{etapa_nome}")
         st.session_state.funnel_colors[etapa_nome] = nova_cor
 
@@ -450,10 +450,10 @@ for i, nome_aba in enumerate(abas_disponiveis):
                 <style>
                 div[data-testid="column"]:nth-of-type({i+1}) div.stButton > button {{
                     background-color: #0A0E27 !important;
-                    color: #00F5FF !important;
-                    border: 1px solid #00F5FF !important;
+                    color: #00E5FF !important;
+                    border: 1px solid #00E5FF !important;
                     font-weight: 600 !important;
-                    box-shadow: 0 0 10px rgba(0, 245, 255, 0.3);
+                    box-shadow: 0 0 10px rgba(0, 229, 255, 0.3);
                 }}
                 </style>
                 """,
@@ -488,8 +488,8 @@ def exibir_agenda_semana(df_tarefas, df_crm, cliente_selecionado):
                 <style>
                 div[data-testid="column"]:nth-of-type(1) div.stButton > button {
                     background-color: #0A0E27 !important;
-                    color: #00F5FF !important;
-                    border: 1px solid #00F5FF !important;
+                    color: #00E5FF !important;
+                    border: 1px solid #00E5FF !important;
                     font-weight: 600 !important;
                 }
                 </style>
@@ -508,8 +508,8 @@ def exibir_agenda_semana(df_tarefas, df_crm, cliente_selecionado):
                 <style>
                 div[data-testid="column"]:nth-of-type(2) div.stButton > button {
                     background-color: #0A0E27 !important;
-                    color: #00F5FF !important;
-                    border: 1px solid #00F5FF !important;
+                    color: #00E5FF !important;
+                    border: 1px solid #00E5FF !important;
                     font-weight: 600 !important;
                 }
                 </style>
@@ -859,11 +859,11 @@ elif aba_selecionada == "Funil de Vendas":
                     f"""
                     <style>
                     div[data-testid="column"]:nth-of-type({idx_f+1}) div.stButton > button {{
-                        background-color: #00F5FF !important;
+                        background-color: #00E5FF !important;
                         color: #0A0E27 !important;
-                        border: 1px solid #00F5FF !important;
+                        border: 1px solid #00E5FF !important;
                         font-weight: 700 !important;
-                        box-shadow: 0 0 10px rgba(0, 245, 255, 0.4);
+                        box-shadow: 0 0 10px rgba(0, 229, 255, 0.4);
                     }}
                     </style>
                     """,
@@ -884,8 +884,8 @@ elif aba_selecionada == "Funil de Vendas":
             
             st.markdown(
                 f"""
-                <div style="background-color: rgba(10, 14, 39, 0.95); border: 2px solid #00F5FF; padding: 25px; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 0 15px rgba(0, 245, 255, 0.2);">
-                    <h3 style="color: #00F5FF; margin-top: 0; margin-bottom: 20px; font-weight: 700;">Ficha Completa & Linha do Tempo: {row_edit['Empresa']}</h3>
+                <div style="background-color: rgba(10, 14, 39, 0.95); border: 2px solid #00E5FF; padding: 25px; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 0 15px rgba(0, 229, 255, 0.2);">
+                    <h3 style="color: #00E5FF; margin-top: 0; margin-bottom: 20px; font-weight: 700;">Ficha Completa & Linha do Tempo: {row_edit['Empresa']}</h3>
                 """,
                 unsafe_allow_html=True
             )
@@ -1037,7 +1037,7 @@ elif aba_selecionada == "Funil de Vendas":
     cols = st.columns(len(etapas_visiveis))
     
     for idx, etapa in enumerate(etapas_visiveis):
-        cor_header = st.session_state.funnel_colors.get(etapa, "#00F5FF")
+        cor_header = st.session_state.funnel_colors.get(etapa, "#00E5FF")
         nome_curto_etapa = etapa.replace("Pré: ", "").replace("Pós: ", "")
         
         with cols[idx]:
@@ -1073,7 +1073,7 @@ elif aba_selecionada == "Funil de Vendas":
                         f"""
                         <div style="line-height: 1.4; margin-bottom: 8px;">
                             <span style="font-size: 13px;"><b>{row['Empresa']}</b></span><br>
-                            <span style="font-size: 11px; color: #00F5FF;">Carteira: {row.get('Cliente', 'N/A')}</span><br>
+                            <span style="font-size: 11px; color: #00E5FF;">Carteira: {row.get('Cliente', 'N/A')}</span><br>
                             <span style="font-size: 12px; color: #94A3B8;">Contato: {row['Contato']}</span><br>
                             <span class="phone-highlight" style="font-size: 12px;">{row.get('Telefone', 'Não informado')}</span><br>
                             <hr style="margin: 6px 0; border-color: #334155;">
@@ -1155,7 +1155,7 @@ elif aba_selecionada == "Dashboard":
     cols_m = st.columns(len(etapas_crm) + 1)
     
     for i, etapa in enumerate(etapas_crm):
-        cor_header = st.session_state.funnel_colors.get(etapa, "#00F5FF")
+        cor_header = st.session_state.funnel_colors.get(etapa, "#00E5FF")
         qtd = contagem_calculada[etapa]
         nome_limpo = etapa.replace("Pré: ", "").replace("Pós: ", "")
         
@@ -1173,8 +1173,8 @@ elif aba_selecionada == "Dashboard":
     with cols_m[-1]:
         st.markdown(
             """
-            <div style="background: linear-gradient(135deg, rgba(10, 14, 39, 0.95) 0%, rgba(5, 11, 24, 0.95) 100%); border: 1px solid #1E293B; border-top: 4px solid #00F5FF; padding: 12px 6px; border-radius: 8px; text-align: center; margin-bottom: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);">
-                <b style="color: #00F5FF; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">TOTAL LEADS</b>
+            <div style="background: linear-gradient(135deg, rgba(10, 14, 39, 0.95) 0%, rgba(5, 11, 24, 0.95) 100%); border: 1px solid #1E293B; border-top: 4px solid #00E5FF; padding: 12px 6px; border-radius: 8px; text-align: center; margin-bottom: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);">
+                <b style="color: #00E5FF; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">TOTAL LEADS</b>
             </div>
             """, 
             unsafe_allow_html=True
@@ -1254,7 +1254,7 @@ elif aba_selecionada == "Dashboard":
                 ),
                 showlegend=False
             )
-            fig_perda.update_traces(textposition="outside", marker=dict(line=dict(color='#00F5FF', width=1)))
+            fig_perda.update_traces(textposition="outside", marker=dict(line=dict(color='#00E5FF', width=1)))
             st.plotly_chart(fig_perda, use_container_width=True)
         else:
             st.info("Nenhum motivo de perda especificado para os leads perdidos.")
@@ -1321,13 +1321,13 @@ elif aba_selecionada == "Relatório Executivo":
         if not df_historico_salvo.empty:
             def colorir_tabela_historico(val, col_name):
                 if col_name == "Mês/Ano":
-                    return "background-color: #FFCC00; color: #0A0E27; font-weight: bold;"
+                    return "background-color: #FFEA00; color: #0A0E27; font-weight: bold;"
                 elif col_name == "Leads Qualificados":
                     return "background-color: #9D00FF; color: #FFFFFF; font-weight: bold;"
                 elif col_name == "Reuniões Agendadas":
-                    return "background-color: #FF6600; color: #FFFFFF; font-weight: bold;"
+                    return "background-color: #FFEA00; color: #0A0E27; font-weight: bold;"
                 elif col_name == "Propostas Enviadas":
-                    return "background-color: #00F5FF; color: #0A0E27; font-weight: bold;"
+                    return "background-color: #FF6600; color: #FFFFFF; font-weight: bold;"
                 elif col_name == "Projetos Fechados":
                     return "background-color: #00FF66; color: #0A0E27; font-weight: bold;"
                 return ""
@@ -1347,8 +1347,8 @@ elif aba_selecionada == "Relatório Executivo":
         
         cores_atv = {
             "Leads Qualificados": "#9D00FF",   
-            "Reuniões Agendadas": "#FF6600",   
-            "Propostas Enviadas": "#00F5FF",   
+            "Reuniões Agendadas": "#FFEA00",   
+            "Propostas Enviadas": "#FF6600",   
             "Projetos Fechados": "#00FF66"    
         }
 
@@ -1434,9 +1434,9 @@ elif aba_selecionada == "Relatório Executivo":
         if not df_financeiro_salvo.empty:
             def colorir_tabela_financeiro(val, col_name):
                 if col_name == "Mês/Ano":
-                    return "background-color: #FFCC00; color: #0A0E27; font-weight: bold;"
+                    return "background-color: #FFEA00; color: #0A0E27; font-weight: bold;"
                 elif col_name == "Propostas Enviadas":
-                    return "background-color: #00F5FF; color: #0A0E27; font-weight: bold;"
+                    return "background-color: #FF6600; color: #FFFFFF; font-weight: bold;"
                 elif col_name == "Projetos Fechados":
                     return "background-color: #00FF66; color: #0A0E27; font-weight: bold;"
                 elif col_name == "Total":
@@ -1455,7 +1455,7 @@ elif aba_selecionada == "Relatório Executivo":
             df_agrupado_fin = df_graf_fin.groupby(["Mês/Ano", "Tipo"])["Valor"].sum().reset_index()
 
             cores_fin_graf = {
-                "Propostas Enviadas": "#00F5FF",
+                "Propostas Enviadas": "#FF6600",
                 "Projetos Fechados": "#00FF66"
             }
 
