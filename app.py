@@ -122,6 +122,15 @@ def aplicar_fundo_personalizado(image_path):
                 background-color: rgba(10, 14, 39, 0.95) !important;
             }}
 
+            /* Estilo personalizado para limitar a altura da Logo Superior */
+            .logo-covem-banner img {{
+                max-height: 130px !important;
+                width: 100% !important;
+                object-fit: contain !important;
+                margin: 0 auto !important;
+                display: block !important;
+            }}
+
             .badge-atrasada {{
                 background-color: rgba(255, 0, 51, 0.2);
                 color: #FF0033;
@@ -420,14 +429,14 @@ st.sidebar.download_button(
 )
 
 # ---------------------------------------------------------
-# 1. LOGO CENTRALIZADA DA COVEM (TAMANHO DOBRADO)
+# 1. LOGO COVEM EM LARGURA TOTAL COM ALTURA RESTRITA
 # ---------------------------------------------------------
-col_l1, col_l2, col_l3 = st.columns([1, 6, 1])
-with col_l2:
-    if ARQUIVO_LOGO.exists():
-        st.image(str(ARQUIVO_LOGO), use_container_width=True)
-    else:
-        st.warning("Arquivo 'logoCOVEM.png' não encontrado na pasta do projeto.")
+st.markdown('<div class="logo-covem-banner">', unsafe_allow_html=True)
+if ARQUIVO_LOGO.exists():
+    st.image(str(ARQUIVO_LOGO), use_container_width=True)
+else:
+    st.warning("Arquivo 'logoCOVEM.png' não encontrado na pasta do projeto.")
+st.markdown('</div>', unsafe_allow_html=True)
 
 st.divider()
 
