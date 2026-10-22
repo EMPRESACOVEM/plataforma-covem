@@ -37,14 +37,14 @@ DEFAULT_COLORS = {
     "Pré: Novo Lead": "#1E3A8A",         # Azul Escuro
     "Pré: Conexão": "#8B5CF6",           # Roxo
 
-    # Funil Principal (Sem a etapa Perdido)
-    "1. Prospecção": "#F472B6",          # Rosa Pastel suave
-    "2. Qualificação": "#FDE047",       # Amarelo Pastel suave
-    "3. Reunião Agendada": "#FDBA74",  # Laranja Pastel suave
-    "4. Proposta Enviada": "#93C5FD",  # Azul Pastel suave
-    "5. Fechado": "#86EFAC",           # Verde Pastel suave
+    # Funil Principal (Sem numeração)
+    "Prospecção": "#F472B6",             # Rosa Pastel suave
+    "Qualificação": "#FDE047",          # Amarelo Pastel suave
+    "Reunião Agendada": "#FDBA74",     # Laranja Pastel suave
+    "Proposta Enviada": "#93C5FD",     # Azul Pastel suave
+    "Fechado": "#86EFAC",              # Verde Pastel suave
 
-    # Pós Funil (Com Standby e Perdido)
+    # Pós Funil
     "Pós: Standby": "#FFFFFF",          # Branco
     "Pós: Perdido": "#EF4444"           # Vermelho
 }
@@ -185,21 +185,21 @@ PROB_MAP = {
     "Pré: Novo Lead": 0.05,
     "Pré: Conexão": 0.10,
 
-    # Funil de Vendas Principal (Sem Perdido)
-    "1. Prospecção": 0.20,
-    "2. Qualificação": 0.40,
-    "3. Reunião Agendada": 0.60,
-    "4. Proposta Enviada": 0.80,
-    "5. Fechado": 1.00,
+    # Funil de Vendas Principal (Sem números)
+    "Prospecção": 0.20,
+    "Qualificação": 0.40,
+    "Reunião Agendada": 0.60,
+    "Proposta Enviada": 0.80,
+    "Fechado": 1.00,
 
-    # Pós Funil (Com Standby e Perdido)
+    # Pós Funil
     "Pós: Standby": 0.00,
     "Pós: Perdido": 0.00
 }
 
 ESTRUTURA_FUNIS = {
     "Pré Funil": ["Pré: Novo Lead", "Pré: Conexão"],
-    "Funil de Vendas": ["1. Prospecção", "2. Qualificação", "3. Reunião Agendada", "4. Proposta Enviada", "5. Fechado"],
+    "Funil de Vendas": ["Prospecção", "Qualificação", "Reunião Agendada", "Proposta Enviada", "Fechado"],
     "Pós Funil": ["Pós: Standby", "Pós: Perdido"]
 }
 
@@ -236,10 +236,15 @@ def carregar_dados_crm():
             df_loaded["Prob"] = pd.to_numeric(df_loaded["Prob"], errors="coerce").fillna(0.2)
             df_loaded["Perda"] = df_loaded["Perda"].fillna("").astype(str)
             
-            # Migração automática das etapas antigas para a nova estrutura
+            # Migração automática das etapas antigas para a nova estrutura sem números
             df_loaded["Etapa"] = df_loaded["Etapa"].replace({
-                "1. Contatado": "1. Prospecção",
-                "2. Conversando": "2. Qualificação",
+                "1. Contatado": "Prospecção",
+                "2. Conversando": "Qualificação",
+                "1. Prospecção": "Prospecção",
+                "2. Qualificação": "Qualificação",
+                "3. Reunião Agendada": "Reunião Agendada",
+                "4. Proposta Enviada": "Proposta Enviada",
+                "5. Fechado": "Fechado",
                 "6. Perdido": "Pós: Perdido",
                 "Pós: Lixeira": "Pós: Perdido"
             })
@@ -250,7 +255,7 @@ def carregar_dados_crm():
 
     df_inicial = pd.DataFrame([
         {
-            "id": 1, "Empresa": "Grupo Delta", "Cliente": "BraClean", "Etapa": "1. Prospecção", 
+            "id": 1, "Empresa": "Grupo Delta", "Cliente": "BraClean", "Etapa": "Prospecção", 
             "Contato": "Roberto Alves", "Cargo": "Diretor Comercial", "Telefone": "(16) 99876-5432", 
             "Email": "roberto@grupodelta.com.br", "Cidade": "Sertãozinho / SP", "Valor": 50000.0, 
             "Prob": 0.20, "Vendedor": "Lucas Mendes", "Perda": "",
@@ -268,7 +273,7 @@ def carregar_dados_crm():
             "Historico": "[02/09/2026 14:30] Lead cadastrado no Pré Funil."
         },
         {
-            "id": 3, "Empresa": "Indústria Omega", "Cliente": "Elleven", "Etapa": "2. Qualificação", 
+            "id": 3, "Empresa": "Indústria Omega", "Cliente": "Elleven", "Etapa": "Qualificação", 
             "Contato": "Fernando Souza", "Cargo": "Sócio-Proprietário", "Telefone": "(11) 98123-4567", 
             "Email": "fernando@omegaind.com.br", "Cidade": "São Paulo / SP", "Valor": 80000.0, 
             "Prob": 0.40, "Vendedor": "Gabriel Silva", "Perda": "",
@@ -1150,7 +1155,6 @@ elif aba_selecionada == "Dashboard":
         nome_limpo = etapa.replace("Pré: ", "").replace("Pós: ", "")
         
         with cols_m[i]:
-            # Aumentado o tamanho da fonte de 10px para 13px (ou o tamanho que preferir para destacar)
             st.markdown(
                 f"""
                 <div style="background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.9) 100%); border: 1px solid #334155; border-top: 4px solid {cor_header}; padding: 12px 6px; border-radius: 8px; text-align: center; margin-bottom: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
@@ -1263,10 +1267,10 @@ elif aba_selecionada == "Relatório Executivo":
 
         sub_m = df_crm_base[df_crm_base["Mês/Ano"] == mes_atual_str]
         
-        leads_q = len(sub_m[sub_m["Etapa"].isin(["1. Prospecção", "2. Qualificação", "3. Reunião Agendada", "4. Proposta Enviada", "5. Fechado"])])
-        reunioes = len(sub_m[sub_m["Etapa"] == "3. Reunião Agendada"])
-        propostas = len(sub_m[sub_m["Etapa"] == "4. Proposta Enviada"])
-        fechados = len(sub_m[sub_m["Etapa"] == "5. Fechado"])
+        leads_q = len(sub_m[sub_m["Etapa"].isin(["Prospecção", "Qualificação", "Reunião Agendada", "Proposta Enviada", "Fechado"])])
+        reunioes = len(sub_m[sub_m["Etapa"] == "Reunião Agendada"])
+        propostas = len(sub_m[sub_m["Etapa"] == "Proposta Enviada"])
+        fechados = len(sub_m[sub_m["Etapa"] == "Fechado"])
 
         if df_historico_salvo.empty:
             df_historico_salvo = pd.DataFrame([{
@@ -1360,8 +1364,8 @@ elif aba_selecionada == "Relatório Executivo":
     df_financeiro_salvo = carregar_dados_financeiro()
 
     if not df_crm_base.empty and "Data_Cadastro" in df_crm_base.columns:
-        sub_m_prop = df_crm_base[(df_crm_base["Mês/Ano"] == mes_atual_str) & (df_crm_base["Etapa"] == "4. Proposta Enviada")]
-        sub_m_fech = df_crm_base[(df_crm_base["Mês/Ano"] == mes_atual_str) & (df_crm_base["Etapa"] == "5. Fechado")]
+        sub_m_prop = df_crm_base[(df_crm_base["Mês/Ano"] == mes_atual_str) & (df_crm_base["Etapa"] == "Proposta Enviada")]
+        sub_m_fech = df_crm_base[(df_crm_base["Mês/Ano"] == mes_atual_str) & (df_crm_base["Etapa"] == "Fechado")]
 
         val_prop = float(sub_m_prop["Valor"].sum()) if not sub_m_prop.empty else 0.0
         qtd_prop = int(len(sub_m_prop))
@@ -1418,7 +1422,7 @@ elif aba_selecionada == "Relatório Executivo":
             st.info("Nenhum dado cadastrado para gerar o histórico financeiro.")
 
     if not df_crm_base.empty and "Data_Cadastro" in df_crm_base.columns:
-        df_graf_fin = df_crm_base[df_crm_base["Etapa"].isin(["4. Proposta Enviada", "5. Fechado"])].copy()
+        df_graf_fin = df_crm_base[df_crm_base["Etapa"].isin(["Proposta Enviada", "Fechado"])].copy()
         if not df_graf_fin.empty:
             df_graf_fin["Tipo"] = df_graf_fin["Etapa"].apply(lambda x: "Propostas Enviadas" if "Proposta" in x else "Projetos Fechados")
             df_agrupado_fin = df_graf_fin.groupby(["Mês/Ano", "Tipo"])["Valor"].sum().reset_index()
