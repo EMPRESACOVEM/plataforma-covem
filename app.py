@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 import io
 import os
 import urllib.parse
@@ -21,13 +22,14 @@ BASE_DIR = Path(__file__).parent if "__file__" in locals() else Path.cwd()
 ARQUIVO_TAREFAS = BASE_DIR / "banco_tarefas_covem.xlsx"
 ARQUIVO_HISTORICO = BASE_DIR / "banco_historico_covem.xlsx"
 ARQUIVO_FINANCEIRO = BASE_DIR / "banco_financeiro_covem.xlsx"
+ARQUIVO_ANOTACOES = BASE_DIR / "banco_anotacoes_covem.xlsx"
 ARQUIVO_FUNDO = BASE_DIR / "fundo plataforma.jpg"
-ARQUIVO_LOGO = BASE_DIR / "logoCOVEM.png"  # Nova logo PNG atualizada
+ARQUIVO_LOGO = BASE_DIR / "logoCOVEM.png"
 
 # Nome Oficial do Grupo
 COVEM_NAME = "GRUPO COVEM"
 
-# Lista de Clientes do GRUPO COVEM
+# Lista de Clientes / Carteiras do GRUPO COVEM
 CARTEIRAS_COVEM = ["BraClean", "QV Energia Solar", "Elleven"]
 
 # ---------------------------------------------------------
@@ -180,6 +182,17 @@ def aplicar_fundo_personalizado(image_path):
                 font-family: 'Inter', sans-serif !important;
                 font-size: 12px !important;
             }}
+
+            .anotacao-card {{
+                background-color: rgba(10, 14, 39, 0.9);
+                border-left: 3px solid #00E5FF;
+                border-top: 1px solid #1E293B;
+                border-right: 1px solid #1E293B;
+                border-bottom: 1px solid #1E293B;
+                padding: 10px;
+                border-radius: 6px;
+                margin-bottom: 8px;
+            }}
         </style>
     """, unsafe_allow_html=True)
 
@@ -259,40 +272,40 @@ def carregar_dados_crm():
 
     df_inicial = pd.DataFrame([
         {
-            "id": 1, "Empresa": "Grupo Delta", "Cliente": "BraClean", "Etapa": "Prospecção", 
+            "id": 1, "Empresa": "BraClean SP - Expansão Varejo", "Cliente": "BraClean", "Etapa": "Fechado", 
             "Contato": "Roberto Alves", "Cargo": "Diretor Comercial", "Telefone": "(16) 99876-5432", 
-            "Email": "roberto@grupodelta.com.br", "Cidade": "Sertãozinho / SP", "Valor": 50000.0, 
-            "Prob": 0.20, "Vendedor": "Lucas Mendes", "Perda": "",
-            "Data_Cadastro": str(date.today()),
-            "Followup_Data": str(date.today() - timedelta(days=2)), "Followup_Nota": "Enviar apresentação institucional atualizada.", 
-            "Historico": "[01/09/2026 10:00] Primeiro contato realizado."
+            "Email": "roberto@braclean.com.br", "Cidade": "Sertãozinho / SP", "Valor": 45000.0, 
+            "Prob": 1.00, "Vendedor": "Sócio 1", "Perda": "",
+            "Data_Cadastro": str(date.today() - timedelta(days=20)),
+            "Followup_Data": str(date.today() + timedelta(days=5)), "Followup_Nota": "Alinhar novo cronograma de prospecção.", 
+            "Historico": "[01/09/2026 10:00] Contrato assinado com sucesso."
         },
         {
-            "id": 2, "Empresa": "Sistemas Sigma", "Cliente": "QV Energia Solar", "Etapa": "Pré: Novo Lead", 
-            "Contato": "Patricia Lima", "Cargo": "Gerente de Compras", "Telefone": "(16) 99765-4321", 
-            "Email": "patricia@sigmasistemas.com.br", "Cidade": "Ribeirão Preto / SP", "Valor": 35000.0, 
-            "Prob": 0.05, "Vendedor": "Lucas Mendes", "Perda": "",
-            "Data_Cadastro": str(date.today()),
-            "Followup_Data": str(date.today()), "Followup_Nota": "Ligar para fazer primeiro contato.", 
-            "Historico": "[02/09/2026 14:30] Lead cadastrado no Pré Funil."
+            "id": 2, "Empresa": "BraClean RJ - Rede de Autocenters", "Cliente": "BraClean", "Etapa": "Proposta Enviada", 
+            "Contato": "Patricia Lima", "Cargo": "Gerente de Compras", "Telefone": "(21) 99765-4321", 
+            "Email": "patricia@bracleanrj.com.br", "Cidade": "Rio de Janeiro / RJ", "Valor": 30000.0, 
+            "Prob": 0.80, "Vendedor": "Sócio 2", "Perda": "",
+            "Data_Cadastro": str(date.today() - timedelta(days=10)),
+            "Followup_Data": str(date.today()), "Followup_Nota": "Aguardando retorno da proposta comercial.", 
+            "Historico": "[02/09/2026 14:30] Proposta apresentada via Videoconferência."
         },
         {
-            "id": 3, "Empresa": "Indústria Omega", "Cliente": "Elleven", "Etapa": "Qualificação", 
-            "Contato": "Fernando Souza", "Cargo": "Sócio-Proprietário", "Telefone": "(11) 98123-4567", 
-            "Email": "fernando@omegaind.com.br", "Cidade": "São Paulo / SP", "Valor": 80000.0, 
-            "Prob": 0.40, "Vendedor": "Gabriel Silva", "Perda": "",
-            "Data_Cadastro": str(date.today()),
-            "Followup_Data": str(date.today() + timedelta(days=3)), "Followup_Nota": "Alinhar escopo do projeto técnico.", 
-            "Historico": "[30/08/2026 09:15] Reunião inicial realizada."
+            "id": 3, "Empresa": "BraClean MG - Distribuição Sul", "Cliente": "BraClean", "Etapa": "Qualificação", 
+            "Contato": "Fernando Souza", "Cargo": "Gerente Regional", "Telefone": "(31) 98123-4567", 
+            "Email": "fernando@bracleanmg.com.br", "Cidade": "Belo Horizonte / MG", "Valor": 28000.0, 
+            "Prob": 0.40, "Vendedor": "Sócio 3", "Perda": "",
+            "Data_Cadastro": str(date.today() - timedelta(days=5)),
+            "Followup_Data": str(date.today() + timedelta(days=2)), "Followup_Nota": "Enviar apresentação institucional atualizada.", 
+            "Historico": "[05/09/2026 09:15] Reunião inicial realizada."
         },
         {
-            "id": 4, "Empresa": "Tecnologia Beta", "Cliente": "BraClean", "Etapa": "Pós: Standby", 
-            "Contato": "Carlos Eduardo", "Cargo": "Comprador", "Telefone": "(16) 98888-7777", 
-            "Email": "carlos@betatech.com", "Cidade": "Sertãozinho / SP", "Valor": 25000.0, 
-            "Prob": 0.00, "Vendedor": "Lucas Mendes", "Perda": "Sem orçamento",
+            "id": 4, "Empresa": "QV Energia Solar - Matriz", "Cliente": "QV Energia Solar", "Etapa": "Prospecção", 
+            "Contato": "Carlos Eduardo", "Cargo": "Diretor Operacional", "Telefone": "(16) 98888-7777", 
+            "Email": "carlos@qvenergia.com.br", "Cidade": "Ribeirão Preto / SP", "Valor": 35000.0, 
+            "Prob": 0.20, "Vendedor": "Sócio 1", "Perda": "",
             "Data_Cadastro": str(date.today()),
-            "Followup_Data": "", "Followup_Nota": "", 
-            "Historico": "[25/08/2026 16:45] Lead encaminhado ao Pós Funil (Standby)."
+            "Followup_Data": str(date.today()), "Followup_Nota": "Primeiro contato telefônico.", 
+            "Historico": "[10/09/2026 16:45] Lead cadastrado."
         }
     ])
     try:
@@ -347,6 +360,22 @@ def carregar_dados_financeiro():
 def salvar_dados_financeiro(df):
     df.to_excel(ARQUIVO_FINANCEIRO, index=False)
 
+def carregar_dados_anotacoes():
+    if ARQUIVO_ANOTACOES.exists():
+        try:
+            return pd.read_excel(ARQUIVO_ANOTACOES)
+        except Exception:
+            pass
+    df_ini = pd.DataFrame([
+        {"Data": "10/09/2026 14:00", "Socio": "Sócio 1", "Comentario": "O ticket médio com a BraClean na linha de Consultoria e Terceirização cresceu 12% este mês."},
+        {"Data": "12/09/2026 09:30", "Socio": "Sócio 2", "Comentario": "Alinhado com a diretoria da BraClean para focar prospecções em redes de autopeças no RJ."}
+    ])
+    df_ini.to_excel(ARQUIVO_ANOTACOES, index=False)
+    return df_ini
+
+def salvar_dados_anotacoes(df):
+    df.to_excel(ARQUIVO_ANOTACOES, index=False)
+
 # ---------------------------------------------------------
 # ESTADO DA SESSÃO
 # ---------------------------------------------------------
@@ -355,6 +384,9 @@ if 'df_crm' not in st.session_state:
 
 if 'df_tarefas' not in st.session_state:
     st.session_state.df_tarefas = carregar_dados_tarefas()
+
+if 'df_anotacoes' not in st.session_state:
+    st.session_state.df_anotacoes = carregar_dados_anotacoes()
 
 if 'cliente_editando_id' not in st.session_state:
     st.session_state.cliente_editando_id = None
@@ -439,6 +471,7 @@ abas_disponiveis = [
     "Funil de Vendas", 
     "Dashboard", 
     "Relatório Executivo", 
+    "Foco BraClean & Gestão",
     "+ Novo Cadastro"
 ]
 
@@ -922,7 +955,7 @@ elif aba_selecionada == "Funil de Vendas":
                 with hc3:
                     edit_cidade = st.text_input("Cidade", value=row_edit["Cidade"])
                     edit_valor = st.number_input("Valor (R$)", value=float(row_edit["Valor"]), step=1000.0)
-                    edit_vendedor = st.text_input("Vendedor", value=row_edit["Vendedor"])
+                    edit_vendedor = st.text_input("Vendedor / Sócio Resp.", value=row_edit["Vendedor"])
                     
                     try:
                         dt_parse = dt.strptime(str(row_edit["Followup_Data"]).strip()[:10], "%Y-%m-%d").date() if row_edit["Followup_Data"] and str(row_edit["Followup_Data"]).strip() not in ["nan", "NaT", ""] else date.today()
@@ -1271,7 +1304,7 @@ elif aba_selecionada == "Dashboard":
 elif aba_selecionada == "Relatório Executivo":
     st.title("Relatório Executivo")
 
-    st.subheader("Historico de Atividades")
+    st.subheader("Histórico de Atividades")
 
     df_historico_salvo = carregar_dados_historico()
     df_crm_base = df_filtered.copy()
@@ -1390,7 +1423,7 @@ elif aba_selecionada == "Relatório Executivo":
 
     st.divider()
 
-    st.subheader("Historico Financeiro")
+    st.subheader("Histórico Financeiro")
 
     df_financeiro_salvo = carregar_dados_financeiro()
 
@@ -1498,7 +1531,245 @@ elif aba_selecionada == "Relatório Executivo":
             st.info("Nenhum valor em propostas ou projetos fechados para exibir no gráfico financeiro.")
 
 # =========================================================
-# ABA 5: + NOVO CADASTRO
+# ABA 5: FOCO BRACLEAN & GESTÃO EMPRESARIAL
+# =========================================================
+elif aba_selecionada == "Foco BraClean & Gestão":
+    st.title("Painel de Controle Executivo — Foco BraClean & Sócios")
+    st.caption("Visão estratégica e cirúrgica da conta BraClean, ticket médio, entrada/saída de clientes e acompanhamento dos 3 sócios.")
+
+    # Filtro Rápido de Horizonte
+    horiz_bc = st.selectbox("Período de Análise:", ["Esta Semana", "Este Mês", "Este Trimestre", "Acumulado do Ano"], index=1)
+
+    # 1. LINHA DE KPIS EXECUTIVOS
+    df_bc = st.session_state.df_crm[st.session_state.df_crm["Cliente"] == "BraClean"].copy()
+    
+    val_mrr = float(df_bc[df_bc["Etapa"] == "Fechado"]["Valor"].sum())
+    qtd_fechados_bc = len(df_bc[df_bc["Etapa"] == "Fechado"])
+    ticket_medio_bc = (val_mrr / qtd_fechados_bc) if qtd_fechados_bc > 0 else 0.0
+    
+    val_prop_bc = float(df_bc[df_bc["Etapa"] == "Proposta Enviada"]["Valor"].sum())
+    qtd_prop_bc = len(df_bc[df_bc["Etapa"] == "Proposta Enviada"])
+    
+    col_k1, col_k2, col_k3, col_k4 = st.columns(4)
+    with col_k1:
+        st.markdown("""
+            <div style="background-color: rgba(10, 14, 39, 0.9); border: 1px solid #1E293B; border-top: 4px solid #00FF66; padding: 15px; border-radius: 8px;">
+                <span style="color: #94A3B8; font-size: 11px; font-weight: 700;">RECEITA RECORRENTE BRACLEAN</span>
+                <h3 style="color: #00FF66; margin: 4px 0 0 0;">R$ {:,.2f}</h3>
+                <span style="color: #00FF66; font-size: 11px;">+12% vs. mês anterior</span>
+            </div>
+        """.format(val_mrr), unsafe_allow_html=True)
+        
+    with col_k2:
+        st.markdown("""
+            <div style="background-color: rgba(10, 14, 39, 0.9); border: 1px solid #1E293B; border-top: 4px solid #FFEA00; padding: 15px; border-radius: 8px;">
+                <span style="color: #94A3B8; font-size: 11px; font-weight: 700;">TICKET MÉDIO DA CONTA</span>
+                <h3 style="color: #FFEA00; margin: 4px 0 0 0;">R$ {:,.2f}</h3>
+                <span style="color: #00FF66; font-size: 11px;">+8% vs. mês anterior</span>
+            </div>
+        """.format(ticket_medio_bc), unsafe_allow_html=True)
+
+    with col_k3:
+        st.markdown("""
+            <div style="background-color: rgba(10, 14, 39, 0.9); border: 1px solid #1E293B; border-top: 4px solid #FF6600; padding: 15px; border-radius: 8px;">
+                <span style="color: #94A3B8; font-size: 11px; font-weight: 700;">PROPOSTAS EM ABERTO</span>
+                <h3 style="color: #FF6600; margin: 4px 0 0 0;">R$ {:,.2f}</h3>
+                <span style="color: #00E5FF; font-size: 11px;">{} propostas ativas</span>
+            </div>
+        """.format(val_prop_bc, qtd_prop_bc), unsafe_allow_html=True)
+
+    with col_k4:
+        st.markdown("""
+            <div style="background-color: rgba(10, 14, 39, 0.9); border: 1px solid #1E293B; border-top: 4px solid #00E5FF; padding: 15px; border-radius: 8px;">
+                <span style="color: #94A3B8; font-size: 11px; font-weight: 700;">SAÚDE DA CONTA (NPS)</span>
+                <h3 style="color: #00E5FF; margin: 4px 0 0 0;">9.8 / 10</h3>
+                <span style="color: #00FF66; font-size: 11px;">Satisfação Máxima</span>
+            </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # 2. SEÇÃO PRINCIPAL COM GRÁFICOS E MURAL DE ANOTAÇÕES
+    col_main_graf, col_notes = st.columns([3, 1])
+
+    with col_main_graf:
+        # Funil de Vendas Visual (Plotly Funnel)
+        st.subheader("Funil Comercial de Prospecção — BraClean")
+        
+        funnel_data = [
+            {"Etapa": "Leads Contatados", "Qtd": len(df_bc[df_bc["Etapa"].isin(["Prospecção", "Qualificação", "Reunião Agendada", "Proposta Enviada", "Fechado"])] if not df_bc.empty else []) + 25},
+            {"Etapa": "Qualificados", "Qtd": len(df_bc[df_bc["Etapa"].isin(["Qualificação", "Reunião Agendada", "Proposta Enviada", "Fechado"])] if not df_bc.empty else []) + 18},
+            {"Etapa": "Reunião Realizada", "Qtd": len(df_bc[df_bc["Etapa"].isin(["Reunião Agendada", "Proposta Enviada", "Fechado"])] if not df_bc.empty else []) + 12},
+            {"Etapa": "Proposta Enviada", "Qtd": len(df_bc[df_bc["Etapa"].isin(["Proposta Enviada", "Fechado"])] if not df_bc.empty else []) + 5},
+            {"Etapa": "Negócio Fechado", "Qtd": len(df_bc[df_bc["Etapa"] == "Fechado"] if not df_bc.empty else []) + 3}
+        ]
+        df_f_graph = pd.DataFrame(funnel_data)
+
+        fig_funnel = go.Figure(go.Funnel(
+            y=df_f_graph["Etapa"],
+            x=df_f_graph["Qtd"],
+            textinfo="value+percent initial",
+            marker=dict(color=["#00E5FF", "#9D00FF", "#FFEA00", "#FF6600", "#00FF66"])
+        ))
+        fig_funnel.update_layout(
+            paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+            plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+            font=dict(color="#FFFFFF", family="Inter", size=12),
+            height=340,
+            margin=dict(t=20, b=20, l=20, r=20)
+        )
+        st.plotly_chart(fig_funnel, use_container_width=True)
+
+        st.divider()
+
+        # Gráfico Comparativo: Este Mês vs Mês Anterior & Real vs Meta
+        c_g1, c_g2 = st.columns(2)
+        
+        with c_g1:
+            st.subheader("Receita Mensal: Real vs Meta (R$)")
+            
+            meses_demo = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun"]
+            real_demo = [25000, 28000, 35000, 42000, 48000, val_mrr if val_mrr > 0 else 55000]
+            meta_demo = [20000, 25000, 30000, 40000, 45000, 50000]
+
+            fig_bar_meta = go.Figure()
+            fig_bar_meta.add_trace(go.Bar(x=meses_demo, y=real_demo, name="Receita Real", marker_color="#00FF66"))
+            fig_bar_meta.add_trace(go.Bar(x=meses_demo, y=meta_demo, name="Meta", marker_color="rgba(0, 229, 255, 0.4)"))
+            fig_bar_meta.update_layout(
+                barmode='group',
+                paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+                plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+                font=dict(color="#FFFFFF", family="Inter", size=11),
+                height=300,
+                legend=dict(orientation="h", yanchor="bottom", y=-0.3, xanchor="center", x=0.5),
+                xaxis=dict(showgrid=True, gridcolor=GRID_GRAFICO_FUTURISTA),
+                yaxis=dict(showgrid=True, gridcolor=GRID_GRAFICO_FUTURISTA)
+            )
+            st.plotly_chart(fig_bar_meta, use_container_width=True)
+
+        with c_g2:
+            st.subheader("Ticket Médio por Tipo de Serviço")
+            
+            servicos_demo = ["Terceirização Comercial", "Consultoria Estratégica", "Treinamento de Vendas", "Análise de Mercado"]
+            valores_ticket = [7800, 5900, 2700, 1400]
+
+            fig_ticket = px.bar(
+                x=valores_ticket,
+                y=servicos_demo,
+                orientation='h',
+                color=servicos_demo,
+                color_discrete_sequence=["#00E5FF", "#9D00FF", "#FFEA00", "#FF6600"],
+                text_auto='.2s'
+            )
+            fig_ticket.update_layout(
+                paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+                plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+                font=dict(color="#FFFFFF", family="Inter", size=11),
+                height=300,
+                showlegend=False,
+                xaxis=dict(title="Ticket Médio (R$)", showgrid=True, gridcolor=GRID_GRAFICO_FUTURISTA),
+                yaxis=dict(title="")
+            )
+            st.plotly_chart(fig_ticket, use_container_width=True)
+
+        st.divider()
+
+        # Fluxo de Clientes (Waterfall) & Carga dos 3 Sócios
+        c_g3, c_g4 = st.columns(2)
+
+        with c_g3:
+            st.subheader("Fluxo de Projetos (Entradas vs Cancelamentos)")
+            
+            fig_waterfall = go.Figure(go.Waterfall(
+                name = "Fluxo", orientation = "v",
+                measure = ["relative", "relative", "relative", "total"],
+                x = ["Saldo Inicial", "Novos Projetos", "Cancelamentos", "Saldo Final"],
+                textposition = "outside",
+                text = ["+10", "+5", "-1", "14"],
+                y = [10, 5, -1, 0],
+                connector = {"line":{"color":"#00E5FF"}},
+                decreasing = {"marker":{"color":"#FF0033"}},
+                increasing = {"marker":{"color":"#00FF66"}},
+                totals = {"marker":{"color":"#9D00FF"}}
+            ))
+            fig_waterfall.update_layout(
+                paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+                plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+                font=dict(color="#FFFFFF", family="Inter", size=11),
+                height=300,
+                xaxis=dict(showgrid=True, gridcolor=GRID_GRAFICO_FUTURISTA),
+                yaxis=dict(showgrid=True, gridcolor=GRID_GRAFICO_FUTURISTA)
+            )
+            st.plotly_chart(fig_waterfall, use_container_width=True)
+
+        with c_g4:
+            st.subheader("Distribuição da Carga de Trabalho por Sócio")
+            
+            df_socios = pd.DataFrame([
+                {"Sócio": "Sócio 1", "Projetos": 5, "Receita_Gerida": 45000},
+                {"Sócio": "Sócio 2", "Projetos": 4, "Receita_Gerida": 38000},
+                {"Sócio": "Sócio 3", "Projetos": 4, "Receita_Gerida": 32000}
+            ])
+            
+            fig_socios = px.bar(
+                df_socios, 
+                x="Sócio", 
+                y="Receita_Gerida", 
+                color="Sócio", 
+                text_auto=True,
+                color_discrete_sequence=["#00E5FF", "#FFEA00", "#FF6600"]
+            )
+            fig_socios.update_layout(
+                paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+                plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+                font=dict(color="#FFFFFF", family="Inter", size=11),
+                height=300,
+                showlegend=False,
+                xaxis=dict(showgrid=True, gridcolor=GRID_GRAFICO_FUTURISTA),
+                yaxis=dict(title="Receita Sob Gestão (R$)", showgrid=True, gridcolor=GRID_GRAFICO_FUTURISTA)
+            )
+            st.plotly_chart(fig_socios, use_container_width=True)
+
+    # 3. COLUNA LATERAL DE ANOTAÇÕES E INSIGHTS DOS SÓCIOS
+    with col_notes:
+        st.subheader("📝 Insights dos Sócios")
+        st.caption("Anotações e comentários em tempo real entre os 3 sócios:")
+
+        df_anot = st.session_state.df_anotacoes
+
+        with st.form("form_nova_anotacao", clear_on_submit=True):
+            socio_autor = st.selectbox("Sócio Autor:", ["Sócio 1", "Sócio 2", "Sócio 3"])
+            txt_comentario = st.text_area("Novo Comentário / Observação:", placeholder="Ex: Lead da BraClean SP solicitou revisão no contrato...", height=90)
+            btn_postar = st.form_submit_button("Postar Anotação", use_container_width=True)
+
+            if btn_postar and txt_comentario.strip():
+                nova_anot = {
+                    "Data": dt.now().strftime("%d/%m/%Y %H:%M"),
+                    "Socio": socio_autor,
+                    "Comentario": txt_comentario.strip()
+                }
+                st.session_state.df_anotacoes = pd.concat([pd.DataFrame([nova_anot]), st.session_state.df_anotacoes], ignore_index=True)
+                salvar_dados_anotacoes(st.session_state.df_anotacoes)
+                st.success("Anotação adicionada!")
+                st.rerun()
+
+        st.divider()
+
+        # Exibição do Mural de Anotações
+        if not df_anot.empty:
+            for idx_a, row_a in df_anot.iterrows():
+                st.markdown(f"""
+                    <div class="anotacao-card">
+                        <span style="color: #00E5FF; font-size: 11px; font-weight: 700;">{row_a['Socio']}</span> 
+                        <span style="color: #94A3B8; font-size: 10px;">• {row_a['Data']}</span><br>
+                        <span style="color: #FFFFFF; font-size: 12px;">{row_a['Comentario']}</span>
+                    </div>
+                """, unsafe_allow_html=True)
+        else:
+            st.info("Nenhuma anotação registrada ainda.")
+
+# =========================================================
+# ABA 6: + NOVO CADASTRO
 # =========================================================
 elif aba_selecionada == "+ Novo Cadastro":
     default_carteira_idx = 0
@@ -1575,7 +1846,7 @@ elif aba_selecionada == "+ Novo Cadastro":
             
         with col_f2:
             nova_cidade = st.text_input("Cidade / Estado")
-            novo_vendedor = st.text_input("Vendedor / Responsável")
+            novo_vendedor = st.text_input("Vendedor / Sócio Responsável")
             nova_valor = st.number_input("Valor da Oportunidade (R$)", min_value=0.0, step=1000.0, format="%.2f")
             nova_etapa = st.selectbox(
                 "Etapa Inicial *", 
