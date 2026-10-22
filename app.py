@@ -1150,10 +1150,11 @@ elif aba_selecionada == "Dashboard":
         nome_limpo = etapa.replace("Pré: ", "").replace("Pós: ", "")
         
         with cols_m[i]:
+            # Aumentado o tamanho da fonte de 10px para 13px (ou o tamanho que preferir para destacar)
             st.markdown(
                 f"""
-                <div style="background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.9) 100%); border: 1px solid #334155; border-top: 4px solid {cor_header}; padding: 10px; border-radius: 8px; text-align: center; margin-bottom: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-                    <b style="color: #F8FAFC; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px;">{nome_limpo}</b>
+                <div style="background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.9) 100%); border: 1px solid #334155; border-top: 4px solid {cor_header}; padding: 12px 6px; border-radius: 8px; text-align: center; margin-bottom: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+                    <b style="color: #F8FAFC; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">{nome_limpo}</b>
                 </div>
                 """, 
                 unsafe_allow_html=True
@@ -1163,8 +1164,8 @@ elif aba_selecionada == "Dashboard":
     with cols_m[-1]:
         st.markdown(
             """
-            <div style="background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.9) 100%); border: 1px solid #334155; border-top: 4px solid #FFFFFF; padding: 10px; border-radius: 8px; text-align: center; margin-bottom: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-                <b style="color: #F8FAFC; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px;">TOTAL LEADS</b>
+            <div style="background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.9) 100%); border: 1px solid #334155; border-top: 4px solid #FFFFFF; padding: 12px 6px; border-radius: 8px; text-align: center; margin-bottom: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+                <b style="color: #F8FAFC; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">TOTAL LEADS</b>
             </div>
             """, 
             unsafe_allow_html=True
@@ -1557,7 +1558,7 @@ elif aba_selecionada == "+ Novo Cadastro":
                 cargo_valido = novo_cargo if 'novo_cargo' in locals() and novo_cargo else "Não informado"
                 telefone_valido = novo_telefone if 'novo_telefone' in locals() and novo_telefone else "Não informado"
                 cidade_valida = nova_cidade if 'nova_cidade' in locals() and nova_cidade else "Não informado"
-                vendedor_valido = novo_vendedor if 'nova_vendedor' in locals() and novo_vendedor else "Não informado"
+                vendedor_valido = novo_vendedor if 'novo_vendedor' in locals() and novo_vendedor else "Não informado"
 
                 nova_linha = {
                     "id": novo_id,
