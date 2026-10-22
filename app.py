@@ -22,7 +22,7 @@ ARQUIVO_TAREFAS = BASE_DIR / "banco_tarefas_covem.xlsx"
 ARQUIVO_HISTORICO = BASE_DIR / "banco_historico_covem.xlsx"
 ARQUIVO_FINANCEIRO = BASE_DIR / "banco_financeiro_covem.xlsx"
 ARQUIVO_FUNDO = BASE_DIR / "fundo plataforma.jpg"
-ARQUIVO_LOGO = BASE_DIR / "logoCOVEM.png"  # Logo PNG sem fundo
+ARQUIVO_LOGO = BASE_DIR / "logoCOVEM.png"  # Nova logo PNG atualizada
 
 # Nome Oficial do Grupo
 COVEM_NAME = "GRUPO COVEM"
@@ -120,15 +120,6 @@ def aplicar_fundo_personalizado(image_path):
 
             [data-testid="stSidebar"] {{
                 background-color: rgba(10, 14, 39, 0.95) !important;
-            }}
-
-            /* Estilo personalizado para limitar a altura da Logo Superior */
-            .logo-covem-banner img {{
-                max-height: 130px !important;
-                width: 100% !important;
-                object-fit: contain !important;
-                margin: 0 auto !important;
-                display: block !important;
             }}
 
             .badge-atrasada {{
@@ -429,14 +420,14 @@ st.sidebar.download_button(
 )
 
 # ---------------------------------------------------------
-# 1. LOGO COVEM EM LARGURA TOTAL COM ALTURA RESTRITA
+# 1. LOGO CENTRALIZADA DA COVEM (logoCOVEM.png)
 # ---------------------------------------------------------
-st.markdown('<div class="logo-covem-banner">', unsafe_allow_html=True)
-if ARQUIVO_LOGO.exists():
-    st.image(str(ARQUIVO_LOGO), use_container_width=True)
-else:
-    st.warning("Arquivo 'logoCOVEM.png' não encontrado na pasta do projeto.")
-st.markdown('</div>', unsafe_allow_html=True)
+col_l1, col_l2, col_l3 = st.columns([1, 2, 1])
+with col_l2:
+    if ARQUIVO_LOGO.exists():
+        st.image(str(ARQUIVO_LOGO), use_container_width=True)
+    else:
+        st.warning("Arquivo 'logoCOVEM.png' não encontrado na pasta do projeto.")
 
 st.divider()
 
