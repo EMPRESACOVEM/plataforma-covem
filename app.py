@@ -22,6 +22,7 @@ ARQUIVO_TAREFAS = BASE_DIR / "banco_tarefas_covem.xlsx"
 ARQUIVO_HISTORICO = BASE_DIR / "banco_historico_covem.xlsx"
 ARQUIVO_FINANCEIRO = BASE_DIR / "banco_financeiro_covem.xlsx"
 ARQUIVO_FUNDO = BASE_DIR / "fundo plataforma.jpg"
+ARQUIVO_LOGO = BASE_DIR / "logoCOVEM.png"  # Nova logo PNG atualizada
 
 # Nome Oficial do Grupo
 COVEM_NAME = "GRUPO COVEM"
@@ -419,11 +420,14 @@ st.sidebar.download_button(
 )
 
 # ---------------------------------------------------------
-# 1. LOGO CENTRALIZADA DA COVEM
+# 1. LOGO CENTRALIZADA DA COVEM (logoCOVEM.png)
 # ---------------------------------------------------------
 col_l1, col_l2, col_l3 = st.columns([1, 2, 1])
 with col_l2:
-    st.image("logo.jpeg", use_container_width=True)
+    if ARQUIVO_LOGO.exists():
+        st.image(str(ARQUIVO_LOGO), use_container_width=True)
+    else:
+        st.warning("Arquivo 'logoCOVEM.png' não encontrado na pasta do projeto.")
 
 st.divider()
 
