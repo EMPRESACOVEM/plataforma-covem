@@ -30,32 +30,36 @@ COVEM_NAME = "GRUPO COVEM"
 CARTEIRAS_COVEM = ["BraClean", "QV Energia Solar", "Elleven"]
 
 # ---------------------------------------------------------
-# PALETA COVEM & ESTILIZAÇÃO CSS (ATUALIZADA)
+# PALETA NEON / FUTURISTA (INSPIRADA NA IMAGEM)
 # ---------------------------------------------------------
 DEFAULT_COLORS = {
     # Pré Funil
-    "Pré: Novo Lead": "#1E3A8A",         # Azul Escuro
-    "Pré: Conexão": "#8B5CF6",           # Roxo
+    "Pré: Novo Lead": "#00F5FF",         # Ciano Neon
+    "Pré: Conexão": "#0066FF",           # Azul Elétrico
 
-    # Funil Principal (Sem numeração)
-    "Prospecção": "#F472B6",             # Rosa Pastel suave
-    "Qualificação": "#FDE047",          # Amarelo Pastel suave
-    "Reunião Agendada": "#FDBA74",     # Laranja Pastel suave
-    "Proposta Enviada": "#93C5FD",     # Azul Pastel suave
-    "Fechado": "#86EFAC",              # Verde Pastel suave
+    # Funil Principal
+    "Prospecção": "#9D00FF",             # Violeta Neon
+    "Qualificação": "#FF007F",          # Magenta / Rosa Neon
+    "Reunião Agendada": "#FF6600",     # Laranja Neon
+    "Proposta Enviada": "#FFCC00",     # Amarelo Elétrico
+    "Fechado": "#00FF66",              # Verde Neon
 
     # Pós Funil
-    "Pós: Standby": "#FFFFFF",          # Branco
-    "Pós: Perdido": "#EF4444"           # Vermelho
+    "Pós: Standby": "#00E5FF",          # Turquesa Neon
+    "Pós: Perdido": "#FF0033"           # Vermelho Neon
 }
 
 CORES_PERDAS = {
-    "Preço / Orçamento": "#FCA5A5",             # Vermelho Pastel
-    "Concorrência": "#FDBA74",                  # Laranja Pastel
-    "Sem Resposta / Sumiu": "#FDE047",          # Amarelo Pastel
-    "Produto / Serviço não Atende": "#93C5FD",  # Azul Pastel
-    "Outros": "#D1D5DB"                         # Cinza Claro
+    "Preço / Orçamento": "#FF0033",             # Vermelho Neon
+    "Concorrência": "#FF6600",                  # Laranja Neon
+    "Sem Resposta / Sumiu": "#FFCC00",          # Amarelo Neon
+    "Produto / Serviço não Atende": "#00F5FF",  # Ciano Neon
+    "Outros": "#9D00FF"                         # Roxo Neon
 }
+
+# Cor de fundo dos gráficos estilo Infográfico Futurista
+FUNDO_GRAFICO_FUTURISTA = "#0A0E27"
+GRID_GRAFICO_FUTURISTA = "rgba(0, 245, 255, 0.12)"
 
 # Força a atualização das cores e estrutura na sessão
 st.session_state.funnel_colors = DEFAULT_COLORS.copy()
@@ -82,7 +86,7 @@ def aplicar_fundo_personalizado(image_path):
             encoded = base64.b64encode(data).decode()
             css_fundo = f"""
             .stApp {{
-                background-image: linear-gradient(rgba(5, 11, 24, 0.80), rgba(5, 11, 24, 0.80)), url("data:image/jpeg;base64,{encoded}");
+                background-image: linear-gradient(rgba(5, 11, 24, 0.85), rgba(5, 11, 24, 0.85)), url("data:image/jpeg;base64,{encoded}");
                 background-size: cover;
                 background-position: center;
                 background-repeat: no-repeat;
@@ -114,13 +118,13 @@ def aplicar_fundo_personalizado(image_path):
             }}
 
             [data-testid="stSidebar"] {{
-                background-color: rgba(15, 23, 42, 0.92) !important;
+                background-color: rgba(10, 14, 39, 0.95) !important;
             }}
 
             .badge-atrasada {{
-                background-color: #4A2024;
-                color: #FCA5A5;
-                border: 1px solid #EF4444;
+                background-color: rgba(255, 0, 51, 0.2);
+                color: #FF0033;
+                border: 1px solid #FF0033;
                 padding: 8px 16px;
                 border-radius: 6px;
                 font-size: 13px;
@@ -131,9 +135,9 @@ def aplicar_fundo_personalizado(image_path):
             }}
 
             .badge-hoje {{
-                background-color: #3F2E04;
-                color: #FDE047;
-                border: 1px solid #EAB308;
+                background-color: rgba(255, 204, 0, 0.2);
+                color: #FFCC00;
+                border: 1px solid #FFCC00;
                 padding: 8px 16px;
                 border-radius: 6px;
                 font-size: 13px;
@@ -144,7 +148,7 @@ def aplicar_fundo_personalizado(image_path):
             }}
 
             .phone-highlight {{
-                color: #38BDF8;
+                color: #00F5FF;
                 font-weight: 600;
             }}
 
@@ -155,8 +159,8 @@ def aplicar_fundo_personalizado(image_path):
             div[data-testid="stExpander"] {{
                 margin-top: 12px !important;
                 margin-bottom: 8px !important;
-                border: 1px solid #334155 !important;
-                background-color: rgba(15, 23, 42, 0.85) !important;
+                border: 1px solid #1E293B !important;
+                background-color: rgba(10, 14, 39, 0.85) !important;
             }}
 
             div[data-testid="stExpander"] details summary {{
@@ -185,7 +189,7 @@ PROB_MAP = {
     "Pré: Novo Lead": 0.05,
     "Pré: Conexão": 0.10,
 
-    # Funil de Vendas Principal (Sem números)
+    # Funil de Vendas Principal
     "Prospecção": 0.20,
     "Qualificação": 0.40,
     "Reunião Agendada": 0.60,
@@ -236,7 +240,6 @@ def carregar_dados_crm():
             df_loaded["Prob"] = pd.to_numeric(df_loaded["Prob"], errors="coerce").fillna(0.2)
             df_loaded["Perda"] = df_loaded["Perda"].fillna("").astype(str)
             
-            # Migração automática das etapas antigas para a nova estrutura sem números
             df_loaded["Etapa"] = df_loaded["Etapa"].replace({
                 "1. Contatado": "Prospecção",
                 "2. Conversando": "Qualificação",
@@ -368,11 +371,11 @@ def calcular_status_followup(data_str):
         dt_follow = dt.strptime(limpa_data, "%Y-%m-%d").date()
         hoje = date.today()
         if dt_follow < hoje:
-            return "atrasado", "Atrasado", '<span style="height: 10px; width: 10px; background-color: #EF4444; border-radius: 50%; display: inline-block;" title="Atrasado"></span>'
+            return "atrasado", "Atrasado", '<span style="height: 10px; width: 10px; background-color: #FF0033; border-radius: 50%; display: inline-block;" title="Atrasado"></span>'
         elif dt_follow == hoje:
-            return "hoje", "Atenção (Hoje)", '<span style="height: 10px; width: 10px; background-color: #EAB308; border-radius: 50%; display: inline-block;" title="Hoje"></span>'
+            return "hoje", "Atenção (Hoje)", '<span style="height: 10px; width: 10px; background-color: #FFCC00; border-radius: 50%; display: inline-block;" title="Hoje"></span>'
         else:
-            return "em_dia", "Em Dia", '<span style="height: 10px; width: 10px; background-color: #22C55E; border-radius: 50%; display: inline-block;" title="Em Dia"></span>'
+            return "em_dia", "Em Dia", '<span style="height: 10px; width: 10px; background-color: #00FF66; border-radius: 50%; display: inline-block;" title="Em Dia"></span>'
     except:
         return "sem_data", "Sem Follow-up", '<span style="height: 10px; width: 10px; background-color: #94A3B8; border-radius: 50%; display: inline-block;" title="Sem Data"></span>'
 
@@ -396,7 +399,7 @@ st.sidebar.divider()
 with st.sidebar.expander("Personalizar Cores das Etapas", expanded=False):
     st.caption("Altere as cores das etapas:")
     for etapa_nome in PROB_MAP.keys():
-        cor_atual = st.session_state.funnel_colors.get(etapa_nome, "#3B82F6")
+        cor_atual = st.session_state.funnel_colors.get(etapa_nome, "#00F5FF")
         nova_cor = st.color_picker(f"Cor: {etapa_nome.replace('Pré: ', '').replace('Pós: ', '')}", cor_atual, key=f"picker_{etapa_nome}")
         st.session_state.funnel_colors[etapa_nome] = nova_cor
 
@@ -446,10 +449,11 @@ for i, nome_aba in enumerate(abas_disponiveis):
                 f"""
                 <style>
                 div[data-testid="column"]:nth-of-type({i+1}) div.stButton > button {{
-                    background-color: #26334D !important;
-                    color: #94A3B8 !important;
-                    border: 1px solid #475569 !important;
-                    font-weight: 500 !important;
+                    background-color: #0A0E27 !important;
+                    color: #00F5FF !important;
+                    border: 1px solid #00F5FF !important;
+                    font-weight: 600 !important;
+                    box-shadow: 0 0 10px rgba(0, 245, 255, 0.3);
                 }}
                 </style>
                 """,
@@ -462,7 +466,7 @@ for i, nome_aba in enumerate(abas_disponiveis):
 
 st.markdown("""
     <div style='margin-top: 30px; margin-bottom: 30px;'>
-        <hr style='border: none; border-top: 1px solid #334155;'>
+        <hr style='border: none; border-top: 1px solid #1E293B;'>
     </div>
 """, unsafe_allow_html=True)
 
@@ -483,10 +487,10 @@ def exibir_agenda_semana(df_tarefas, df_crm, cliente_selecionado):
                 """
                 <style>
                 div[data-testid="column"]:nth-of-type(1) div.stButton > button {
-                    background-color: #26334D !important;
-                    color: #94A3B8 !important;
-                    border: 1px solid #475569 !important;
-                    font-weight: 500 !important;
+                    background-color: #0A0E27 !important;
+                    color: #00F5FF !important;
+                    border: 1px solid #00F5FF !important;
+                    font-weight: 600 !important;
                 }
                 </style>
                 """,
@@ -503,10 +507,10 @@ def exibir_agenda_semana(df_tarefas, df_crm, cliente_selecionado):
                 """
                 <style>
                 div[data-testid="column"]:nth-of-type(2) div.stButton > button {
-                    background-color: #26334D !important;
-                    color: #94A3B8 !important;
-                    border: 1px solid #475569 !important;
-                    font-weight: 500 !important;
+                    background-color: #0A0E27 !important;
+                    color: #00F5FF !important;
+                    border: 1px solid #00F5FF !important;
+                    font-weight: 600 !important;
                 }
                 </style>
                 """,
@@ -855,10 +859,11 @@ elif aba_selecionada == "Funil de Vendas":
                     f"""
                     <style>
                     div[data-testid="column"]:nth-of-type({idx_f+1}) div.stButton > button {{
-                        background-color: #38BDF8 !important;
-                        color: #0F172A !important;
-                        border: 1px solid #38BDF8 !important;
+                        background-color: #00F5FF !important;
+                        color: #0A0E27 !important;
+                        border: 1px solid #00F5FF !important;
                         font-weight: 700 !important;
+                        box-shadow: 0 0 10px rgba(0, 245, 255, 0.4);
                     }}
                     </style>
                     """,
@@ -879,8 +884,8 @@ elif aba_selecionada == "Funil de Vendas":
             
             st.markdown(
                 f"""
-                <div style="background-color: rgba(15, 23, 42, 0.95); border: 2px solid #38BDF8; padding: 25px; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 4px 12px rgba(56, 189, 248, 0.15);">
-                    <h3 style="color: #38BDF8; margin-top: 0; margin-bottom: 20px; font-weight: 700;">Ficha Completa & Linha do Tempo: {row_edit['Empresa']}</h3>
+                <div style="background-color: rgba(10, 14, 39, 0.95); border: 2px solid #00F5FF; padding: 25px; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 0 15px rgba(0, 245, 255, 0.2);">
+                    <h3 style="color: #00F5FF; margin-top: 0; margin-bottom: 20px; font-weight: 700;">Ficha Completa & Linha do Tempo: {row_edit['Empresa']}</h3>
                 """,
                 unsafe_allow_html=True
             )
@@ -1032,13 +1037,13 @@ elif aba_selecionada == "Funil de Vendas":
     cols = st.columns(len(etapas_visiveis))
     
     for idx, etapa in enumerate(etapas_visiveis):
-        cor_header = st.session_state.funnel_colors.get(etapa, "#3B82F6")
+        cor_header = st.session_state.funnel_colors.get(etapa, "#00F5FF")
         nome_curto_etapa = etapa.replace("Pré: ", "").replace("Pós: ", "")
         
         with cols[idx]:
             st.markdown(
                 f"""
-                <div style="background: linear-gradient(135deg, rgba(30, 58, 95, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%); border: 1px solid #334155; border-top: 6px solid {cor_header}; padding: 14px 10px; border-radius: 6px; text-align: center; margin-bottom: 16px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);">
+                <div style="background: linear-gradient(135deg, rgba(10, 14, 39, 0.95) 0%, rgba(5, 11, 24, 0.95) 100%); border: 1px solid #1E293B; border-top: 5px solid {cor_header}; padding: 14px 10px; border-radius: 6px; text-align: center; margin-bottom: 16px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);">
                     <b style="color: #FFFFFF; font-size: 13px; text-transform: uppercase; letter-spacing: 0.8px;">{nome_curto_etapa}</b>
                 </div>
                 """, 
@@ -1052,7 +1057,7 @@ elif aba_selecionada == "Funil de Vendas":
                 cliente_id = int(row['id'])
                 
                 st.markdown(f"""
-                    <div style="border-left: 5px solid {cor_header}; background-color: rgba(17, 28, 49, 0.85); border-top: 1px solid #1E293B; border-right: 1px solid #1E293B; border-bottom: 1px solid #1E293B; border-radius: 4px; margin-bottom: 6px; padding: 2px;">
+                    <div style="border-left: 5px solid {cor_header}; background-color: rgba(10, 14, 39, 0.85); border-top: 1px solid #1E293B; border-right: 1px solid #1E293B; border-bottom: 1px solid #1E293B; border-radius: 4px; margin-bottom: 6px; padding: 2px;">
                 """, unsafe_allow_html=True)
                 
                 with st.expander(f"{row['Empresa']}"):
@@ -1068,7 +1073,7 @@ elif aba_selecionada == "Funil de Vendas":
                         f"""
                         <div style="line-height: 1.4; margin-bottom: 8px;">
                             <span style="font-size: 13px;"><b>{row['Empresa']}</b></span><br>
-                            <span style="font-size: 11px; color: #38BDF8;">Carteira: {row.get('Cliente', 'N/A')}</span><br>
+                            <span style="font-size: 11px; color: #00F5FF;">Carteira: {row.get('Cliente', 'N/A')}</span><br>
                             <span style="font-size: 12px; color: #94A3B8;">Contato: {row['Contato']}</span><br>
                             <span class="phone-highlight" style="font-size: 12px;">{row.get('Telefone', 'Não informado')}</span><br>
                             <hr style="margin: 6px 0; border-color: #334155;">
@@ -1150,14 +1155,14 @@ elif aba_selecionada == "Dashboard":
     cols_m = st.columns(len(etapas_crm) + 1)
     
     for i, etapa in enumerate(etapas_crm):
-        cor_header = st.session_state.funnel_colors.get(etapa, "#3B82F6")
+        cor_header = st.session_state.funnel_colors.get(etapa, "#00F5FF")
         qtd = contagem_calculada[etapa]
         nome_limpo = etapa.replace("Pré: ", "").replace("Pós: ", "")
         
         with cols_m[i]:
             st.markdown(
                 f"""
-                <div style="background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.9) 100%); border: 1px solid #334155; border-top: 4px solid {cor_header}; padding: 12px 6px; border-radius: 8px; text-align: center; margin-bottom: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+                <div style="background: linear-gradient(135deg, rgba(10, 14, 39, 0.95) 0%, rgba(5, 11, 24, 0.95) 100%); border: 1px solid #1E293B; border-top: 4px solid {cor_header}; padding: 12px 6px; border-radius: 8px; text-align: center; margin-bottom: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);">
                     <b style="color: #F8FAFC; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">{nome_limpo}</b>
                 </div>
                 """, 
@@ -1168,8 +1173,8 @@ elif aba_selecionada == "Dashboard":
     with cols_m[-1]:
         st.markdown(
             """
-            <div style="background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.9) 100%); border: 1px solid #334155; border-top: 4px solid #FFFFFF; padding: 12px 6px; border-radius: 8px; text-align: center; margin-bottom: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-                <b style="color: #F8FAFC; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">TOTAL LEADS</b>
+            <div style="background: linear-gradient(135deg, rgba(10, 14, 39, 0.95) 0%, rgba(5, 11, 24, 0.95) 100%); border: 1px solid #1E293B; border-top: 4px solid #00F5FF; padding: 12px 6px; border-radius: 8px; text-align: center; margin-bottom: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);">
+                <b style="color: #00F5FF; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">TOTAL LEADS</b>
             </div>
             """, 
             unsafe_allow_html=True
@@ -1194,16 +1199,20 @@ elif aba_selecionada == "Dashboard":
             names="Etapa",
             color="Etapa",
             color_discrete_map=st.session_state.funnel_colors,
-            hole=0.0
+            hole=0.4
         )
         fig_pizza.update_layout(
-            template="plotly_dark",
-            paper_bgcolor="rgba(30, 41, 59, 0.75)",
-            plot_bgcolor="rgba(30, 41, 59, 0.75)",
-            font=dict(color="#FFFFFF", size=13),
-            height=440
+            paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+            plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+            font=dict(color="#FFFFFF", family="Inter", size=13),
+            height=440,
+            margin=dict(t=40, b=40, l=20, r=20),
+            legend=dict(font=dict(color="#FFFFFF"))
         )
-        fig_pizza.update_traces(textinfo="percent+value")
+        fig_pizza.update_traces(
+            textinfo="percent+value",
+            marker=dict(line=dict(color='#0A0E27', width=2))
+        )
         st.plotly_chart(fig_pizza, use_container_width=True)
     else:
         st.info("Nenhum dado encontrado para o período selecionado.")
@@ -1227,16 +1236,25 @@ elif aba_selecionada == "Dashboard":
                 text="Quantidade"
             )
             fig_perda.update_layout(
-                template="plotly_dark",
-                paper_bgcolor="rgba(30, 41, 59, 0.75)",
-                plot_bgcolor="rgba(30, 41, 59, 0.75)",
-                font=dict(color="#FFFFFF", size=13),
+                paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+                plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+                font=dict(color="#FFFFFF", family="Inter", size=13),
                 height=380,
-                xaxis_title="Motivo de Perda",
-                yaxis_title="Quantidade",
+                xaxis=dict(
+                    title="Motivo de Perda",
+                    showgrid=True,
+                    gridcolor=GRID_GRAFICO_FUTURISTA,
+                    zerolinecolor=GRID_GRAFICO_FUTURISTA
+                ),
+                yaxis=dict(
+                    title="Quantidade",
+                    showgrid=True,
+                    gridcolor=GRID_GRAFICO_FUTURISTA,
+                    zerolinecolor=GRID_GRAFICO_FUTURISTA
+                ),
                 showlegend=False
             )
-            fig_perda.update_traces(textposition="outside")
+            fig_perda.update_traces(textposition="outside", marker=dict(line=dict(color='#00F5FF', width=1)))
             st.plotly_chart(fig_perda, use_container_width=True)
         else:
             st.info("Nenhum motivo de perda especificado para os leads perdidos.")
@@ -1303,15 +1321,15 @@ elif aba_selecionada == "Relatório Executivo":
         if not df_historico_salvo.empty:
             def colorir_tabela_historico(val, col_name):
                 if col_name == "Mês/Ano":
-                    return "background-color: #FDE047; color: #1E293B; font-weight: bold;"
+                    return "background-color: #FFCC00; color: #0A0E27; font-weight: bold;"
                 elif col_name == "Leads Qualificados":
-                    return "background-color: #F472B6; color: #1E293B; font-weight: bold;"
+                    return "background-color: #9D00FF; color: #FFFFFF; font-weight: bold;"
                 elif col_name == "Reuniões Agendadas":
-                    return "background-color: #FDBA74; color: #1E293B; font-weight: bold;"
+                    return "background-color: #FF6600; color: #FFFFFF; font-weight: bold;"
                 elif col_name == "Propostas Enviadas":
-                    return "background-color: #93C5FD; color: #1E293B; font-weight: bold;"
+                    return "background-color: #00F5FF; color: #0A0E27; font-weight: bold;"
                 elif col_name == "Projetos Fechados":
-                    return "background-color: #86EFAC; color: #1E293B; font-weight: bold;"
+                    return "background-color: #00FF66; color: #0A0E27; font-weight: bold;"
                 return ""
 
             df_estilizado = df_historico_salvo.style.apply(lambda col: [colorir_tabela_historico(v, col.name) for v in col], axis=0)
@@ -1328,10 +1346,10 @@ elif aba_selecionada == "Relatório Executivo":
         )
         
         cores_atv = {
-            "Leads Qualificados": "#F472B6",   
-            "Reuniões Agendadas": "#FDBA74",   
-            "Propostas Enviadas": "#93C5FD",   
-            "Projetos Fechados": "#86EFAC"    
+            "Leads Qualificados": "#9D00FF",   
+            "Reuniões Agendadas": "#FF6600",   
+            "Propostas Enviadas": "#00F5FF",   
+            "Projetos Fechados": "#00FF66"    
         }
 
         fig_linha_atv = px.line(
@@ -1345,16 +1363,25 @@ elif aba_selecionada == "Relatório Executivo":
             color_discrete_map=cores_atv
         )
         fig_linha_atv.update_layout(
-            template="plotly_dark",
-            paper_bgcolor="rgba(30, 41, 59, 0.75)",
-            plot_bgcolor="rgba(30, 41, 59, 0.75)",
-            font=dict(color="#FFFFFF", size=13),
-            xaxis_title="MÊS / ANO",
-            yaxis_title="QUANTIDADE",
+            paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+            plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+            font=dict(color="#FFFFFF", family="Inter", size=13),
+            xaxis=dict(
+                title="MÊS / ANO",
+                showgrid=True,
+                gridcolor=GRID_GRAFICO_FUTURISTA,
+                zerolinecolor=GRID_GRAFICO_FUTURISTA
+            ),
+            yaxis=dict(
+                title="QUANTIDADE",
+                showgrid=True,
+                gridcolor=GRID_GRAFICO_FUTURISTA,
+                zerolinecolor=GRID_GRAFICO_FUTURISTA
+            ),
             height=440,
-            legend=dict(orientation="h", yanchor="bottom", y=-0.25, xanchor="center", x=0.5)
+            legend=dict(orientation="h", yanchor="bottom", y=-0.25, xanchor="center", x=0.5, font=dict(color="#FFFFFF"))
         )
-        fig_linha_atv.update_traces(textposition="top center")
+        fig_linha_atv.update_traces(textposition="top center", marker=dict(size=8))
         st.plotly_chart(fig_linha_atv, use_container_width=True)
 
     st.divider()
@@ -1407,13 +1434,13 @@ elif aba_selecionada == "Relatório Executivo":
         if not df_financeiro_salvo.empty:
             def colorir_tabela_financeiro(val, col_name):
                 if col_name == "Mês/Ano":
-                    return "background-color: #FDE047; color: #1E293B; font-weight: bold;"
+                    return "background-color: #FFCC00; color: #0A0E27; font-weight: bold;"
                 elif col_name == "Propostas Enviadas":
-                    return "background-color: #93C5FD; color: #1E293B; font-weight: bold;"
+                    return "background-color: #00F5FF; color: #0A0E27; font-weight: bold;"
                 elif col_name == "Projetos Fechados":
-                    return "background-color: #86EFAC; color: #1E293B; font-weight: bold;"
+                    return "background-color: #00FF66; color: #0A0E27; font-weight: bold;"
                 elif col_name == "Total":
-                    return "background-color: #F1F5F9; color: #1E293B; font-weight: bold;"
+                    return "background-color: #1E293B; color: #FFFFFF; font-weight: bold;"
                 return ""
 
             df_fin_estilizado = df_financeiro_salvo.style.apply(lambda col: [colorir_tabela_financeiro(v, col.name) for v in col], axis=0)
@@ -1428,8 +1455,8 @@ elif aba_selecionada == "Relatório Executivo":
             df_agrupado_fin = df_graf_fin.groupby(["Mês/Ano", "Tipo"])["Valor"].sum().reset_index()
 
             cores_fin_graf = {
-                "Propostas Enviadas": "#93C5FD",
-                "Projetos Fechados": "#86EFAC"
+                "Propostas Enviadas": "#00F5FF",
+                "Projetos Fechados": "#00FF66"
             }
 
             fig_linha_fin = px.line(
@@ -1443,16 +1470,25 @@ elif aba_selecionada == "Relatório Executivo":
                 color_discrete_map=cores_fin_graf
             )
             fig_linha_fin.update_layout(
-                template="plotly_dark",
-                paper_bgcolor="rgba(30, 41, 59, 0.75)",
-                plot_bgcolor="rgba(30, 41, 59, 0.75)",
-                font=dict(color="#FFFFFF", size=13),
-                xaxis_title="MÊS / ANO",
-                yaxis_title="VALOR (R$)",
+                paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+                plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+                font=dict(color="#FFFFFF", family="Inter", size=13),
+                xaxis=dict(
+                    title="MÊS / ANO",
+                    showgrid=True,
+                    gridcolor=GRID_GRAFICO_FUTURISTA,
+                    zerolinecolor=GRID_GRAFICO_FUTURISTA
+                ),
+                yaxis=dict(
+                    title="VALOR (R$)",
+                    showgrid=True,
+                    gridcolor=GRID_GRAFICO_FUTURISTA,
+                    zerolinecolor=GRID_GRAFICO_FUTURISTA
+                ),
                 height=440,
-                legend=dict(orientation="h", yanchor="bottom", y=-0.25, xanchor="center", x=0.5)
+                legend=dict(orientation="h", yanchor="bottom", y=-0.25, xanchor="center", x=0.5, font=dict(color="#FFFFFF"))
             )
-            fig_linha_fin.update_traces(texttemplate='R$ %{text:,.2f}', textposition="top center")
+            fig_linha_fin.update_traces(texttemplate='R$ %{text:,.2f}', textposition="top center", marker=dict(size=8))
             st.plotly_chart(fig_linha_fin, use_container_width=True)
         else:
             st.info("Nenhum valor em propostas ou projetos fechados para exibir no gráfico financeiro.")
