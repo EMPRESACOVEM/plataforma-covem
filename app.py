@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
 import io
 import os
 import urllib.parse
@@ -22,42 +21,48 @@ BASE_DIR = Path(__file__).parent if "__file__" in locals() else Path.cwd()
 ARQUIVO_TAREFAS = BASE_DIR / "banco_tarefas_covem.xlsx"
 ARQUIVO_HISTORICO = BASE_DIR / "banco_historico_covem.xlsx"
 ARQUIVO_FINANCEIRO = BASE_DIR / "banco_financeiro_covem.xlsx"
-ARQUIVO_ANOTACOES = BASE_DIR / "banco_anotacoes_covem.xlsx"
 ARQUIVO_FUNDO = BASE_DIR / "fundo plataforma.jpg"
-ARQUIVO_LOGO = BASE_DIR / "logoCOVEM.png"
+ARQUIVO_LOGO = BASE_DIR / "logoCOVEM.png"  # Nova logo PNG atualizada
 
 # Nome Oficial do Grupo
 COVEM_NAME = "GRUPO COVEM"
 
-# Lista de Clientes / Carteiras do GRUPO COVEM
+# Lista de Clientes do GRUPO COVEM
 CARTEIRAS_COVEM = ["BraClean", "QV Energia Solar", "Elleven"]
 
 # ---------------------------------------------------------
 # PALETA DE CORES NEON PERSONALIZADA POR ETAPA
 # ---------------------------------------------------------
 DEFAULT_COLORS = {
-    "Pré: Novo Lead": "#00E5FF",
-    "Pré: Conexão": "#0047AB",
-    "Prospecção": "#9D00FF",
-    "Qualificação": "#FF007F",
-    "Reunião Agendada": "#FFEA00",
-    "Proposta Enviada": "#FF6600",
-    "Fechado": "#00FF66",
-    "Pós: Standby": "#FFFFFF",
-    "Pós: Perdido": "#FF0033"
+    # Pré Funil
+    "Pré: Novo Lead": "#00E5FF",         # Azul Claro Neon
+    "Pré: Conexão": "#0047AB",           # Azul Escuro Neon
+
+    # Funil Principal
+    "Prospecção": "#9D00FF",             # Roxo Neon
+    "Qualificação": "#FF007F",          # Rosa Neon
+    "Reunião Agendada": "#FFEA00",     # Amarelo Neon
+    "Proposta Enviada": "#FF6600",     # Laranja Neon
+    "Fechado": "#00FF66",              # Verde Neon
+
+    # Pós Funil
+    "Pós: Standby": "#FFFFFF",          # Branco Neon
+    "Pós: Perdido": "#FF0033"           # Vermelho Neon
 }
 
 CORES_PERDAS = {
-    "Preço / Orçamento": "#FF0033",
-    "Concorrência": "#FF6600",
-    "Sem Resposta / Sumiu": "#FFEA00",
-    "Produto / Serviço não Atende": "#00E5FF",
-    "Outros": "#9D00FF"
+    "Preço / Orçamento": "#FF0033",             # Vermelho Neon
+    "Concorrência": "#FF6600",                  # Laranja Neon
+    "Sem Resposta / Sumiu": "#FFEA00",          # Amarelo Neon
+    "Produto / Serviço não Atende": "#00E5FF",  # Azul Claro Neon
+    "Outros": "#9D00FF"                         # Roxo Neon
 }
 
+# Cor de fundo dos gráficos estilo Infográfico Futurista
 FUNDO_GRAFICO_FUTURISTA = "#0A0E27"
 GRID_GRAFICO_FUTURISTA = "rgba(0, 229, 255, 0.12)"
 
+# Força a atualização das cores e estrutura na sessão
 st.session_state.funnel_colors = DEFAULT_COLORS.copy()
 
 if 'menu_ativo' not in st.session_state:
@@ -72,6 +77,7 @@ if 'sub_menu_tarefas' not in st.session_state:
 if 'editando_agenda_idx' not in st.session_state:
     st.session_state.editando_agenda_idx = None
 
+# Função para carregar a imagem de fundo local via Base64
 def aplicar_fundo_personalizado(image_path):
     css_fundo = ""
     if image_path.exists():
@@ -94,32 +100,104 @@ def aplicar_fundo_personalizado(image_path):
     st.markdown(f"""
         <style>
             @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-            html, body, [class*="css"] {{ font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important; }}
-            .notranslate, [data-testid="stSidebar"], [data-baseweb="select"] {{ translate: no !important; }}
+
+            html, body, [class*="css"] {{
+                font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+            }}
+
+            .notranslate, [data-testid="stSidebar"], [data-baseweb="select"] {{
+                translate: no !important;
+            }}
+
             {css_fundo}
-            h1, h2, h3, h4, h5, h6, p, label, .streamlit-expanderHeader {{ font-family: 'Inter', sans-serif !important; font-weight: 700 !important; color: #FFFFFF !important; }}
-            [data-testid="stSidebar"] {{ background-color: rgba(10, 14, 39, 0.95) !important; }}
-            .badge-atrasada {{ background-color: rgba(255, 0, 51, 0.2); color: #FF0033; border: 1px solid #FF0033; padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 600; display: inline-block; text-align: center; width: 100%; }}
-            .badge-hoje {{ background-color: rgba(255, 234, 0, 0.2); color: #FFEA00; border: 1px solid #FFEA00; padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 600; display: inline-block; text-align: center; width: 100%; }}
-            .phone-highlight {{ color: #00E5FF; font-weight: 600; }}
-            div[data-testid="stVerticalBlock"] {{ gap: 2px !important; }}
-            div[data-testid="stExpander"] {{ margin-top: 12px !important; margin-bottom: 8px !important; border: 1px solid #1E293B !important; background-color: rgba(10, 14, 39, 0.85) !important; }}
-            div[data-testid="stMetricValue"] {{ font-size: 22px !important; font-weight: 700 !important; color: #FFFFFF !important; }}
-            div[data-testid="stMetricLabel"] {{ font-size: 12px !important; }}
-            .anotacao-card {{ background-color: rgba(10, 14, 39, 0.9); border-left: 3px solid #00E5FF; border-top: 1px solid #1E293B; border-right: 1px solid #1E293B; border-bottom: 1px solid #1E293B; padding: 10px; border-radius: 6px; margin-bottom: 8px; }}
+
+            h1, h2, h3, h4, h5, h6, p, label, .streamlit-expanderHeader {{
+                font-family: 'Inter', sans-serif !important;
+                font-weight: 700 !important;
+                letter-spacing: -0.4px !important;
+                color: #FFFFFF !important;
+            }}
+
+            [data-testid="stSidebar"] {{
+                background-color: rgba(10, 14, 39, 0.95) !important;
+            }}
+
+            .badge-atrasada {{
+                background-color: rgba(255, 0, 51, 0.2);
+                color: #FF0033;
+                border: 1px solid #FF0033;
+                padding: 8px 16px;
+                border-radius: 6px;
+                font-size: 13px;
+                font-weight: 600;
+                display: inline-block;
+                text-align: center;
+                width: 100%;
+            }}
+
+            .badge-hoje {{
+                background-color: rgba(255, 234, 0, 0.2);
+                color: #FFEA00;
+                border: 1px solid #FFEA00;
+                padding: 8px 16px;
+                border-radius: 6px;
+                font-size: 13px;
+                font-weight: 600;
+                display: inline-block;
+                text-align: center;
+                width: 100%;
+            }}
+
+            .phone-highlight {{
+                color: #00E5FF;
+                font-weight: 600;
+            }}
+
+            div[data-testid="stVerticalBlock"] {{
+                gap: 2px !important;
+            }}
+            
+            div[data-testid="stExpander"] {{
+                margin-top: 12px !important;
+                margin-bottom: 8px !important;
+                border: 1px solid #1E293B !important;
+                background-color: rgba(10, 14, 39, 0.85) !important;
+            }}
+
+            div[data-testid="stExpander"] details summary {{
+                padding-top: 8px !important;
+                padding-bottom: 8px !important;
+            }}
+
+            div[data-testid="stMetricValue"] {{
+                font-family: 'Inter', sans-serif !important;
+                font-size: 22px !important;
+                font-weight: 700 !important;
+                color: #FFFFFF !important;
+            }}
+
+            div[data-testid="stMetricLabel"] {{
+                font-family: 'Inter', sans-serif !important;
+                font-size: 12px !important;
+            }}
         </style>
     """, unsafe_allow_html=True)
 
 aplicar_fundo_personalizado(ARQUIVO_FUNDO)
 
 PROB_MAP = {
+    # Pré Funil
     "Pré: Novo Lead": 0.05,
     "Pré: Conexão": 0.10,
+
+    # Funil de Vendas Principal
     "Prospecção": 0.20,
     "Qualificação": 0.40,
     "Reunião Agendada": 0.60,
     "Proposta Enviada": 0.80,
     "Fechado": 1.00,
+
+    # Pós Funil
     "Pós: Standby": 0.00,
     "Pós: Perdido": 0.00
 }
@@ -132,6 +210,9 @@ ESTRUTURA_FUNIS = {
 
 MOTIVOS_PERDA_PADRAO = list(CORES_PERDAS.keys())
 
+# ---------------------------------------------------------
+# CONEXÃO COM O GOOGLE SHEETS
+# ---------------------------------------------------------
 @st.cache_resource
 def get_gsheets_connection():
     return st.connection("gsheets", type=GSheetsConnection)
@@ -148,42 +229,77 @@ def carregar_dados_crm():
 
         df_loaded = conn.read(worksheet="Página1", ttl=0)
         df_loaded = df_loaded.dropna(how="all")
+        
         colunas_esperadas = ["id", "Empresa", "Cliente", "Etapa", "Contato", "Cargo", "Telefone", "Email", "Cidade", "Valor", "Prob", "Vendedor", "Perda", "Data_Cadastro", "Followup_Data", "Followup_Nota", "Historico"]
         for col in colunas_esperadas:
             if col not in df_loaded.columns:
                 df_loaded[col] = ""
+                
         if not df_loaded.empty:
             df_loaded["id"] = pd.to_numeric(df_loaded["id"], errors="coerce").fillna(0).astype(int)
             df_loaded["Valor"] = pd.to_numeric(df_loaded["Valor"], errors="coerce").fillna(0.0)
             df_loaded["Prob"] = pd.to_numeric(df_loaded["Prob"], errors="coerce").fillna(0.2)
             df_loaded["Perda"] = df_loaded["Perda"].fillna("").astype(str)
+            
             df_loaded["Etapa"] = df_loaded["Etapa"].replace({
-                "1. Contatado": "Prospecção", "2. Conversando": "Qualificação", "1. Prospecção": "Prospecção",
-                "2. Qualificação": "Qualificação", "3. Reunião Agendada": "Reunião Agendada",
-                "4. Proposta Enviada": "Proposta Enviada", "5. Fechado": "Fechado", "6. Perdido": "Pós: Perdido"
+                "1. Contatado": "Prospecção",
+                "2. Conversando": "Qualificação",
+                "1. Prospecção": "Prospecção",
+                "2. Qualificação": "Qualificação",
+                "3. Reunião Agendada": "Reunião Agendada",
+                "4. Proposta Enviada": "Proposta Enviada",
+                "5. Fechado": "Fechado",
+                "6. Perdido": "Pós: Perdido",
+                "Pós: Lixeira": "Pós: Perdido"
             })
+            
             return df_loaded
     except Exception as e:
         st.warning(f"Aviso ao ler do Google Sheets: {e}. Carregando dados padrão iniciais.")
 
-    return pd.DataFrame([
+    df_inicial = pd.DataFrame([
         {
-            "id": 1, "Empresa": "BraClean SP - Expansão Varejo", "Cliente": "BraClean", "Etapa": "Fechado", 
+            "id": 1, "Empresa": "Grupo Delta", "Cliente": "BraClean", "Etapa": "Prospecção", 
             "Contato": "Roberto Alves", "Cargo": "Diretor Comercial", "Telefone": "(16) 99876-5432", 
-            "Email": "roberto@braclean.com.br", "Cidade": "Sertãozinho / SP", "Valor": 45000.0, 
-            "Prob": 1.00, "Vendedor": "Sócio 1", "Perda": "",
-            "Data_Cadastro": str(date.today() - timedelta(days=5)),
-            "Followup_Data": str(date.today()), "Followup_Nota": "Contrato ativo", "Historico": "Fechado"
+            "Email": "roberto@grupodelta.com.br", "Cidade": "Sertãozinho / SP", "Valor": 50000.0, 
+            "Prob": 0.20, "Vendedor": "Lucas Mendes", "Perda": "",
+            "Data_Cadastro": str(date.today()),
+            "Followup_Data": str(date.today() - timedelta(days=2)), "Followup_Nota": "Enviar apresentação institucional atualizada.", 
+            "Historico": "[01/09/2026 10:00] Primeiro contato realizado."
         },
         {
-            "id": 2, "Empresa": "BraClean RJ - Autocenters", "Cliente": "BraClean", "Etapa": "Reunião Agendada", 
-            "Contato": "Patricia Lima", "Cargo": "Gerente", "Telefone": "(21) 99765-4321", 
-            "Email": "patricia@bracleanrj.com.br", "Cidade": "Rio de Janeiro / RJ", "Valor": 30000.0, 
-            "Prob": 0.60, "Vendedor": "Sócio 2", "Perda": "",
+            "id": 2, "Empresa": "Sistemas Sigma", "Cliente": "QV Energia Solar", "Etapa": "Pré: Novo Lead", 
+            "Contato": "Patricia Lima", "Cargo": "Gerente de Compras", "Telefone": "(16) 99765-4321", 
+            "Email": "patricia@sigmasistemas.com.br", "Cidade": "Ribeirão Preto / SP", "Valor": 35000.0, 
+            "Prob": 0.05, "Vendedor": "Lucas Mendes", "Perda": "",
             "Data_Cadastro": str(date.today()),
-            "Followup_Data": str(date.today()), "Followup_Nota": "Reunião de alinhamento", "Historico": "Agendado"
+            "Followup_Data": str(date.today()), "Followup_Nota": "Ligar para fazer primeiro contato.", 
+            "Historico": "[02/09/2026 14:30] Lead cadastrado no Pré Funil."
+        },
+        {
+            "id": 3, "Empresa": "Indústria Omega", "Cliente": "Elleven", "Etapa": "Qualificação", 
+            "Contato": "Fernando Souza", "Cargo": "Sócio-Proprietário", "Telefone": "(11) 98123-4567", 
+            "Email": "fernando@omegaind.com.br", "Cidade": "São Paulo / SP", "Valor": 80000.0, 
+            "Prob": 0.40, "Vendedor": "Gabriel Silva", "Perda": "",
+            "Data_Cadastro": str(date.today()),
+            "Followup_Data": str(date.today() + timedelta(days=3)), "Followup_Nota": "Alinhar escopo do projeto técnico.", 
+            "Historico": "[30/08/2026 09:15] Reunião inicial realizada."
+        },
+        {
+            "id": 4, "Empresa": "Tecnologia Beta", "Cliente": "BraClean", "Etapa": "Pós: Standby", 
+            "Contato": "Carlos Eduardo", "Cargo": "Comprador", "Telefone": "(16) 98888-7777", 
+            "Email": "carlos@betatech.com", "Cidade": "Sertãozinho / SP", "Valor": 25000.0, 
+            "Prob": 0.00, "Vendedor": "Lucas Mendes", "Perda": "Sem orçamento",
+            "Data_Cadastro": str(date.today()),
+            "Followup_Data": "", "Followup_Nota": "", 
+            "Historico": "[25/08/2026 16:45] Lead encaminhado ao Pós Funil (Standby)."
         }
     ])
+    try:
+        conn.update(worksheet="Página1", data=df_inicial)
+    except:
+        pass
+    return df_inicial
 
 def salvar_dados_crm(df):
     try:
@@ -201,35 +317,71 @@ def carregar_dados_tarefas():
             return df_loaded
         except Exception:
             pass
-    return pd.DataFrame(columns=["Titulo", "Descricao", "Cliente", "Data_Vencimento", "Prioridade", "Status", "Data_Criacao"])
+            
+    df_inicial_vazio = pd.DataFrame(columns=["Titulo", "Descricao", "Cliente", "Data_Vencimento", "Prioridade", "Status", "Data_Criacao"])
+    df_inicial_vazio.to_excel(ARQUIVO_TAREFAS, index=False)
+    return df_inicial_vazio
 
 def salvar_dados_tarefas(df):
     df.to_excel(ARQUIVO_TAREFAS, index=False)
 
-def carregar_dados_anotacoes():
-    if ARQUIVO_ANOTACOES.exists():
+def carregar_dados_historico():
+    if ARQUIVO_HISTORICO.exists():
         try:
-            return pd.read_excel(ARQUIVO_ANOTACOES)
+            return pd.read_excel(ARQUIVO_HISTORICO)
         except Exception:
             pass
-    return pd.DataFrame([{"Data": "10/09/2026 14:00", "Socio": "Sócio 1", "Comentario": "Meta de prospecção diária batida."}])
+    return pd.DataFrame(columns=["Mês/Ano", "Leads Qualificados", "Reuniões Agendadas", "Propostas Enviadas", "Projetos Fechados"])
 
-def salvar_dados_anotacoes(df):
-    df.to_excel(ARQUIVO_ANOTACOES, index=False)
+def salvar_dados_historico(df):
+    df.to_excel(ARQUIVO_HISTORICO, index=False)
 
+def carregar_dados_financeiro():
+    if ARQUIVO_FINANCEIRO.exists():
+        try:
+            return pd.read_excel(ARQUIVO_FINANCEIRO)
+        except Exception:
+            pass
+    return pd.DataFrame(columns=["Mês/Ano", "Propostas Enviadas", "Projetos Fechados", "Total"])
+
+def salvar_dados_financeiro(df):
+    df.to_excel(ARQUIVO_FINANCEIRO, index=False)
+
+# ---------------------------------------------------------
+# ESTADO DA SESSÃO
+# ---------------------------------------------------------
 if 'df_crm' not in st.session_state:
     st.session_state.df_crm = carregar_dados_crm()
 
 if 'df_tarefas' not in st.session_state:
     st.session_state.df_tarefas = carregar_dados_tarefas()
 
-if 'df_anotacoes' not in st.session_state:
-    st.session_state.df_anotacoes = carregar_dados_anotacoes()
+if 'cliente_editando_id' not in st.session_state:
+    st.session_state.cliente_editando_id = None
 
 df = st.session_state.df_crm
 
 # ---------------------------------------------------------
-# BARRA LATERAL (FILTROS)
+# FUNÇÃO DE LÓGICA DE CORES DO FOLLOW-UP
+# ---------------------------------------------------------
+def calcular_status_followup(data_str):
+    if not data_str or pd.isna(data_str) or str(data_str).strip() in ["", "nan", "NaT", "None"]:
+        return "sem_data", "Sem Follow-up", '<span style="height: 10px; width: 10px; background-color: #94A3B8; border-radius: 50%; display: inline-block;" title="Sem Data"></span>'
+    try:
+        limpa_data = str(data_str).strip()[:10]
+        dt_follow = dt.strptime(limpa_data, "%Y-%m-%d").date()
+        hoje = date.today()
+        if dt_follow < hoje:
+            return "atrasado", "Atrasado", '<span style="height: 10px; width: 10px; background-color: #FF0033; border-radius: 50%; display: inline-block;" title="Atrasado"></span>'
+        elif dt_follow == hoje:
+            return "hoje", "Atenção (Hoje)", '<span style="height: 10px; width: 10px; background-color: #FFEA00; border-radius: 50%; display: inline-block;" title="Hoje"></span>'
+        else:
+            return "em_dia", "Em Dia", '<span style="height: 10px; width: 10px; background-color: #00FF66; border-radius: 50%; display: inline-block;" title="Em Dia"></span>'
+    except:
+        return "sem_data", "Sem Follow-up", '<span style="height: 10px; width: 10px; background-color: #94A3B8; border-radius: 50%; display: inline-block;" title="Sem Data"></span>'
+
+# ---------------------------------------------------------
+# BARRA LATERAL (FILTROS E CONFIGURAÇÕES)
 # ---------------------------------------------------------
 opcoes_filtro = ["TODOS"] + CARTEIRAS_COVEM
 cliente_sel = st.sidebar.selectbox("Clientes COVEM:", opcoes_filtro)
@@ -242,6 +394,15 @@ else:
     df_filtered = df
     titulo_dinamico = f"Dashboard - {COVEM_NAME}"
     titulo_funil = f"Gestão de Funis — {COVEM_NAME}"
+
+st.sidebar.divider()
+
+with st.sidebar.expander("Personalizar Cores das Etapas", expanded=False):
+    st.caption("Altere as cores das etapas:")
+    for etapa_nome in PROB_MAP.keys():
+        cor_atual = st.session_state.funnel_colors.get(etapa_nome, "#00E5FF")
+        nova_cor = st.color_picker(f"Cor: {etapa_nome.replace('Pré: ', '').replace('Pós: ', '')}", cor_atual, key=f"picker_{etapa_nome}")
+        st.session_state.funnel_colors[etapa_nome] = nova_cor
 
 st.sidebar.divider()
 
@@ -258,15 +419,21 @@ st.sidebar.download_button(
     use_container_width=True
 )
 
-# LOGO
+# ---------------------------------------------------------
+# 1. LOGO CENTRALIZADA DA COVEM (logoCOVEM.png)
+# ---------------------------------------------------------
 col_l1, col_l2, col_l3 = st.columns([1, 2, 1])
 with col_l2:
     if ARQUIVO_LOGO.exists():
         st.image(str(ARQUIVO_LOGO), use_container_width=True)
+    else:
+        st.warning("Arquivo 'logoCOVEM.png' não encontrado na pasta do projeto.")
 
 st.divider()
 
-# MENU PRINCIPAL
+# ---------------------------------------------------------
+# MENU HORIZONTAL PRINCIPAL EM CARDS
+# ---------------------------------------------------------
 abas_disponiveis = [
     "Gerenciamento de Tarefas",
     "Funil de Vendas", 
@@ -276,221 +443,1187 @@ abas_disponiveis = [
 ]
 
 cols_menu = st.columns(len(abas_disponiveis))
+
 for i, nome_aba in enumerate(abas_disponiveis):
     with cols_menu[i]:
+        is_active = (st.session_state.menu_ativo == nome_aba)
+        
+        if is_active:
+            st.markdown(
+                f"""
+                <style>
+                div[data-testid="column"]:nth-of-type({i+1}) div.stButton > button {{
+                    background-color: #0A0E27 !important;
+                    color: #00E5FF !important;
+                    border: 1px solid #00E5FF !important;
+                    font-weight: 600 !important;
+                    box-shadow: 0 0 10px rgba(0, 229, 255, 0.3);
+                }}
+                </style>
+                """,
+                unsafe_allow_html=True
+            )
+        
         if st.button(nome_aba, key=f"menu_card_{i}", use_container_width=True):
             st.session_state.menu_ativo = nome_aba
             st.rerun()
 
-st.markdown("<hr style='border: none; border-top: 1px solid #1E293B;'>", unsafe_allow_html=True)
+st.markdown("""
+    <div style='margin-top: 30px; margin-bottom: 30px;'>
+        <hr style='border: none; border-top: 1px solid #1E293B;'>
+    </div>
+""", unsafe_allow_html=True)
+
 aba_selecionada = st.session_state.menu_ativo
 
-# =========================================================
-# ABA 4: RELATÓRIO EXECUTIVO (TOTALMENTE SINCRONIZADO)
-# =========================================================
-if aba_selecionada == "Relatório Executivo":
-    st.title("Relatório Executivo — Desempenho & Sócios")
-    st.caption("Visão analítica sincronizada em tempo real com a base do Google Sheets.")
-
-    # 1. CÁLCULO DOS KPIS REAIS DA BASE
-    df_base_rel = df_filtered.copy()
+# ---------------------------------------------------------
+# FUNÇÃO DE RENDERIZAÇÃO DA AGENDA DA SEMANA
+# ---------------------------------------------------------
+def exibir_agenda_semana(df_tarefas, df_crm, cliente_selecionado):
+    st.markdown('<div style="margin-top: 4px;"></div>', unsafe_allow_html=True)
     
-    val_mrr = float(df_base_rel[df_base_rel["Etapa"] == "Fechado"]["Valor"].sum())
-    qtd_fechados = len(df_base_rel[df_base_rel["Etapa"] == "Fechado"])
-    ticket_medio = (val_mrr / qtd_fechados) if qtd_fechados > 0 else 0.0
-    total_prospeccoes = len(df_base_rel)
-    taxa_conversao_geral = ((qtd_fechados / total_prospeccoes) * 100) if total_prospeccoes > 0 else 0.0
-
-    col_k1, col_k2, col_k3, col_k4 = st.columns(4)
-    with col_k1:
-        st.markdown(f"""
-            <div style="background-color: rgba(10, 14, 39, 0.9); border: 1px solid #1E293B; border-top: 4px solid #00FF66; padding: 15px; border-radius: 8px;">
-                <span style="color: #94A3B8; font-size: 11px; font-weight: 700;">FATURAMENTO / VENDAS</span>
-                <h3 style="color: #00FF66; margin: 4px 0 0 0;">R$ {val_mrr:,.2f}</h3>
-                <span style="color: #00FF66; font-size: 11px;">{qtd_fechados} negócios fechados</span>
-            </div>
-        """, unsafe_allow_html=True)
-    with col_k2:
-        st.markdown(f"""
-            <div style="background-color: rgba(10, 14, 39, 0.9); border: 1px solid #1E293B; border-top: 4px solid #FFEA00; padding: 15px; border-radius: 8px;">
-                <span style="color: #94A3B8; font-size: 11px; font-weight: 700;">TICKET MÉDIO</span>
-                <h3 style="color: #FFEA00; margin: 4px 0 0 0;">R$ {ticket_medio:,.2f}</h3>
-                <span style="color: #00E5FF; font-size: 11px;">Por contrato fechado</span>
-            </div>
-        """, unsafe_allow_html=True)
-    with col_k3:
-        st.markdown(f"""
-            <div style="background-color: rgba(10, 14, 39, 0.9); border: 1px solid #1E293B; border-top: 4px solid #9D00FF; padding: 15px; border-radius: 8px;">
-                <span style="color: #94A3B8; font-size: 11px; font-weight: 700;">TOTAL DE PROSPECÇÕES</span>
-                <h3 style="color: #9D00FF; margin: 4px 0 0 0;">{total_prospeccoes}</h3>
-                <span style="color: #94A3B8; font-size: 11px;">Leads ativos na base</span>
-            </div>
-        """, unsafe_allow_html=True)
-    with col_k4:
-        st.markdown(f"""
-            <div style="background-color: rgba(10, 14, 39, 0.9); border: 1px solid #1E293B; border-top: 4px solid #00E5FF; padding: 15px; border-radius: 8px;">
-                <span style="color: #94A3B8; font-size: 11px; font-weight: 700;">EFICIÊNCIA DE CONVERSÃO</span>
-                <h3 style="color: #00E5FF; margin: 4px 0 0 0;">{taxa_conversao_geral:.1f}%</h3>
-                <span style="color: #00FF66; font-size: 11px;">Lead para Fechado</span>
-            </div>
-        """, unsafe_allow_html=True)
-
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    # 2. FUNIL DE VENDAS SINCRONIZADO
-    st.subheader("Funil Comercial de Prospecção (Sincronizado)")
+    c_sub1, c_sub2 = st.columns(2)
     
-    q_prosp = len(df_base_rel[df_base_rel["Etapa"].isin(["Prospecção", "Qualificação", "Reunião Agendada", "Proposta Enviada", "Fechado"])])
-    q_qualif = len(df_base_rel[df_base_rel["Etapa"].isin(["Qualificação", "Reunião Agendada", "Proposta Enviada", "Fechado"])])
-    q_reun = len(df_base_rel[df_base_rel["Etapa"].isin(["Reunião Agendada", "Proposta Enviada", "Fechado"])])
-    q_prop = len(df_base_rel[df_base_rel["Etapa"].isin(["Proposta Enviada", "Fechado"])])
-    q_fech = len(df_base_rel[df_base_rel["Etapa"] == "Fechado"])
+    with c_sub1:
+        is_sub_active_1 = (st.session_state.sub_menu_tarefas == "Tarefas")
+        if is_sub_active_1:
+            st.markdown(
+                """
+                <style>
+                div[data-testid="column"]:nth-of-type(1) div.stButton > button {
+                    background-color: #0A0E27 !important;
+                    color: #00E5FF !important;
+                    border: 1px solid #00E5FF !important;
+                    font-weight: 600 !important;
+                }
+                </style>
+                """,
+                unsafe_allow_html=True
+            )
+        if st.button("Tarefas", key="sub_btn_tarefas", use_container_width=True):
+            st.session_state.sub_menu_tarefas = "Tarefas"
+            st.rerun()
+            
+    with c_sub2:
+        is_sub_active_2 = (st.session_state.sub_menu_tarefas == "Follow-up")
+        if is_sub_active_2:
+            st.markdown(
+                """
+                <style>
+                div[data-testid="column"]:nth-of-type(2) div.stButton > button {
+                    background-color: #0A0E27 !important;
+                    color: #00E5FF !important;
+                    border: 1px solid #00E5FF !important;
+                    font-weight: 600 !important;
+                }
+                </style>
+                """,
+                unsafe_allow_html=True
+            )
+        if st.button("Follow-up", key="sub_btn_followups", use_container_width=True):
+            st.session_state.sub_menu_tarefas = "Follow-up"
+            st.rerun()
 
-    funnel_data = [
-        {"Etapa": "Leads Contatados", "Qtd": q_prosp},
-        {"Etapa": "Qualificados", "Qtd": q_qualif},
-        {"Etapa": "Reunião Realizada", "Qtd": q_reun},
-        {"Etapa": "Proposta Enviada", "Qtd": q_prop},
-        {"Etapa": "Negócio Fechado", "Qtd": q_fech}
-    ]
-    df_f_graph = pd.DataFrame(funnel_data)
-    
-    fig_funnel = go.Figure(go.Funnel(
-        y=df_f_graph["Etapa"],
-        x=df_f_graph["Qtd"],
-        textinfo="value+percent initial",
-        marker=dict(color=["#00E5FF", "#9D00FF", "#FFEA00", "#FF6600", "#00FF66"])
-    ))
-    fig_funnel.update_layout(
-        paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
-        plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
-        font=dict(color="#FFFFFF", family="Inter", size=12),
-        height=320,
-        margin=dict(t=20, b=20, l=20, r=20)
-    )
-    st.plotly_chart(fig_funnel, use_container_width=True)
+    st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
+
+    def obter_telefone_por_empresa(nome_empresa):
+        if not nome_empresa or nome_empresa == "Nenhum / Tarefa Geral":
+            return "Não vinculado"
+        match = df_crm[df_crm["Empresa"].str.lower() == str(nome_empresa).lower()]
+        if not match.empty:
+            tel = match.iloc[0].get("Telefone", "")
+            return tel if tel else "Não informado"
+        return "Não cadastrado no CRM"
+
+    if st.session_state.sub_menu_tarefas == "Tarefas":
+        if df_tarefas.empty or "Data_Vencimento" not in df_tarefas.columns:
+            st.info("Nenhuma tarefa cadastrada.")
+        else:
+            hoje = datetime.date.today()
+            df_temp = df_tarefas.copy()
+            
+            if cliente_selecionado != "TODOS":
+                empresas_da_carteira = df_crm[df_crm["Cliente"] == cliente_selecionado]["Empresa"].tolist()
+                df_temp = df_temp[df_temp["Cliente"].isin(empresas_da_carteira) | (df_temp["Cliente"] == cliente_selecionado)]
+
+            df_temp["Data_Vencimento"] = pd.to_datetime(df_temp["Data_Vencimento"], errors="coerce").dt.date
+
+            pendentes = df_temp[df_temp["Status"] != "Concluído"]
+            atrasadas = pendentes[pendentes["Data_Vencimento"] < hoje]
+            hoje_tarefas = pendentes[pendentes["Data_Vencimento"] == hoje]
+
+            col_atraso, col_hoje = st.columns(2)
+
+            with col_atraso:
+                st.markdown(f'<div class="badge-atrasada">{len(atrasadas)} Tarefas Atrasadas</div>', unsafe_allow_html=True)
+                with st.expander("Ver Tarefas Atrasadas"):
+                    if not atrasadas.empty:
+                        for _, row in atrasadas.iterrows():
+                            emp_vinculada = row.get('Cliente', 'N/A')
+                            tel_contato = obter_telefone_por_empresa(emp_vinculada)
+                            st.markdown(f"""
+                                - **{row['Titulo']}**<br>
+                                &nbsp;&nbsp;&nbsp;&nbsp;Empresa/Cliente: `{emp_vinculada}`<br>
+                                &nbsp;&nbsp;&nbsp;&nbsp;Telefone: <span class="phone-highlight">{tel_contato}</span><br>
+                                &nbsp;&nbsp;&nbsp;&nbsp;Vencimento: {row['Data_Vencimento'].strftime('%d/%m/%Y')}
+                                <hr style="margin: 4px 0; border-color: #334155;">
+                            """, unsafe_allow_html=True)
+                    else:
+                        st.write("Nenhuma tarefa atrasada.")
+
+            with col_hoje:
+                st.markdown(f'<div class="badge-hoje">{len(hoje_tarefas)} Tarefas para Hoje</div>', unsafe_allow_html=True)
+                with st.expander("Ver Tarefas para Hoje"):
+                    if not hoje_tarefas.empty:
+                        for _, row in hoje_tarefas.iterrows():
+                            emp_vinculada = row.get('Cliente', 'N/A')
+                            tel_contato = obter_telefone_por_empresa(emp_vinculada)
+                            st.markdown(f"""
+                                - **{row['Titulo']}**<br>
+                                &nbsp;&nbsp;&nbsp;&nbsp;Empresa/Cliente: `{emp_vinculada}`<br>
+                                &nbsp;&nbsp;&nbsp;&nbsp;Telefone: <span class="phone-highlight">{tel_contato}</span>
+                                <hr style="margin: 4px 0; border-color: #334155;">
+                            """, unsafe_allow_html=True)
+                    else:
+                        st.write("Nenhuma tarefa para hoje.")
+
+    else:
+        if df_crm.empty:
+            st.info("Nenhum cliente no CRM.")
+        else:
+            crm_temp = df_filtered.copy()
+            status_list = []
+            for _, r in crm_temp.iterrows():
+                st_code, st_label, st_icon = calcular_status_followup(r.get("Followup_Data", ""))
+                status_list.append(st_code)
+            crm_temp["status_fu"] = status_list
+
+            c_atrasados = crm_temp[crm_temp["status_fu"] == "atrasado"]
+            c_hoje = crm_temp[crm_temp["status_fu"] == "hoje"]
+
+            col_c_atraso, col_c_hoje = st.columns(2)
+
+            with col_c_atraso:
+                st.markdown(f'<div class="badge-atrasada">{len(c_atrasados)} Follow-ups Atrasados</div>', unsafe_allow_html=True)
+                with st.expander("Ver Follow-ups Atrasados"):
+                    if not c_atrasados.empty:
+                        for _, row in c_atrasados.iterrows():
+                            raw_dt = str(row['Followup_Data']).strip()[:10]
+                            try:
+                                dt_f_br = dt.strptime(raw_dt, "%Y-%m-%d").strftime("%d/%m/%Y")
+                            except:
+                                dt_f_br = "Data Inválida"
+                            tel_crm = row.get('Telefone', 'Não informado')
+                            st.markdown(f"""
+                                - **{row['Empresa']}**<br>
+                                &nbsp;&nbsp;&nbsp;&nbsp;Contato: `{row['Contato']}`<br>
+                                &nbsp;&nbsp;&nbsp;&nbsp;Telefone: <span class="phone-highlight">{tel_crm}</span><br>
+                                &nbsp;&nbsp;&nbsp;&nbsp;Data: {dt_f_br}
+                                <hr style="margin: 4px 0; border-color: #334155;">
+                            """, unsafe_allow_html=True)
+                    else:
+                        st.write("Nenhum follow-up atrasado.")
+
+            with col_c_hoje:
+                st.markdown(f'<div class="badge-hoje">{len(c_hoje)} Follow-ups para Hoje</div>', unsafe_allow_html=True)
+                with st.expander("Ver Follow-ups para Hoje"):
+                    if not c_hoje.empty:
+                        for _, row in c_hoje.iterrows():
+                            tel_crm = row.get('Telefone', 'Não informado')
+                            st.markdown(f"""
+                                - **{row['Empresa']}**<br>
+                                &nbsp;&nbsp;&nbsp;&nbsp;Contato: `{row['Contato']}`<br>
+                                &nbsp;&nbsp;&nbsp;&nbsp;Telefone: <span class="phone-highlight">{tel_crm}</span>
+                                <hr style="margin: 4px 0; border-color: #334155;">
+                            """, unsafe_allow_html=True)
+                    else:
+                        st.write("Nenhum follow-up para hoje.")
 
     st.divider()
 
-    # 3. CONTROLE DE SÓCIOS CALCULADO AUTOMATICAMENTE
-    st.subheader("Desempenho Comercial por Sócio (Calculado da Base)")
-    st.caption("Acompanhamento das prospecções, reuniões marcadas e vendas geradas por cada sócio responsável.")
+# =========================================================
+# ABA 1: GERENCIADOR DE TAREFAS & CALENDÁRIO FUTURO
+# =========================================================
+if aba_selecionada == "Gerenciamento de Tarefas":
+    st.subheader(f"Gerenciamento de Tarefas — {cliente_sel}")
+    exibir_agenda_semana(st.session_state.df_tarefas, st.session_state.df_crm, cliente_sel)
 
-    # Agrupamento dinâmico da coluna 'Vendedor' / 'Sócio'
-    if "Vendedor" in df_base_rel.columns and not df_base_rel.empty:
-        df_socios_calc = df_base_rel.groupby("Vendedor").agg(
-            Prospeccao_Total=('id', 'count'),
-            Reunioes_Marcadas=('Etapa', lambda x: sum(x.isin(["Reunião Agendada", "Proposta Enviada", "Fechado"]))),
-            Vendas_Fechadas=('Etapa', lambda x: sum(x == "Fechado")),
-            Valor_Gerado=('Valor', lambda x: sum(x[df_base_rel.loc[x.index, "Etapa"] == "Fechado"]))
-        ).reset_index().rename(columns={"Vendedor": "Sócio"})
-        
-        # Criação dos indicadores diários e semanais aproximados com base no volume mensal acumulado
-        df_socios_calc["Prospecção Mensal"] = df_socios_calc["Prospeccao_Total"]
-        df_socios_calc["Prospecção Semanal"] = (df_socios_calc["Prospecção Mensal"] / 4).round(1)
-        df_socios_calc["Prospecção Diária"] = (df_socios_calc["Prospecção Semanal"] / 5).round(1)
+    if cliente_sel != "TODOS":
+        lista_clientes = ["Nenhum / Tarefa Geral"] + df_filtered["Empresa"].dropna().tolist()
     else:
-        df_socios_calc = pd.DataFrame(columns=["Sócio", "Prospecção Diária", "Prospecção Semanal", "Prospecção Mensal", "Reunioes_Marcadas", "Vendas_Fechadas", "Valor_Gerado"])
-
-    if not df_socios_calc.empty:
-        fig_ativ_socio = px.bar(
-            df_socios_calc,
-            x="Sócio",
-            y=["Prospecção Diária", "Prospecção Semanal", "Prospecção Mensal"],
-            barmode="group",
-            title="Volume de Prospecção por Sócio (Média Diária, Semanal e Total Mensal)",
-            color_discrete_sequence=["#00E5FF", "#FFEA00", "#00FF66"]
+        lista_clientes = (
+            ["Nenhum / Tarefa Geral"] + st.session_state.df_crm["Empresa"].dropna().tolist()
+            if not st.session_state.df_crm.empty
+            else ["Nenhum / Tarefa Geral"]
         )
-        fig_ativ_socio.update_layout(
+
+    with st.expander("Criar Nova Tarefa", expanded=False):
+        with st.form(key="form_nova_tarefa_crm", clear_on_submit=True):
+            col1, col2 = st.columns([2, 1])
+
+            with col1:
+                st.markdown("**Selecione a Ação Rápida:**")
+                acao_selecionada = st.radio(
+                    "Ação",
+                    options=["Ligar", "Enviar mensagem", "Enviar e-mail", "Enviar proposta"],
+                    horizontal=True,
+                    label_visibility="collapsed"
+                )
+                
+                complemento_titulo = st.text_input("Detalhes adicionais (Opcional)", placeholder="Ex: Falar com o gerente sobre o orçamento")
+                descricao = st.text_area("Descrição / Observações")
+
+            with col2:
+                cliente_vinculado = st.selectbox(
+                    "Vincular ao Cliente / Oportunidade", options=lista_clientes
+                )
+                data_vencimento = st.date_input(
+                    "Data de Vencimento", min_value=datetime.date.today()
+                )
+                prioridade = st.selectbox(
+                    "Prioridade", options=["Baixa", "Média", "Alta", "Urgente"]
+                )
+
+            submit_tarefa = st.form_submit_button("Salvar Tarefa", use_container_width=True)
+
+            if submit_tarefa:
+                titulo_final = f"{acao_selecionada}" + (f" - {complemento_titulo}" if complemento_titulo else "")
+                
+                nova_linha_tarefa = {
+                    "Titulo": titulo_final,
+                    "Descricao": descricao,
+                    "Cliente": cliente_vinculado,
+                    "Data_Vencimento": str(data_vencimento),
+                    "Prioridade": prioridade,
+                    "Status": "Pendente",
+                    "Data_Criacao": str(datetime.date.today()),
+                }
+                st.session_state.df_tarefas = pd.concat(
+                    [st.session_state.df_tarefas, pd.DataFrame([nova_linha_tarefa])],
+                    ignore_index=True
+                )
+                salvar_dados_tarefas(st.session_state.df_tarefas)
+                st.success("Tarefa criada com sucesso!")
+                st.rerun()
+
+    st.divider()
+
+    st.subheader("Agenda de Tarefas e Follow Up")
+
+    col_h1, col_h2 = st.columns([2, 2])
+    with col_h1:
+        horizonte = st.selectbox(
+            "Horizonte de Visualização:",
+            ["Próximos 7 Dias", "Próximos 15 Dias", "Próximos 30 Dias", "Todos os Registros Futuros"],
+            label_visibility="collapsed"
+        )
+
+    hoje = date.today()
+    if horizonte == "Próximos 7 Dias":
+        limite_data = hoje + timedelta(days=7)
+    elif horizonte == "Próximos 15 Dias":
+        limite_data = hoje + timedelta(days=15)
+    elif horizonte == "Próximos 30 Dias":
+        limite_data = hoje + timedelta(days=30)
+    else:
+        limite_data = hoje + timedelta(days=365)
+
+    eventos_futuros = []
+
+    df_tarefas_exibicao = st.session_state.df_tarefas.copy()
+    if cliente_sel != "TODOS":
+        empresas_da_carteira = df_filtered["Empresa"].tolist()
+        df_tarefas_exibicao = df_tarefas_exibicao[df_tarefas_exibicao["Cliente"].isin(empresas_da_carteira) | (df_tarefas_exibicao["Cliente"] == cliente_sel)]
+
+    if not df_tarefas_exibicao.empty:
+        for idx_t, t in df_tarefas_exibicao.iterrows():
+            if pd.notna(t.get("Data_Vencimento")):
+                try:
+                    dt_v = dt.strptime(str(t["Data_Vencimento"])[:10], "%Y-%m-%d").date()
+                    if hoje <= dt_v <= limite_data:
+                        eventos_futuros.append({
+                            "origem": "tarefa",
+                            "index_original": idx_t,
+                            "Data_Formatada": dt_v.strftime("%d/%m/%Y"),
+                            "Tipo": "Tarefa",
+                            "Título / Ação": t["Titulo"],
+                            "Vinculado a": f"Cliente: {t.get('Cliente', 'Geral')}",
+                            "Prioridade / Status": f"Prioridade: {t.get('Prioridade', 'Normal')}"
+                        })
+                except:
+                    pass
+
+    if not df_filtered.empty:
+        for idx_c, c in df_filtered.iterrows():
+            f_dat = c.get("Followup_Data", "")
+            if pd.notna(f_dat) and str(f_dat).strip() not in ["", "nan", "NaT"]:
+                try:
+                    dt_f = dt.strptime(str(f_dat)[:10], "%Y-%m-%d").date()
+                    if hoje <= dt_f <= limite_data:
+                        eventos_futuros.append({
+                            "origem": "crm",
+                            "index_original": idx_c,
+                            "Data_Formatada": dt_f.strftime("%d/%m/%Y"),
+                            "Tipo": "Follow-up CRM",
+                            "Título / Ação": c.get("Followup_Nota", "Contato Comercial"),
+                            "Vinculado a": f"Empresa: {c['Empresa']} ({c.get('Contato', 'Não informado')})",
+                            "Prioridade / Status": f"Etapa: {c['Etapa']}"
+                        })
+                except:
+                    pass
+
+    if eventos_futuros:
+        df_futuro = pd.DataFrame(eventos_futuros)
+        df_futuro = df_futuro.sort_values(by="Data_Formatada", ascending=True).reset_index(drop=True)
+
+        with st.expander(f"Ver compromissos no período ({len(df_futuro)} encontrados)", expanded=True):
+            c_m1, c_m2, c_m3 = st.columns(3)
+            c_m1.metric("Total de Ações no Período", len(df_futuro))
+            c_m2.metric("Tarefas Pendentes", len(df_futuro[df_futuro["Tipo"] == "Tarefa"]))
+            c_m3.metric("Follow-ups de CRM", len(df_futuro[df_futuro["Tipo"] == "Follow-up CRM"]))
+
+            st.divider()
+
+            df_exibicao_tabela = df_futuro[["Data_Formatada", "Tipo", "Título / Ação", "Vinculado a", "Prioridade / Status"]]
+            
+            st.dataframe(
+                df_exibicao_tabela,
+                use_container_width=True,
+                hide_index=True
+            )
+
+            st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
+            
+            item_selecionado_acoes = st.selectbox(
+                "Selecione o compromisso para gerenciar (Editar/Excluir):",
+                options=range(len(df_futuro)),
+                format_func=lambda x: f"[{df_futuro.loc[x, 'Data_Formatada']}] {df_futuro.loc[x, 'Tipo']} - {df_futuro.loc[x, 'Título / Ação']} ({df_futuro.loc[x, 'Vinculado a']})",
+                label_visibility="collapsed"
+            )
+
+            if item_selecionado_acoes is not None:
+                sel_row = df_futuro.loc[item_selecionado_acoes]
+                origem_sel = sel_row["origem"]
+                idx_orig_sel = sel_row["index_original"]
+
+                col_acao1, col_acao2 = st.columns(2)
+                with col_acao1:
+                    if st.button("Excluir", use_container_width=True):
+                        if origem_sel == "tarefa":
+                            st.session_state.df_tarefas = st.session_state.df_tarefas.drop(idx_orig_sel).reset_index(drop=True)
+                            salvar_dados_tarefas(st.session_state.df_tarefas)
+                        else:
+                            st.session_state.df_crm.loc[idx_orig_sel, "Followup_Data"] = ""
+                            st.session_state.df_crm.loc[idx_orig_sel, "Followup_Nota"] = ""
+                            salvar_dados_crm(st.session_state.df_crm)
+                        st.success("Item removido com sucesso!")
+                        st.rerun()
+
+                with col_acao2:
+                    with st.popover("Editar", use_container_width=True):
+                        novo_txt_acao = st.text_input("Título / Ação", value=sel_row["Título / Ação"])
+                        novo_vinc_acao = st.text_input("Vínculo / Empresa", value=sel_row["Vinculado a"])
+                        if st.button("Salvar Alterações"):
+                            if origem_sel == "tarefa":
+                                st.session_state.df_tarefas.loc[idx_orig_sel, "Titulo"] = novo_txt_acao
+                                salvar_dados_tarefas(st.session_state.df_tarefas)
+                            else:
+                                st.session_state.df_crm.loc[idx_orig_sel, "Followup_Nota"] = novo_txt_acao
+                                salvar_dados_crm(st.session_state.df_crm)
+                            st.success("Atualizado com sucesso!")
+                            st.rerun()
+    else:
+        st.info("Nenhuma tarefa ou follow-up agendado para este horizonte de tempo.")
+
+# =========================================================
+# ABA 2: FUNIL DE VENDAS (COM SELEÇÃO DOS 3 FUNIS)
+# =========================================================
+elif aba_selecionada == "Funil de Vendas":
+    col_topo_titulo, col_topo_busca = st.columns([2, 1])
+    with col_topo_titulo:
+        st.subheader(titulo_funil)
+    with col_topo_busca:
+        termo_busca = st.text_input(
+            "Pesquisar cliente", 
+            placeholder="🔍 Buscar por empresa, contato...", 
+            label_visibility="collapsed"
+        )
+
+    # ---------------------------------------------------------
+    # SUB-MENU DE SELEÇÃO DOS 3 FUNIS (PRÉ, PRINCIPAL E PÓS)
+    # ---------------------------------------------------------
+    funis_list = ["Pré Funil", "Funil de Vendas", "Pós Funil"]
+    cols_funis = st.columns(3)
+    
+    for idx_f, nome_f in enumerate(funis_list):
+        with cols_funis[idx_f]:
+            is_funil_active = (st.session_state.funnel_selecionado == nome_f)
+            if is_funil_active:
+                st.markdown(
+                    f"""
+                    <style>
+                    div[data-testid="column"]:nth-of-type({idx_f+1}) div.stButton > button {{
+                        background-color: #00E5FF !important;
+                        color: #0A0E27 !important;
+                        border: 1px solid #00E5FF !important;
+                        font-weight: 700 !important;
+                        box-shadow: 0 0 10px rgba(0, 229, 255, 0.4);
+                    }}
+                    </style>
+                    """,
+                    unsafe_allow_html=True
+                )
+            if st.button(nome_f, key=f"btn_funil_{idx_f}", use_container_width=True):
+                st.session_state.funnel_selecionado = nome_f
+                st.rerun()
+
+    st.markdown("<div style='margin-bottom: 20px;'></div>", unsafe_allow_html=True)
+
+    if st.session_state.cliente_editando_id is not None:
+        cliente_edit_id = st.session_state.cliente_editando_id
+        filtro_reg = df[df["id"] == cliente_edit_id]
+        
+        if not filtro_reg.empty:
+            row_edit = filtro_reg.iloc[0]
+            
+            st.markdown(
+                f"""
+                <div style="background-color: rgba(10, 14, 39, 0.95); border: 2px solid #00E5FF; padding: 25px; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 0 15px rgba(0, 229, 255, 0.2);">
+                    <h3 style="color: #00E5FF; margin-top: 0; margin-bottom: 20px; font-weight: 700;">Ficha Completa & Linha do Tempo: {row_edit['Empresa']}</h3>
+                """,
+                unsafe_allow_html=True
+            )
+            
+            with st.form(key=f"form_full_edit_horizontal_{cliente_edit_id}"):
+                etapas_todas = list(PROB_MAP.keys())
+                
+                edit_etapa = st.selectbox(
+                    "Etapa do Funil (Pré, Principal ou Pós)", 
+                    options=etapas_todas, 
+                    index=etapas_todas.index(row_edit["Etapa"]) if row_edit["Etapa"] in etapas_todas else 0,
+                    format_func=lambda x: x.replace("Pré: ", "").replace("Pós: ", "")
+                )
+                
+                st.divider()
+
+                hc1, hc2, hc3 = st.columns(3)
+                with hc1:
+                    edit_empresa = st.text_input("Empresa", value=row_edit["Empresa"])
+                    
+                    carteira_atual_cliente = row_edit.get("Cliente", CARTEIRAS_COVEM[0])
+                    idx_carteira_edit = CARTEIRAS_COVEM.index(carteira_atual_cliente) if carteira_atual_cliente in CARTEIRAS_COVEM else 0
+                    edit_carteira = st.selectbox("Carteira / Marca", options=CARTEIRAS_COVEM, index=idx_carteira_edit)
+
+                    edit_contato = st.text_input("Contato", value=row_edit["Contato"])
+                with hc2:
+                    edit_cargo = st.text_input("Cargo", value=row_edit["Cargo"])
+                    edit_tel = st.text_input("Telefone", value=row_edit["Telefone"])
+                    edit_email = st.text_input("E-mail", value=row_edit["Email"])
+                with hc3:
+                    edit_cidade = st.text_input("Cidade", value=row_edit["Cidade"])
+                    edit_valor = st.number_input("Valor (R$)", value=float(row_edit["Valor"]), step=1000.0)
+                    edit_vendedor = st.text_input("Vendedor", value=row_edit["Vendedor"])
+                    
+                    try:
+                        dt_parse = dt.strptime(str(row_edit["Followup_Data"]).strip()[:10], "%Y-%m-%d").date() if row_edit["Followup_Data"] and str(row_edit["Followup_Data"]).strip() not in ["nan", "NaT", ""] else date.today()
+                    except:
+                        dt_parse = date.today()
+                        
+                    edit_fu_data = st.date_input("Próxima Data de Follow-up", value=dt_parse)
+                
+                edit_fu_nota = st.text_input("Resumo / Nota do Follow-up", value=row_edit["Followup_Nota"])
+                
+                edit_perda = str(row_edit.get("Perda", "")).strip()
+                edit_motivo_perda = st.selectbox(
+                    "Motivo de Perda / Sem Interesse (Se aplicável)", 
+                    options=[""] + MOTIVOS_PERDA_PADRAO,
+                    index=(MOTIVOS_PERDA_PADRAO.index(edit_perda) + 1) if edit_perda in MOTIVOS_PERDA_PADRAO else 0
+                )
+                
+                st.divider()
+                st.markdown("**Adicionar Nota Rápida na Linha do Tempo:**")
+                col_t1, col_t2 = st.columns([3, 1])
+                with col_t1:
+                    nova_nota_timeline = st.text_input("Escreva o que foi conversado / alinhado:", placeholder="Ex: Cliente pediu para retornar na próxima terça para fechar o contrato.", key="input_timeline_edit")
+                with col_t2:
+                    st.markdown("<br>", unsafe_allow_html=True)
+                    adicionar_timeline_btn = st.form_submit_button("+ Registrar na Timeline", use_container_width=True)
+
+                st.markdown("**Histórico de Interações (Linha do Tempo):**")
+                historico_atual = str(row_edit["Historico"]) if pd.notna(row_edit["Historico"]) else ""
+                
+                if historico_atual.strip():
+                    for linha_hist in historico_atual.split("\n"):
+                        if linha_hist.strip():
+                            st.markdown(f"- 🕒 `{linha_hist.strip()}`")
+                else:
+                    st.caption("Nenhum registro na linha do tempo ainda.")
+                
+                st.divider()
+                bcol1, bcol2, bcol3 = st.columns([2, 2, 2])
+                with bcol1:
+                    btn_salvar_alt = st.form_submit_button("Salvar Alterações Gerais", use_container_width=True)
+                with bcol2:
+                    btn_fechar_modal = st.form_submit_button("Fechar Ficha", use_container_width=True)
+                with bcol3:
+                    btn_excluir = st.form_submit_button("Excluir Cliente", use_container_width=True)
+                    
+                idx_df = st.session_state.df_crm.index[st.session_state.df_crm["id"] == cliente_edit_id]
+                
+                if len(idx_df) > 0:
+                    idx_real = idx_df[0]
+                    
+                    if adicionar_timeline_btn and nova_nota_timeline.strip():
+                        timestamp_atual = dt.now().strftime("%d/%m/%Y %H:%M")
+                        novo_registro_timeline = f"[{timestamp_atual}] {nova_nota_timeline.strip()}"
+                        
+                        if historico_atual.strip():
+                            historico_atualizado = novo_registro_timeline + "\n" + historico_atual
+                        else:
+                            historico_atualizado = novo_registro_timeline
+                            
+                        st.session_state.df_crm.loc[idx_real, "Historico"] = historico_atualizado
+                        salvar_dados_crm(st.session_state.df_crm)
+                        st.success("Nota adicionada na linha do tempo com sucesso!")
+                        st.rerun()
+
+                    if btn_salvar_alt:
+                        st.session_state.df_crm.loc[idx_real, "Etapa"] = edit_etapa
+                        st.session_state.df_crm.loc[idx_real, "Prob"] = PROB_MAP[edit_etapa]
+                        st.session_state.df_crm.loc[idx_real, "Empresa"] = edit_empresa
+                        st.session_state.df_crm.loc[idx_real, "Cliente"] = edit_carteira
+                        st.session_state.df_crm.loc[idx_real, "Contato"] = edit_contato
+                        st.session_state.df_crm.loc[idx_real, "Cargo"] = edit_cargo
+                        st.session_state.df_crm.loc[idx_real, "Telefone"] = edit_tel
+                        st.session_state.df_crm.loc[idx_real, "Email"] = edit_email
+                        st.session_state.df_crm.loc[idx_real, "Cidade"] = edit_cidade
+                        st.session_state.df_crm.loc[idx_real, "Valor"] = edit_valor
+                        st.session_state.df_crm.loc[idx_real, "Vendedor"] = edit_vendedor
+                        st.session_state.df_crm.loc[idx_real, "Followup_Data"] = str(edit_fu_data)
+                        st.session_state.df_crm.loc[idx_real, "Followup_Nota"] = edit_fu_nota
+                        
+                        st.session_state.df_crm["Perda"] = st.session_state.df_crm["Perda"].astype(str)
+                        st.session_state.df_crm.loc[idx_real, "Perda"] = str(edit_motivo_perda)
+                        
+                        salvar_dados_crm(st.session_state.df_crm)
+                        st.session_state.cliente_editando_id = None
+                        st.success("Alterações salvas com sucesso!")
+                        st.rerun()
+                        
+                if btn_fechar_modal:
+                    st.session_state.cliente_editando_id = None
+                    st.rerun()
+                    
+                if btn_excluir:
+                    st.session_state.df_crm = st.session_state.df_crm[st.session_state.df_crm["id"] != cliente_edit_id]
+                    salvar_dados_crm(st.session_state.df_crm)
+                    st.session_state.cliente_editando_id = None
+                    st.warning("Cliente excluído com sucesso!")
+                    st.rerun()
+
+            st.markdown("</div>", unsafe_allow_html=True)
+            st.divider()
+
+    df_funil_exibicao = df_filtered.copy()
+    if termo_busca:
+        termo_limpo = termo_busca.lower()
+        df_funil_exibicao = df_funil_exibicao[
+            df_funil_exibicao["Empresa"].astype(str).str.lower().str.contains(termo_limpo) |
+            df_funil_exibicao["Contato"].astype(str).str.lower().str.contains(termo_limpo) |
+            df_funil_exibicao["Telefone"].astype(str).str.lower().str.contains(termo_limpo)
+        ]
+
+    # Filtrar etapas conforme o Funil Ativo
+    funil_atual = st.session_state.funnel_selecionado
+    etapas_visiveis = ESTRUTURA_FUNIS.get(funil_atual, ESTRUTURA_FUNIS["Funil de Vendas"])
+    todas_etapas_existentes = list(PROB_MAP.keys())
+
+    cols = st.columns(len(etapas_visiveis))
+    
+    for idx, etapa in enumerate(etapas_visiveis):
+        cor_header = st.session_state.funnel_colors.get(etapa, "#00E5FF")
+        nome_curto_etapa = etapa.replace("Pré: ", "").replace("Pós: ", "")
+        
+        with cols[idx]:
+            st.markdown(
+                f"""
+                <div style="background: linear-gradient(135deg, rgba(10, 14, 39, 0.95) 0%, rgba(5, 11, 24, 0.95) 100%); border: 1px solid #1E293B; border-top: 5px solid {cor_header}; padding: 14px 10px; border-radius: 6px; text-align: center; margin-bottom: 16px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);">
+                    <b style="color: #FFFFFF; font-size: 13px; text-transform: uppercase; letter-spacing: 0.8px;">{nome_curto_etapa}</b>
+                </div>
+                """, 
+                unsafe_allow_html=True
+            )
+            
+            sub_df = df_funil_exibicao[df_funil_exibicao["Etapa"] == etapa]
+            
+            for _, row in sub_df.iterrows():
+                st_code, st_label, st_icon = calcular_status_followup(row.get("Followup_Data", ""))
+                cliente_id = int(row['id'])
+                
+                st.markdown(f"""
+                    <div style="border-left: 5px solid {cor_header}; background-color: rgba(10, 14, 39, 0.85); border-top: 1px solid #1E293B; border-right: 1px solid #1E293B; border-bottom: 1px solid #1E293B; border-radius: 4px; margin-bottom: 6px; padding: 2px;">
+                """, unsafe_allow_html=True)
+                
+                with st.expander(f"{row['Empresa']}"):
+                    dt_f_exib = row.get('Followup_Data', '')
+                    
+                    try:
+                        raw_val = str(dt_f_exib).strip()[:10]
+                        dt_f_str = dt.strptime(raw_val, "%Y-%m-%d").strftime("%d/%m/%Y") if raw_val and raw_val not in ["nan", "NaT", ""] else "Não agendado"
+                    except:
+                        dt_f_str = "Não agendado"
+                    
+                    st.markdown(
+                        f"""
+                        <div style="line-height: 1.4; margin-bottom: 8px;">
+                            <span style="font-size: 13px;"><b>{row['Empresa']}</b></span><br>
+                            <span style="font-size: 11px; color: #00E5FF;">Carteira: {row.get('Cliente', 'N/A')}</span><br>
+                            <span style="font-size: 12px; color: #94A3B8;">Contato: {row['Contato']}</span><br>
+                            <span class="phone-highlight" style="font-size: 12px;">{row.get('Telefone', 'Não informado')}</span><br>
+                            <hr style="margin: 6px 0; border-color: #334155;">
+                            <span style="font-size: 12px; color: #E2E8F0;"><b>Follow-up:</b> {st_icon} {dt_f_str}</span>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
+                    
+                    nova_etapa_card = st.selectbox(
+                        "Mover Lead:", 
+                        options=todas_etapas_existentes, 
+                        index=todas_etapas_existentes.index(row["Etapa"]) if row["Etapa"] in todas_etapas_existentes else 0, 
+                        key=f"mov_etapa_{cliente_id}",
+                        format_func=lambda x: x.replace("Pré: ", "").replace("Pós: ", ""),
+                        label_visibility="collapsed"
+                    )
+                    
+                    if nova_etapa_card != row["Etapa"]:
+                        idx_df = st.session_state.df_crm[st.session_state.df_crm["id"] == cliente_id].index
+                        st.session_state.df_crm.loc[idx_df, "Etapa"] = nova_etapa_card
+                        st.session_state.df_crm.loc[idx_df, "Prob"] = PROB_MAP[nova_etapa_card]
+                        if "Perdido" in nova_etapa_card:
+                            st.session_state.df_crm["Perda"] = st.session_state.df_crm["Perda"].astype(str)
+                            st.session_state.df_crm.loc[idx_df, "Perda"] = "Outros"
+                        
+                        salvar_dados_crm(st.session_state.df_crm)
+                        st.success("Lead movimentado com sucesso!")
+                        st.rerun()
+
+                    st.markdown("<div style='margin-top: 6px;'></div>", unsafe_allow_html=True)
+                    if st.button("EDITAR", key=f"btn_edit_{cliente_id}", use_container_width=True):
+                        st.session_state.cliente_editando_id = cliente_id
+                        st.rerun()
+                
+                st.markdown("</div>", unsafe_allow_html=True)
+
+# =========================================================
+# ABA 3: DASHBOARD
+# =========================================================
+elif aba_selecionada == "Dashboard":
+    st.markdown(f'<div class="notranslate"><h3>{titulo_dinamico}</h3></div>', unsafe_allow_html=True)
+    
+    col_f1, _ = st.columns([2, 2])
+    with col_f1:
+        periodo_sel = st.selectbox(
+            "Visualizar Período:", 
+            ["Todos os Registros", "Esta Semana", "15 Dias", "1 Mês", "2 Meses", "3 Meses"],
+            label_visibility="collapsed"
+        )
+    
+    df_dash = df_filtered.copy()
+    if "Data_Cadastro" in df_dash.columns:
+        df_dash["Data_Cadastro"] = pd.to_datetime(df_dash["Data_Cadastro"], errors='coerce')
+        hoje = pd.Timestamp.now()
+        
+        if periodo_sel == "Esta Semana":
+            inicio = hoje - pd.Timedelta(days=hoje.weekday())
+            df_dash = df_dash[df_dash["Data_Cadastro"] >= inicio]
+        elif periodo_sel == "15 Dias":
+            df_dash = df_dash[df_dash["Data_Cadastro"] >= hoje - pd.Timedelta(days=15)]
+        elif periodo_sel == "1 Mês":
+            df_dash = df_dash[df_dash["Data_Cadastro"] >= hoje - pd.Timedelta(days=30)]
+        elif periodo_sel == "2 Meses":
+            df_dash = df_dash[df_dash["Data_Cadastro"] >= hoje - pd.Timedelta(days=60)]
+        elif periodo_sel == "3 Meses":
+            df_dash = df_dash[df_dash["Data_Cadastro"] >= hoje - pd.Timedelta(days=90)]
+
+    st.divider()
+
+    etapas_crm = list(PROB_MAP.keys())
+    contagem_calculada = {}
+    
+    for etapa in etapas_crm:
+        count_real = len(df_dash[df_dash["Etapa"] == etapa])
+        contagem_calculada[etapa] = count_real
+        
+    total_leads = sum(contagem_calculada.values())
+    cols_m = st.columns(len(etapas_crm) + 1)
+    
+    for i, etapa in enumerate(etapas_crm):
+        cor_header = st.session_state.funnel_colors.get(etapa, "#00E5FF")
+        qtd = contagem_calculada[etapa]
+        nome_limpo = etapa.replace("Pré: ", "").replace("Pós: ", "")
+        
+        with cols_m[i]:
+            st.markdown(
+                f"""
+                <div style="background: linear-gradient(135deg, rgba(10, 14, 39, 0.95) 0%, rgba(5, 11, 24, 0.95) 100%); border: 1px solid #1E293B; border-top: 4px solid {cor_header}; padding: 12px 6px; border-radius: 8px; text-align: center; margin-bottom: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);">
+                    <b style="color: #F8FAFC; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">{nome_limpo}</b>
+                </div>
+                """, 
+                unsafe_allow_html=True
+            )
+            st.metric(label="", value=qtd)
+
+    with cols_m[-1]:
+        st.markdown(
+            """
+            <div style="background: linear-gradient(135deg, rgba(10, 14, 39, 0.95) 0%, rgba(5, 11, 24, 0.95) 100%); border: 1px solid #1E293B; border-top: 4px solid #00E5FF; padding: 12px 6px; border-radius: 8px; text-align: center; margin-bottom: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);">
+                <b style="color: #00E5FF; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">TOTAL LEADS</b>
+            </div>
+            """, 
+            unsafe_allow_html=True
+        )
+        st.metric(label="", value=total_leads)
+
+    st.divider()
+
+    if cliente_sel != "TODOS":
+        titulo_grafico_funil = f"Dashboard Gráfico - {cliente_sel}"
+    else:
+        titulo_grafico_funil = f"Dashboard Gráfico - {COVEM_NAME}"
+
+    st.markdown(f'<div class="notranslate"><h3>{titulo_grafico_funil}</h3></div>', unsafe_allow_html=True)
+    df_pizza = pd.DataFrame(list(contagem_calculada.items()), columns=["Etapa", "Quantidade"])
+    df_pizza_valida = df_pizza[df_pizza["Quantidade"] > 0]
+
+    if not df_pizza_valida.empty:
+        fig_pizza = px.pie(
+            df_pizza_valida, 
+            values="Quantidade", 
+            names="Etapa",
+            color="Etapa",
+            color_discrete_map=st.session_state.funnel_colors,
+            hole=0.4
+        )
+        fig_pizza.update_layout(
             paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
             plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
-            font=dict(color="#FFFFFF", family="Inter", size=12),
-            height=350,
-            xaxis=dict(showgrid=True, gridcolor=GRID_GRAFICO_FUTURISTA),
-            yaxis=dict(title="Quantidade de Contatos", showgrid=True, gridcolor=GRID_GRAFICO_FUTURISTA)
+            font=dict(color="#FFFFFF", family="Inter", size=13),
+            height=440,
+            margin=dict(t=40, b=40, l=20, r=20),
+            legend=dict(font=dict(color="#FFFFFF"))
         )
-        st.plotly_chart(fig_ativ_socio, use_container_width=True)
-
-        c_det1, c_det2 = st.columns(2)
-        with c_det1:
-            fig_reunioes = px.bar(
-                df_socios_calc, x="Sócio", y="Reunioes_Marcadas", text="Reunioes_Marcadas",
-                title="Reuniões Avançadas por Sócio", color="Sócio",
-                color_discrete_sequence=["#9D00FF", "#FF6600", "#00E5FF"]
-            )
-            fig_reunioes.update_layout(
-                paper_bgcolor=FUNDO_GRAFICO_FUTURISTA, plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
-                font=dict(color="#FFFFFF", size=11), height=300, showlegend=False,
-                xaxis=dict(showgrid=True, gridcolor=GRID_GRAFICO_FUTURISTA),
-                yaxis=dict(showgrid=True, gridcolor=GRID_GRAFICO_FUTURISTA)
-            )
-            st.plotly_chart(fig_reunioes, use_container_width=True)
-
-        with c_det2:
-            fig_vendas_socio = px.bar(
-                df_socios_calc, x="Sócio", y="Vendas_Fechadas", text="Vendas_Fechadas",
-                title="Vendas Concretizadas por Sócio", color="Sócio",
-                color_discrete_sequence=["#00FF66", "#FFEA00", "#FF6600"]
-            )
-            fig_vendas_socio.update_layout(
-                paper_bgcolor=FUNDO_GRAFICO_FUTURISTA, plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
-                font=dict(color="#FFFFFF", size=11), height=300, showlegend=False,
-                xaxis=dict(showgrid=True, gridcolor=GRID_GRAFICO_FUTURISTA),
-                yaxis=dict(showgrid=True, gridcolor=GRID_GRAFICO_FUTURISTA)
-            )
-            st.plotly_chart(fig_vendas_socio, use_container_width=True)
+        fig_pizza.update_traces(
+            textinfo="percent+value",
+            marker=dict(line=dict(color='#0A0E27', width=2))
+        )
+        st.plotly_chart(fig_pizza, use_container_width=True)
+    else:
+        st.info("Nenhum dado encontrado para o período selecionado.")
 
     st.divider()
 
-    # 4. TAXAS DE CONVERSÃO REAL DO SEU FUNIL
-    c_nov1, c_nov2 = st.columns(2)
-    with c_nov1:
-        st.subheader("Taxa de Conversão do Funil (%)")
+    st.markdown(f'<div class="notranslate"><h3>Gráfico de Motivo de Perda — {titulo_dinamico}</h3></div>', unsafe_allow_html=True)
+    df_perdidos = df_dash[df_dash["Etapa"] == "Pós: Perdido"].copy()
+    
+    if not df_perdidos.empty and "Perda" in df_perdidos.columns:
+        df_perdidos["Perda"] = df_perdidos["Perda"].fillna("").astype(str).str.strip()
+        df_motivos = df_perdidos[df_perdidos["Perda"] != ""].groupby("Perda").size().reset_index(name="Quantidade")
         
-        tx_qualif = (q_qualif / q_prosp * 100) if q_prosp > 0 else 0
-        tx_reun = (q_reun / q_qualif * 100) if q_qualif > 0 else 0
-        tx_prop = (q_prop / q_reun * 100) if q_reun > 0 else 0
-        tx_fech = (q_fech / q_prop * 100) if q_prop > 0 else 0
+        if not df_motivos.empty:
+            fig_perda = px.bar(
+                df_motivos,
+                x="Perda",
+                y="Quantidade",
+                color="Perda",
+                color_discrete_map=CORES_PERDAS,
+                text="Quantidade"
+            )
+            fig_perda.update_layout(
+                paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+                plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+                font=dict(color="#FFFFFF", family="Inter", size=13),
+                height=380,
+                xaxis=dict(
+                    title="Motivo de Perda",
+                    showgrid=True,
+                    gridcolor=GRID_GRAFICO_FUTURISTA,
+                    zerolinecolor=GRID_GRAFICO_FUTURISTA
+                ),
+                yaxis=dict(
+                    title="Quantidade",
+                    showgrid=True,
+                    gridcolor=GRID_GRAFICO_FUTURISTA,
+                    zerolinecolor=GRID_GRAFICO_FUTURISTA
+                ),
+                showlegend=False
+            )
+            fig_perda.update_traces(textposition="outside", marker=dict(line=dict(color='#00E5FF', width=1)))
+            st.plotly_chart(fig_perda, use_container_width=True)
+        else:
+            st.info("Nenhum motivo de perda especificado para os leads perdidos.")
+    else:
+        st.info("Nenhum lead registrado em 'Pós: Perdido' no momento.")
 
-        df_conv = pd.DataFrame({
-            "Etapa": ["Contatado ➔ Qualificado", "Qualificado ➔ Reunião", "Reunião ➔ Proposta", "Proposta ➔ Fechado"],
-            "Taxa (%)": [round(tx_qualif, 1), round(tx_reun, 1), round(tx_prop, 1), round(tx_fech, 1)]
-        })
-        fig_conv = px.bar(
-            df_conv, x="Taxa (%)", y="Etapa", orientation="h", text="Taxa (%)",
-            color_discrete_sequence=["#00E5FF"]
-        )
-        fig_conv.update_layout(
-            paper_bgcolor=FUNDO_GRAFICO_FUTURISTA, plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
-            font=dict(color="#FFFFFF", size=11), height=280,
-            xaxis=dict(showgrid=True, gridcolor=GRID_GRAFICO_FUTURISTA), yaxis=dict(title="")
-        )
-        st.plotly_chart(fig_conv, use_container_width=True)
+# =========================================================
+# ABA 4: RELATÓRIO EXECUTIVO
+# =========================================================
+elif aba_selecionada == "Relatório Executivo":
+    st.title("Relatório Executivo")
 
-    with c_nov2:
-        st.subheader("Projeção do Pipeline Ponderado (R$)")
+    st.subheader("Historico de Atividades")
+
+    df_historico_salvo = carregar_dados_historico()
+    df_crm_base = df_filtered.copy()
+
+    mes_atual_str = dt.now().strftime("%b/%y").capitalize()
+    meses_map = {"Jan": "Jan", "Feb": "Fev", "Mar": "Mar", "Apr": "Abr", "May": "Mai", "Jun": "Jun", "Jul": "Jul", "Aug": "Ago", "Sep": "Set", "Oct": "Out", "Nov": "Nov", "Dec": "Dez"}
+    for eng, pt in meses_map.items():
+        mes_atual_str = mes_atual_str.replace(eng, pt)
+
+    if not df_crm_base.empty and "Data_Cadastro" in df_crm_base.columns:
+        df_crm_base["Data_Datetime"] = pd.to_datetime(df_crm_base["Data_Cadastro"], errors="coerce")
+        df_crm_base["Mês/Ano"] = df_crm_base["Data_Datetime"].dt.strftime("%b/%y").str.capitalize()
+        for eng, pt in meses_map.items():
+            df_crm_base["Mês/Ano"] = df_crm_base["Mês/Ano"].str.replace(eng, pt, regex=False)
+
+        sub_m = df_crm_base[df_crm_base["Mês/Ano"] == mes_atual_str]
         
-        val_proposta_aberto = float(df_base_rel[df_base_rel["Etapa"] == "Proposta Enviada"]["Valor"].sum())
-        val_reuniao_aberto = float(df_base_rel[df_base_rel["Etapa"] == "Reunião Agendada"]["Valor"].sum())
+        leads_q = len(sub_m[sub_m["Etapa"].isin(["Prospecção", "Qualificação", "Reunião Agendada", "Proposta Enviada", "Fechado"])])
+        reunioes = len(sub_m[sub_m["Etapa"] == "Reunião Agendada"])
+        propostas = len(sub_m[sub_m["Etapa"] == "Proposta Enviada"])
+        fechados = len(sub_m[sub_m["Etapa"] == "Fechado"])
+
+        if df_historico_salvo.empty:
+            df_historico_salvo = pd.DataFrame([{
+                "Mês/Ano": mes_atual_str,
+                "Leads Qualificados": leads_q,
+                "Reuniões Agendadas": reunioes,
+                "Propostas Enviadas": propostas,
+                "Projetos Fechados": fechados
+            }])
+        else:
+            if mes_atual_str in df_historico_salvo["Mês/Ano"].values:
+                idx = df_historico_salvo[df_historico_salvo["Mês/Ano"] == mes_atual_str].index[0]
+                df_historico_salvo.loc[idx, "Leads Qualificados"] = leads_q
+                df_historico_salvo.loc[idx, "Reuniões Agendadas"] = reunioes
+                df_historico_salvo.loc[idx, "Propostas Enviadas"] = propostas
+                df_historico_salvo.loc[idx, "Projetos Fechados"] = fechados
+            else:
+                nova_linha_hist = pd.DataFrame([{
+                    "Mês/Ano": mes_atual_str,
+                    "Leads Qualificados": leads_q,
+                    "Reuniões Agendadas": reunioes,
+                    "Propostas Enviadas": propostas,
+                    "Projetos Fechados": fechados
+                }])
+                df_historico_salvo = pd.concat([df_historico_salvo, nova_linha_hist], ignore_index=True)
         
-        proj_30d = val_mrr + (val_proposta_aberto * 0.8)
-        proj_60d = proj_30d + (val_reuniao_aberto * 0.6)
-        proj_90d = proj_60d * 1.25
+        salvar_dados_historico(df_historico_salvo)
 
-        df_proj = pd.DataFrame({
-            "Período": ["Faturamento Atual", "Projeção 30 Days", "Projeção 60 Days", "Projeção 90 Days"],
-            "Valor Projetado (R$)": [round(val_mrr, 2), round(proj_30d, 2), round(proj_60d, 2), round(proj_90d, 2)]
-        })
-        fig_proj = px.line(
-            df_proj, x="Período", y="Valor Projetado (R$)", markers=True, text="Valor Projetado (R$)",
-            color_discrete_sequence=["#00FF66"]
-        )
-        fig_proj.update_layout(
-            paper_bgcolor=FUNDO_GRAFICO_FUTURISTA, plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
-            font=dict(color="#FFFFFF", size=11), height=280,
-            xaxis=dict(showgrid=True, gridcolor=GRID_GRAFICO_FUTURISTA), yaxis=dict(showgrid=True, gridcolor=GRID_GRAFICO_FUTURISTA)
-        )
-        fig_proj.update_traces(texttemplate='R$ %{text:,.2f}', textposition="top center")
-        st.plotly_chart(fig_proj, use_container_width=True)
+    with st.expander("Exibir / Ocultar Tabela de Histórico de Atividades", expanded=True):
+        if not df_historico_salvo.empty:
+            def colorir_tabela_historico(val, col_name):
+                if col_name == "Mês/Ano":
+                    return "background-color: #FFEA00; color: #0A0E27; font-weight: bold;"
+                elif col_name == "Leads Qualificados":
+                    return "background-color: #9D00FF; color: #FFFFFF; font-weight: bold;"
+                elif col_name == "Reuniões Agendadas":
+                    return "background-color: #FFEA00; color: #0A0E27; font-weight: bold;"
+                elif col_name == "Propostas Enviadas":
+                    return "background-color: #FF6600; color: #FFFFFF; font-weight: bold;"
+                elif col_name == "Projetos Fechados":
+                    return "background-color: #00FF66; color: #0A0E27; font-weight: bold;"
+                return ""
 
-# As demais abas (Gerenciamento de Tarefas, Funil de Vendas, Dashboard e + Novo Cadastro) continuam mantidas no mesmo código.
+            df_estilizado = df_historico_salvo.style.apply(lambda col: [colorir_tabela_historico(v, col.name) for v in col], axis=0)
+            st.dataframe(df_estilizado, use_container_width=True, hide_index=True)
+        else:
+            st.info("Nenhum dado cadastrado para gerar o histórico de atividades.")
+
+    if not df_historico_salvo.empty:
+        df_melted_atv = df_historico_salvo.melt(
+            id_vars=["Mês/Ano"], 
+            value_vars=["Leads Qualificados", "Reuniões Agendadas", "Propostas Enviadas", "Projetos Fechados"],
+            var_name="Métrica", 
+            value_name="Quantidade"
+        )
+        
+        cores_atv = {
+            "Leads Qualificados": "#9D00FF",   
+            "Reuniões Agendadas": "#FFEA00",   
+            "Propostas Enviadas": "#FF6600",   
+            "Projetos Fechados": "#00FF66"    
+        }
+
+        fig_linha_atv = px.line(
+            df_melted_atv,
+            x="Mês/Ano",
+            y="Quantidade",
+            color="Métrica",
+            text="Quantidade",
+            markers=True,
+            title=f"Evolução Mensal de Atividades & Prospecção — {COVEM_NAME}",
+            color_discrete_map=cores_atv
+        )
+        fig_linha_atv.update_layout(
+            paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+            plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+            font=dict(color="#FFFFFF", family="Inter", size=13),
+            xaxis=dict(
+                title="MÊS / ANO",
+                showgrid=True,
+                gridcolor=GRID_GRAFICO_FUTURISTA,
+                zerolinecolor=GRID_GRAFICO_FUTURISTA
+            ),
+            yaxis=dict(
+                title="QUANTIDADE",
+                showgrid=True,
+                gridcolor=GRID_GRAFICO_FUTURISTA,
+                zerolinecolor=GRID_GRAFICO_FUTURISTA
+            ),
+            height=440,
+            legend=dict(orientation="h", yanchor="bottom", y=-0.25, xanchor="center", x=0.5, font=dict(color="#FFFFFF"))
+        )
+        fig_linha_atv.update_traces(textposition="top center", marker=dict(size=8))
+        st.plotly_chart(fig_linha_atv, use_container_width=True)
+
+    st.divider()
+
+    st.subheader("Historico Financeiro")
+
+    df_financeiro_salvo = carregar_dados_financeiro()
+
+    if not df_crm_base.empty and "Data_Cadastro" in df_crm_base.columns:
+        sub_m_prop = df_crm_base[(df_crm_base["Mês/Ano"] == mes_atual_str) & (df_crm_base["Etapa"] == "Proposta Enviada")]
+        sub_m_fech = df_crm_base[(df_crm_base["Mês/Ano"] == mes_atual_str) & (df_crm_base["Etapa"] == "Fechado")]
+
+        val_prop = float(sub_m_prop["Valor"].sum()) if not sub_m_prop.empty else 0.0
+        qtd_prop = int(len(sub_m_prop))
+
+        val_fech = float(sub_m_fech["Valor"].sum()) if not sub_m_fech.empty else 0.0
+        qtd_fech = int(len(sub_m_fech))
+
+        total_mes = val_prop + val_fech
+
+        str_prop_fmt = f"R$ {val_prop:,.2f} ({qtd_prop} un)".replace(",", "X").replace(".", ",").replace("X", ".")
+        str_fech_fmt = f"R$ {val_fech:,.2f} ({qtd_fech} un)".replace(",", "X").replace(".", ",").replace("X", ".")
+        str_total_fmt = f"R$ {total_mes:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+        if df_financeiro_salvo.empty:
+            df_financeiro_salvo = pd.DataFrame([{
+                "Mês/Ano": mes_atual_str,
+                "Propostas Enviadas": str_prop_fmt,
+                "Projetos Fechados": str_fech_fmt,
+                "Total": str_total_fmt
+            }])
+        else:
+            if mes_atual_str in df_financeiro_salvo["Mês/Ano"].values:
+                idx = df_financeiro_salvo[df_financeiro_salvo["Mês/Ano"] == mes_atual_str].index[0]
+                df_financeiro_salvo.loc[idx, "Propostas Enviadas"] = str_prop_fmt
+                df_financeiro_salvo.loc[idx, "Projetos Fechados"] = str_fech_fmt
+                df_financeiro_salvo.loc[idx, "Total"] = str_total_fmt
+            else:
+                nova_linha_fin = pd.DataFrame([{
+                    "Mês/Ano": mes_atual_str,
+                    "Propostas Enviadas": str_prop_fmt,
+                    "Projetos Fechados": str_fech_fmt,
+                    "Total": str_total_fmt
+                }])
+                df_financeiro_salvo = pd.concat([df_financeiro_salvo, nova_linha_fin], ignore_index=True)
+
+        salvar_dados_financeiro(df_financeiro_salvo)
+
+    with st.expander("Exibir / Ocultar Tabela de Histórico Financeiro", expanded=True):
+        if not df_financeiro_salvo.empty:
+            def colorir_tabela_financeiro(val, col_name):
+                if col_name == "Mês/Ano":
+                    return "background-color: #FFEA00; color: #0A0E27; font-weight: bold;"
+                elif col_name == "Propostas Enviadas":
+                    return "background-color: #FF6600; color: #FFFFFF; font-weight: bold;"
+                elif col_name == "Projetos Fechados":
+                    return "background-color: #00FF66; color: #0A0E27; font-weight: bold;"
+                elif col_name == "Total":
+                    return "background-color: #1E293B; color: #FFFFFF; font-weight: bold;"
+                return ""
+
+            df_fin_estilizado = df_financeiro_salvo.style.apply(lambda col: [colorir_tabela_financeiro(v, col.name) for v in col], axis=0)
+            st.dataframe(df_fin_estilizado, use_container_width=True, hide_index=True)
+        else:
+            st.info("Nenhum dado cadastrado para gerar o histórico financeiro.")
+
+    if not df_crm_base.empty and "Data_Cadastro" in df_crm_base.columns:
+        df_graf_fin = df_crm_base[df_crm_base["Etapa"].isin(["Proposta Enviada", "Fechado"])].copy()
+        if not df_graf_fin.empty:
+            df_graf_fin["Tipo"] = df_graf_fin["Etapa"].apply(lambda x: "Propostas Enviadas" if "Proposta" in x else "Projetos Fechados")
+            df_agrupado_fin = df_graf_fin.groupby(["Mês/Ano", "Tipo"])["Valor"].sum().reset_index()
+
+            cores_fin_graf = {
+                "Propostas Enviadas": "#FF6600",
+                "Projetos Fechados": "#00FF66"
+            }
+
+            fig_linha_fin = px.line(
+                df_agrupado_fin,
+                x="Mês/Ano",
+                y="Valor",
+                color="Tipo",
+                text="Valor",
+                markers=True,
+                title=f"Evolução Financeira Mensal (R$) — {COVEM_NAME}",
+                color_discrete_map=cores_fin_graf
+            )
+            fig_linha_fin.update_layout(
+                paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+                plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+                font=dict(color="#FFFFFF", family="Inter", size=13),
+                xaxis=dict(
+                    title="MÊS / ANO",
+                    showgrid=True,
+                    gridcolor=GRID_GRAFICO_FUTURISTA,
+                    zerolinecolor=GRID_GRAFICO_FUTURISTA
+                ),
+                yaxis=dict(
+                    title="VALOR (R$)",
+                    showgrid=True,
+                    gridcolor=GRID_GRAFICO_FUTURISTA,
+                    zerolinecolor=GRID_GRAFICO_FUTURISTA
+                ),
+                height=440,
+                legend=dict(orientation="h", yanchor="bottom", y=-0.25, xanchor="center", x=0.5, font=dict(color="#FFFFFF"))
+            )
+            fig_linha_fin.update_traces(texttemplate='R$ %{text:,.2f}', textposition="top center", marker=dict(size=8))
+            st.plotly_chart(fig_linha_fin, use_container_width=True)
+        else:
+            st.info("Nenhum valor em propostas ou projetos fechados para exibir no gráfico financeiro.")
+
+# =========================================================
+# ABA 5: + NOVO CADASTRO
+# =========================================================
+elif aba_selecionada == "+ Novo Cadastro":
+    default_carteira_idx = 0
+    if cliente_sel != "TODOS" and cliente_sel in CARTEIRAS_COVEM:
+        default_carteira_idx = CARTEIRAS_COVEM.index(cliente_sel)
+
+    st.subheader(f"+ Novo Cadastro Rápido ({f'Sincronizado com: {cliente_sel}' if cliente_sel != 'TODOS' else 'Geral'})")
+    st.caption("Cadastre rapidamente uma nova empresa informando apenas os dados fundamentais.")
+
+    with st.form("form_cadastro_rapido", clear_on_submit=True):
+        col_r1, col_r2 = st.columns(2)
+
+        with col_r1:
+            rapido_empresa = st.text_input("Nome da Empresa *")
+            rapido_telefone = st.text_input("Telefone *")
+
+        with col_r2:
+            rapido_carteira = st.selectbox("Carteira *", CARTEIRAS_COVEM, index=default_carteira_idx, key="rapido_carteira")
+            rapido_etapa = st.selectbox(
+                "Etapa / Funil Inicial *", 
+                list(PROB_MAP.keys()), 
+                key="rapido_etapa",
+                format_func=lambda x: x.replace("Pré: ", "").replace("Pós: ", "")
+            )
+
+        btn_salvar_rapido = st.form_submit_button("Cadastrar Rapidamente", use_container_width=True)
+
+        if btn_salvar_rapido:
+            if not rapido_empresa or not rapido_telefone:
+                st.error("Por favor, preencha o Nome da Empresa e o Telefone.")
+            else:
+                novo_id = int(df["id"].max() + 1) if not df.empty and pd.notna(df["id"].max()) else 1
+                
+                nova_linha_rapida = {
+                    "id": novo_id,
+                    "Empresa": rapido_empresa,
+                    "Cliente": rapido_carteira,
+                    "Etapa": rapido_etapa,
+                    "Contato": "Não informado",
+                    "Cargo": "Não informado",
+                    "Telefone": rapido_telefone,
+                    "Email": "Não informado",
+                    "Cidade": "Não informado",
+                    "Valor": 0.0,
+                    "Prob": PROB_MAP[rapido_etapa],
+                    "Vendedor": "Não informado",
+                    "Perda": "",
+                    "Data_Cadastro": str(date.today()),
+                    "Followup_Data": str(date.today()),
+                    "Followup_Nota": "Novo cadastro rápido efetuado.",
+                    "Historico": f"[{dt.now().strftime('%d/%m/%Y %H:%M')}] Cadastro rápido realizado."
+                }
+                st.session_state.df_crm = pd.concat(
+                    [st.session_state.df_crm, pd.DataFrame([nova_linha_rapida])], 
+                    ignore_index=True
+                )
+                salvar_dados_crm(st.session_state.df_crm)
+                st.success(f"Empresa '{rapido_empresa}' cadastrada e salva com sucesso na nuvem!")
+                st.rerun()
+
+    st.write("---")
+    st.subheader(f"Cadastrar Oportunidade Completa ({f'Sincronizado com: {cliente_sel}' if cliente_sel != 'TODOS' else 'Geral'})")
+    
+    with st.form("form_oportunidade", clear_on_submit=True):
+        col_f1, col_f2 = st.columns(2)
+        
+        with col_f1:
+            nova_empresa = st.text_input("Nome da Empresa / Cliente *")
+            novo_cliente = st.selectbox("Marca / Carteira *", CARTEIRAS_COVEM, index=default_carteira_idx, key="completo_carteira")
+            novo_contato = st.text_input("Contato / Nome")
+            novo_cargo = st.text_input("Cargo")
+            novo_telefone = st.text_input("Telefone de Contato *")
+            novo_email = st.text_input("E-mail Comercial")
+            
+        with col_f2:
+            nova_cidade = st.text_input("Cidade / Estado")
+            novo_vendedor = st.text_input("Vendedor / Responsável")
+            nova_valor = st.number_input("Valor da Oportunidade (R$)", min_value=0.0, step=1000.0, format="%.2f")
+            nova_etapa = st.selectbox(
+                "Etapa Inicial *", 
+                list(PROB_MAP.keys()),
+                format_func=lambda x: x.replace("Pré: ", "").replace("Pós: ", "")
+            )
+            motivo_perda = st.selectbox("Motivo de Perda / Sem Interesse (Se aplicável)", [""] + MOTIVOS_PERDA_PADRAO)
+            
+        st.divider()
+        st.markdown("**Dados Iniciais de Follow-up:**")
+        f_data_ini = st.date_input("Data do Primeiro Follow-up", value=date.today())
+        f_nota_ini = st.text_input("Lembrete / Ação de Follow-up")
+
+        btn_salvar = st.form_submit_button("Salvar Oportunidade Completa")
+        
+        if btn_salvar:
+            if not nova_empresa:
+                st.error("Preencha o Nome da Empresa.")
+            else:
+                novo_id = int(df["id"].max() + 1) if not df.empty and pd.notna(df["id"].max()) else 1
+                
+                email_valido = nova_email if 'nova_email' in locals() and nova_email else "Não informado"
+                contato_valido = novo_contato if 'novo_contato' in locals() and novo_contato else "Não informado"
+                cargo_valido = novo_cargo if 'novo_cargo' in locals() and novo_cargo else "Não informado"
+                telefone_valido = novo_telefone if 'novo_telefone' in locals() and novo_telefone else "Não informado"
+                cidade_valida = nova_cidade if 'nova_cidade' in locals() and nova_cidade else "Não informado"
+                vendedor_valido = novo_vendedor if 'novo_vendedor' in locals() and novo_vendedor else "Não informado"
+
+                nova_linha = {
+                    "id": novo_id,
+                    "Empresa": nova_empresa,
+                    "Cliente": novo_cliente,
+                    "Etapa": nova_etapa,
+                    "Contato": contato_valido,
+                    "Cargo": cargo_valido,
+                    "Telefone": telefone_valido,
+                    "Email": email_valido,
+                    "Cidade": cidade_valida,
+                    "Valor": nova_valor,
+                    "Prob": PROB_MAP[nova_etapa],
+                    "Vendedor": vendedor_valido,
+                    "Perda": str(motivo_perda) if "Perdido" in nova_etapa else "",
+                    "Data_Cadastro": str(date.today()),
+                    "Followup_Data": str(f_data_ini) if f_nota_ini else "",
+                    "Followup_Nota": f_nota_ini,
+                    "Historico": f"[{dt.now().strftime('%d/%m/%Y %H:%M')}] Oportunidade cadastrada."
+                }
+                st.session_state.df_crm = pd.concat([st.session_state.df_crm, pd.DataFrame([nova_linha])], ignore_index=True)
+                salvar_dados_crm(st.session_state.df_crm)
+                st.success("Oportunidade cadastrada e salva com sucesso na nuvem!")
+                st.rerun()
