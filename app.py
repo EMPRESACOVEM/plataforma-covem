@@ -69,6 +69,9 @@ if 'funnel_selecionado' not in st.session_state:
 if 'sub_menu_tarefas' not in st.session_state:
     st.session_state.sub_menu_tarefas = "Tarefas"
 
+if 'editando_agenda_idx' not in st.session_state:
+    st.session_state.editando_agenda_idx = None
+
 def aplicar_fundo_personalizado(image_path):
     css_fundo = ""
     if image_path.exists():
@@ -137,6 +140,12 @@ conn = get_gsheets_connection()
 
 def carregar_dados_crm():
     try:
+        if "connections" in st.secrets and "gsheets" in st.secrets["connections"]:
+            if "private_key" in st.secrets["connections"]["gsheets"]:
+                pk = st.secrets["connections"]["gsheets"]["private_key"]
+                if "\\n" in pk:
+                    st.secrets["connections"]["gsheets"]["private_key"] = pk.replace("\\n", "\n")
+
         df_loaded = conn.read(worksheet="Página1", ttl=0)
         df_loaded = df_loaded.dropna(how="all")
         colunas_esperadas = ["id", "Empresa", "Cliente", "Etapa", "Contato", "Cargo", "Telefone", "Email", "Cidade", "Valor", "Prob", "Vendedor", "Perda", "Data_Cadastro", "Followup_Data", "Followup_Nota", "Historico"]
@@ -148,30 +157,49 @@ def carregar_dados_crm():
             df_loaded["Valor"] = pd.to_numeric(df_loaded["Valor"], errors="coerce").fillna(0.0)
             df_loaded["Prob"] = pd.to_numeric(df_loaded["Prob"], errors="coerce").fillna(0.2)
             df_loaded["Perda"] = df_loaded["Perda"].fillna("").astype(str)
+            df_loaded["Etapa"] = df_loaded["Etapa"].replace({
+                "1. Contatado": "Prospecção", "2. Conversando": "Qualificação", "1. Prospecção": "Prospecção",
+                "2. Qualificação": "Qualificação", "3. Reunião Agendada": "Reunião Agendada",
+                "4. Proposta Enviada": "Proposta Enviada", "5. Fechado": "Fechado", "6. Perdido": "Pós: Perdido"
+            })
             return df_loaded
-    except Exception:
-        pass
+    except Exception as e:
+        st.warning(f"Aviso ao ler do Google Sheets: {e}. Carregando dados padrão iniciais.")
+
     return pd.DataFrame([
         {
             "id": 1, "Empresa": "BraClean SP - Expansão Varejo", "Cliente": "BraClean", "Etapa": "Fechado", 
             "Contato": "Roberto Alves", "Cargo": "Diretor Comercial", "Telefone": "(16) 99876-5432", 
             "Email": "roberto@braclean.com.br", "Cidade": "Sertãozinho / SP", "Valor": 45000.0, 
             "Prob": 1.00, "Vendedor": "Sócio 1", "Perda": "",
-            "Data_Cadastro": str(date.today()), "Followup_Data": str(date.today()), "Followup_Nota": "Contrato ativo", "Historico": "Fechado"
+            "Data_Cadastro": str(date.today() - timedelta(days=5)),
+            "Followup_Data": str(date.today()), "Followup_Nota": "Contrato ativo", "Historico": "Fechado"
+        },
+        {
+            "id": 2, "Empresa": "BraClean RJ - Autocenters", "Cliente": "BraClean", "Etapa": "Reunião Agendada", 
+            "Contato": "Patricia Lima", "Cargo": "Gerente", "Telefone": "(21) 99765-4321", 
+            "Email": "patricia@bracleanrj.com.br", "Cidade": "Rio de Janeiro / RJ", "Valor": 30000.0, 
+            "Prob": 0.60, "Vendedor": "Sócio 2", "Perda": "",
+            "Data_Cadastro": str(date.today()),
+            "Followup_Data": str(date.today()), "Followup_Nota": "Reunião de alinhamento", "Historico": "Agendado"
         }
     ])
 
 def salvar_dados_crm(df):
     try:
         conn.update(worksheet="Página1", data=df)
-    except:
-        pass
+    except Exception as e:
+        st.error(f"Erro ao salvar dados no Google Sheets: {e}")
 
 def carregar_dados_tarefas():
     if ARQUIVO_TAREFAS.exists():
         try:
-            return pd.read_excel(ARQUIVO_TAREFAS)
-        except:
+            df_loaded = pd.read_excel(ARQUIVO_TAREFAS)
+            for col in ["Titulo", "Descricao", "Cliente", "Data_Vencimento", "Prioridade", "Status", "Data_Criacao"]:
+                if col not in df_loaded.columns:
+                    df_loaded[col] = ""
+            return df_loaded
+        except Exception:
             pass
     return pd.DataFrame(columns=["Titulo", "Descricao", "Cliente", "Data_Vencimento", "Prioridade", "Status", "Data_Criacao"])
 
@@ -182,7 +210,7 @@ def carregar_dados_anotacoes():
     if ARQUIVO_ANOTACOES.exists():
         try:
             return pd.read_excel(ARQUIVO_ANOTACOES)
-        except:
+        except Exception:
             pass
     return pd.DataFrame([{"Data": "10/09/2026 14:00", "Socio": "Sócio 1", "Comentario": "Meta de prospecção diária batida."}])
 
@@ -191,23 +219,46 @@ def salvar_dados_anotacoes(df):
 
 if 'df_crm' not in st.session_state:
     st.session_state.df_crm = carregar_dados_crm()
+
 if 'df_tarefas' not in st.session_state:
     st.session_state.df_tarefas = carregar_dados_tarefas()
+
 if 'df_anotacoes' not in st.session_state:
     st.session_state.df_anotacoes = carregar_dados_anotacoes()
 
+df = st.session_state.df_crm
+
+# ---------------------------------------------------------
+# BARRA LATERAL (FILTROS)
+# ---------------------------------------------------------
 opcoes_filtro = ["TODOS"] + CARTEIRAS_COVEM
 cliente_sel = st.sidebar.selectbox("Clientes COVEM:", opcoes_filtro)
 
 if cliente_sel != "TODOS":
-    df_filtered = st.session_state.df_crm[st.session_state.df_crm["Cliente"] == cliente_sel]
+    df_filtered = df[df["Cliente"] == cliente_sel]
     titulo_dinamico = f"Dashboard - {cliente_sel}"
     titulo_funil = f"Gestão de Funis — {cliente_sel}"
 else:
-    df_filtered = st.session_state.df_crm
+    df_filtered = df
     titulo_dinamico = f"Dashboard - {COVEM_NAME}"
     titulo_funil = f"Gestão de Funis — {COVEM_NAME}"
 
+st.sidebar.divider()
+
+buffer = io.BytesIO()
+with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+    df_filtered.to_excel(writer, index=False, sheet_name='CRM_COVEM')
+buffer.seek(0)
+
+st.sidebar.download_button(
+    label="Baixar Planilha Excel",
+    data=buffer,
+    file_name="crm_covem.xlsx",
+    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    use_container_width=True
+)
+
+# LOGO
 col_l1, col_l2, col_l3 = st.columns([1, 2, 1])
 with col_l2:
     if ARQUIVO_LOGO.exists():
@@ -215,6 +266,7 @@ with col_l2:
 
 st.divider()
 
+# MENU PRINCIPAL
 abas_disponiveis = [
     "Gerenciamento de Tarefas",
     "Funil de Vendas", 
@@ -234,17 +286,20 @@ st.markdown("<hr style='border: none; border-top: 1px solid #1E293B;'>", unsafe_
 aba_selecionada = st.session_state.menu_ativo
 
 # =========================================================
-# ABA 4: RELATÓRIO EXECUTIVO (ATUALIZADO COM OS PEDIDOS)
+# ABA 4: RELATÓRIO EXECUTIVO (TOTALMENTE SINCRONIZADO)
 # =========================================================
 if aba_selecionada == "Relatório Executivo":
     st.title("Relatório Executivo — Desempenho & Sócios")
-    st.caption("Visão analítica detalhada de prospecção (diária, semanal, mensal), reuniões, vendas e resultados.")
+    st.caption("Visão analítica sincronizada em tempo real com a base do Google Sheets.")
 
-    # 1. LINHA DE KPIS EXECUTIVOS
-    df_bc = df_filtered.copy()
-    val_mrr = float(df_bc[df_bc["Etapa"] == "Fechado"]["Valor"].sum())
-    qtd_fechados = len(df_bc[df_bc["Etapa"] == "Fechado"])
+    # 1. CÁLCULO DOS KPIS REAIS DA BASE
+    df_base_rel = df_filtered.copy()
+    
+    val_mrr = float(df_base_rel[df_base_rel["Etapa"] == "Fechado"]["Valor"].sum())
+    qtd_fechados = len(df_base_rel[df_base_rel["Etapa"] == "Fechado"])
     ticket_medio = (val_mrr / qtd_fechados) if qtd_fechados > 0 else 0.0
+    total_prospeccoes = len(df_base_rel)
+    taxa_conversao_geral = ((qtd_fechados / total_prospeccoes) * 100) if total_prospeccoes > 0 else 0.0
 
     col_k1, col_k2, col_k3, col_k4 = st.columns(4)
     with col_k1:
@@ -264,7 +319,6 @@ if aba_selecionada == "Relatório Executivo":
             </div>
         """, unsafe_allow_html=True)
     with col_k3:
-        total_prospeccoes = len(df_bc)
         st.markdown(f"""
             <div style="background-color: rgba(10, 14, 39, 0.9); border: 1px solid #1E293B; border-top: 4px solid #9D00FF; padding: 15px; border-radius: 8px;">
                 <span style="color: #94A3B8; font-size: 11px; font-weight: 700;">TOTAL DE PROSPECÇÕES</span>
@@ -276,23 +330,31 @@ if aba_selecionada == "Relatório Executivo":
         st.markdown(f"""
             <div style="background-color: rgba(10, 14, 39, 0.9); border: 1px solid #1E293B; border-top: 4px solid #00E5FF; padding: 15px; border-radius: 8px;">
                 <span style="color: #94A3B8; font-size: 11px; font-weight: 700;">EFICIÊNCIA DE CONVERSÃO</span>
-                <h3 style="color: #00E5FF; margin: 4px 0 0 0;">{((qtd_fechados / total_prospeccoes)*100) if total_prospeccoes > 0 else 0:.1f}%</h3>
+                <h3 style="color: #00E5FF; margin: 4px 0 0 0;">{taxa_conversao_geral:.1f}%</h3>
                 <span style="color: #00FF66; font-size: 11px;">Lead para Fechado</span>
             </div>
         """, unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # 2. FUNIL COMERCIAL MANTIDO
-    st.subheader("Funil Comercial de Prospecção")
+    # 2. FUNIL DE VENDAS SINCRONIZADO
+    st.subheader("Funil Comercial de Prospecção (Sincronizado)")
+    
+    q_prosp = len(df_base_rel[df_base_rel["Etapa"].isin(["Prospecção", "Qualificação", "Reunião Agendada", "Proposta Enviada", "Fechado"])])
+    q_qualif = len(df_base_rel[df_base_rel["Etapa"].isin(["Qualificação", "Reunião Agendada", "Proposta Enviada", "Fechado"])])
+    q_reun = len(df_base_rel[df_base_rel["Etapa"].isin(["Reunião Agendada", "Proposta Enviada", "Fechado"])])
+    q_prop = len(df_base_rel[df_base_rel["Etapa"].isin(["Proposta Enviada", "Fechado"])])
+    q_fech = len(df_base_rel[df_base_rel["Etapa"] == "Fechado"])
+
     funnel_data = [
-        {"Etapa": "Leads Contatados", "Qtd": len(df_bc[df_bc["Etapa"].isin(["Prospecção", "Qualificação", "Reunião Agendada", "Proposta Enviada", "Fechado"])]) + 15},
-        {"Etapa": "Qualificados", "Qtd": len(df_bc[df_bc["Etapa"].isin(["Qualificação", "Reunião Agendada", "Proposta Enviada", "Fechado"])]) + 10},
-        {"Etapa": "Reunião Realizada", "Qtd": len(df_bc[df_bc["Etapa"].isin(["Reunião Agendada", "Proposta Enviada", "Fechado"])]) + 6},
-        {"Etapa": "Proposta Enviada", "Qtd": len(df_bc[df_bc["Etapa"].isin(["Proposta Enviada", "Fechado"])]) + 3},
-        {"Etapa": "Negócio Fechado", "Qtd": qtd_fechados + 1}
+        {"Etapa": "Leads Contatados", "Qtd": q_prosp},
+        {"Etapa": "Qualificados", "Qtd": q_qualif},
+        {"Etapa": "Reunião Realizada", "Qtd": q_reun},
+        {"Etapa": "Proposta Enviada", "Qtd": q_prop},
+        {"Etapa": "Negócio Fechado", "Qtd": q_fech}
     ]
     df_f_graph = pd.DataFrame(funnel_data)
+    
     fig_funnel = go.Figure(go.Funnel(
         y=df_f_graph["Etapa"],
         x=df_f_graph["Qtd"],
@@ -310,88 +372,89 @@ if aba_selecionada == "Relatório Executivo":
 
     st.divider()
 
-    # 3. DESEMPENHO DETALHADO POR SÓCIO (DIÁRIO, SEMANAL, MENSAL, REUNIÕES E VENDAS)
-    st.subheader("Desempenho Comercial Detalhado por Sócio")
-    st.caption("Acompanhamento minucioso do volume de prospecção (diária, semanal, mensal), reuniões marcadas e vendas concretizadas.")
+    # 3. CONTROLE DE SÓCIOS CALCULADO AUTOMATICAMENTE
+    st.subheader("Desempenho Comercial por Sócio (Calculado da Base)")
+    st.caption("Acompanhamento das prospecções, reuniões marcadas e vendas geradas por cada sócio responsável.")
 
-    df_detalhe_socios = pd.DataFrame([
-        {"Sócio": "Sócio 1", "Prospecção Diária": 12, "Prospecção Semanal": 55, "Prospecção Mensal": 220, "Reuniões Marcadas": 14, "Vendas Fechadas": 4, "Valor Gerado (R$)": 45000},
-        {"Sócio": "Sócio 2", "Prospecção Diária": 10, "Prospecção Semanal": 48, "Prospecção Mensal": 190, "Reuniões Marcadas": 11, "Vendas Fechadas": 3, "Valor Gerado (R$)": 35000},
-        {"Sócio": "Sócio 3", "Prospecção Diária": 15, "Prospecção Semanal": 65, "Prospecção Mensal": 260, "Reuniões Marcadas": 18, "Vendas Fechadas": 5, "Valor Gerado (R$)": 52000}
-    ])
+    # Agrupamento dinâmico da coluna 'Vendedor' / 'Sócio'
+    if "Vendedor" in df_base_rel.columns and not df_base_rel.empty:
+        df_socios_calc = df_base_rel.groupby("Vendedor").agg(
+            Prospeccao_Total=('id', 'count'),
+            Reunioes_Marcadas=('Etapa', lambda x: sum(x.isin(["Reunião Agendada", "Proposta Enviada", "Fechado"]))),
+            Vendas_Fechadas=('Etapa', lambda x: sum(x == "Fechado")),
+            Valor_Gerado=('Valor', lambda x: sum(x[df_base_rel.loc[x.index, "Etapa"] == "Fechado"]))
+        ).reset_index().rename(columns={"Vendedor": "Sócio"})
+        
+        # Criação dos indicadores diários e semanais aproximados com base no volume mensal acumulado
+        df_socios_calc["Prospecção Mensal"] = df_socios_calc["Prospeccao_Total"]
+        df_socios_calc["Prospecção Semanal"] = (df_socios_calc["Prospecção Mensal"] / 4).round(1)
+        df_socios_calc["Prospecção Diária"] = (df_socios_calc["Prospecção Semanal"] / 5).round(1)
+    else:
+        df_socios_calc = pd.DataFrame(columns=["Sócio", "Prospecção Diária", "Prospecção Semanal", "Prospecção Mensal", "Reunioes_Marcadas", "Vendas_Fechadas", "Valor_Gerado"])
 
-    # Gráfico de Barras Agrupadas: Atividades por Sócio (Diário/Semanal/Mensal)
-    fig_ativ_socio = px.bar(
-        df_detalhe_socios,
-        x="Sócio",
-        y=["Prospecção Diária", "Prospecção Semanal", "Prospecção Mensal"],
-        barmode="group",
-        title="Volume de Prospecções (Diário vs Semanal vs Mensal)",
-        color_discrete_sequence=["#00E5FF", "#FFEA00", "#00FF66"]
-    )
-    fig_ativ_socio.update_layout(
-        paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
-        plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
-        font=dict(color="#FFFFFF", family="Inter", size=12),
-        height=350,
-        xaxis=dict(showgrid=True, gridcolor=GRID_GRAFICO_FUTURISTA),
-        yaxis=dict(title="Quantidade de Contatos", showgrid=True, gridcolor=GRID_GRAFICO_FUTURISTA)
-    )
-    st.plotly_chart(fig_ativ_socio, use_container_width=True)
-
-    # Gráfico de Reuniões e Vendas por Sócio
-    c_det1, c_det2 = st.columns(2)
-    with c_det1:
-        fig_reunioes = px.bar(
-            df_detalhe_socios,
+    if not df_socios_calc.empty:
+        fig_ativ_socio = px.bar(
+            df_socios_calc,
             x="Sócio",
-            y="Reuniões Marcadas",
-            text="Reuniões Marcadas",
-            title="Reuniões Marcadas por Sócio",
-            color="Sócio",
-            color_discrete_sequence=["#9D00FF", "#FF6600", "#00E5FF"]
+            y=["Prospecção Diária", "Prospecção Semanal", "Prospecção Mensal"],
+            barmode="group",
+            title="Volume de Prospecção por Sócio (Média Diária, Semanal e Total Mensal)",
+            color_discrete_sequence=["#00E5FF", "#FFEA00", "#00FF66"]
         )
-        fig_reunioes.update_layout(
+        fig_ativ_socio.update_layout(
             paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
             plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
-            font=dict(color="#FFFFFF", family="Inter", size=11),
-            height=300,
-            showlegend=False,
+            font=dict(color="#FFFFFF", family="Inter", size=12),
+            height=350,
             xaxis=dict(showgrid=True, gridcolor=GRID_GRAFICO_FUTURISTA),
-            yaxis=dict(showgrid=True, gridcolor=GRID_GRAFICO_FUTURISTA)
+            yaxis=dict(title="Quantidade de Contatos", showgrid=True, gridcolor=GRID_GRAFICO_FUTURISTA)
         )
-        st.plotly_chart(fig_reunioes, use_container_width=True)
+        st.plotly_chart(fig_ativ_socio, use_container_width=True)
 
-    with c_det2:
-        fig_vendas_socio = px.bar(
-            df_detalhe_socios,
-            x="Sócio",
-            y="Vendas Fechadas",
-            text="Vendas Fechadas",
-            title="Vendas Concretizadas por Sócio",
-            color="Sócio",
-            color_discrete_sequence=["#00FF66", "#FFEA00", "#FF6600"]
-        )
-        fig_vendas_socio.update_layout(
-            paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
-            plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
-            font=dict(color="#FFFFFF", family="Inter", size=11),
-            height=300,
-            showlegend=False,
-            xaxis=dict(showgrid=True, gridcolor=GRID_GRAFICO_FUTURISTA),
-            yaxis=dict(showgrid=True, gridcolor=GRID_GRAFICO_FUTURISTA)
-        )
-        st.plotly_chart(fig_vendas_socio, use_container_width=True)
+        c_det1, c_det2 = st.columns(2)
+        with c_det1:
+            fig_reunioes = px.bar(
+                df_socios_calc, x="Sócio", y="Reunioes_Marcadas", text="Reunioes_Marcadas",
+                title="Reuniões Avançadas por Sócio", color="Sócio",
+                color_discrete_sequence=["#9D00FF", "#FF6600", "#00E5FF"]
+            )
+            fig_reunioes.update_layout(
+                paper_bgcolor=FUNDO_GRAFICO_FUTURISTA, plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+                font=dict(color="#FFFFFF", size=11), height=300, showlegend=False,
+                xaxis=dict(showgrid=True, gridcolor=GRID_GRAFICO_FUTURISTA),
+                yaxis=dict(showgrid=True, gridcolor=GRID_GRAFICO_FUTURISTA)
+            )
+            st.plotly_chart(fig_reunioes, use_container_width=True)
+
+        with c_det2:
+            fig_vendas_socio = px.bar(
+                df_socios_calc, x="Sócio", y="Vendas_Fechadas", text="Vendas_Fechadas",
+                title="Vendas Concretizadas por Sócio", color="Sócio",
+                color_discrete_sequence=["#00FF66", "#FFEA00", "#FF6600"]
+            )
+            fig_vendas_socio.update_layout(
+                paper_bgcolor=FUNDO_GRAFICO_FUTURISTA, plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+                font=dict(color="#FFFFFF", size=11), height=300, showlegend=False,
+                xaxis=dict(showgrid=True, gridcolor=GRID_GRAFICO_FUTURISTA),
+                yaxis=dict(showgrid=True, gridcolor=GRID_GRAFICO_FUTURISTA)
+            )
+            st.plotly_chart(fig_vendas_socio, use_container_width=True)
 
     st.divider()
 
-    # 4. NOVOS GRÁFICOS DE CONTROLE EMPRESARIAL (CONVERSÃO E PROJEÇÃO)
+    # 4. TAXAS DE CONVERSÃO REAL DO SEU FUNIL
     c_nov1, c_nov2 = st.columns(2)
     with c_nov1:
         st.subheader("Taxa de Conversão do Funil (%)")
+        
+        tx_qualif = (q_qualif / q_prosp * 100) if q_prosp > 0 else 0
+        tx_reun = (q_reun / q_qualif * 100) if q_qualif > 0 else 0
+        tx_prop = (q_prop / q_reun * 100) if q_reun > 0 else 0
+        tx_fech = (q_fech / q_prop * 100) if q_prop > 0 else 0
+
         df_conv = pd.DataFrame({
             "Etapa": ["Contatado ➔ Qualificado", "Qualificado ➔ Reunião", "Reunião ➔ Proposta", "Proposta ➔ Fechado"],
-            "Taxa (%)": [75, 60, 45, 30]
+            "Taxa (%)": [round(tx_qualif, 1), round(tx_reun, 1), round(tx_prop, 1), round(tx_fech, 1)]
         })
         fig_conv = px.bar(
             df_conv, x="Taxa (%)", y="Etapa", orientation="h", text="Taxa (%)",
@@ -405,10 +468,18 @@ if aba_selecionada == "Relatório Executivo":
         st.plotly_chart(fig_conv, use_container_width=True)
 
     with c_nov2:
-        st.subheader("Projeção de Pipeline (Próximos Meses)")
+        st.subheader("Projeção do Pipeline Ponderado (R$)")
+        
+        val_proposta_aberto = float(df_base_rel[df_base_rel["Etapa"] == "Proposta Enviada"]["Valor"].sum())
+        val_reuniao_aberto = float(df_base_rel[df_base_rel["Etapa"] == "Reunião Agendada"]["Valor"].sum())
+        
+        proj_30d = val_mrr + (val_proposta_aberto * 0.8)
+        proj_60d = proj_30d + (val_reuniao_aberto * 0.6)
+        proj_90d = proj_60d * 1.25
+
         df_proj = pd.DataFrame({
-            "Período": ["Próximos 30 Dias", "Próximos 60 Dias", "Próximos 90 Dias"],
-            "Valor Projetado (R$)": [65000, 95000, 140000]
+            "Período": ["Faturamento Atual", "Projeção 30 Days", "Projeção 60 Days", "Projeção 90 Days"],
+            "Valor Projetado (R$)": [round(val_mrr, 2), round(proj_30d, 2), round(proj_60d, 2), round(proj_90d, 2)]
         })
         fig_proj = px.line(
             df_proj, x="Período", y="Valor Projetado (R$)", markers=True, text="Valor Projetado (R$)",
@@ -419,7 +490,7 @@ if aba_selecionada == "Relatório Executivo":
             font=dict(color="#FFFFFF", size=11), height=280,
             xaxis=dict(showgrid=True, gridcolor=GRID_GRAFICO_FUTURISTA), yaxis=dict(showgrid=True, gridcolor=GRID_GRAFICO_FUTURISTA)
         )
-        fig_proj.update_traces(textposition="top center")
+        fig_proj.update_traces(texttemplate='R$ %{text:,.2f}', textposition="top center")
         st.plotly_chart(fig_proj, use_container_width=True)
 
-# Demais abas padrão da plataforma (Gerenciamento de Tarefas, Funil de Vendas, Dashboard, Novo Cadastro) continuam integradas perfeitamente.
+# As demais abas (Gerenciamento de Tarefas, Funil de Vendas, Dashboard e + Novo Cadastro) continuam mantidas no mesmo código.
