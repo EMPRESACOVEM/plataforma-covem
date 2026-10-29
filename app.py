@@ -327,28 +327,6 @@ def carregar_dados_tarefas():
 def salvar_dados_tarefas(df):
     df.to_excel(ARQUIVO_TAREFAS, index=False)
 
-def carregar_dados_historico():
-    if ARQUIVO_HISTORICO.exists():
-        try:
-            return pd.read_excel(ARQUIVO_HISTORICO)
-        except Exception:
-            pass
-    return pd.DataFrame(columns=["Mês/Ano", "Leads Qualificados", "Reuniões Agendadas", "Propostas Enviadas", "Projetos Fechados"])
-
-def salvar_dados_historico(df):
-    df.to_excel(ARQUIVO_HISTORICO, index=False)
-
-def carregar_dados_financeiro():
-    if ARQUIVO_FINANCEIRO.exists():
-        try:
-            return pd.read_excel(ARQUIVO_FINANCEIRO)
-        except Exception:
-            pass
-    return pd.DataFrame(columns=["Mês/Ano", "Propostas Enviadas", "Projetos Fechados", "Total"])
-
-def salvar_dados_financeiro(df):
-    df.to_excel(ARQUIVO_FINANCEIRO, index=False)
-
 # ---------------------------------------------------------
 # ESTADO DA SESSÃO
 # ---------------------------------------------------------
@@ -1264,15 +1242,15 @@ elif aba_selecionada == "Dashboard":
         st.info("Nenhum lead registrado em 'Pós: Perdido' no momento.")
 
 # =========================================================
-# ABA 4: RELATÓRIO EXECUTIVO (COM TODOS OS GRÁFICOS SOLICITADOS)
+# ABA 4: RELATÓRIO EXECUTIVO (COM ALTERAÇÕES SOLICITADAS)
 # =========================================================
 elif aba_selecionada == "Relatório Executivo":
     st.title("Relatório Executivo")
 
     # ---------------------------------------------------------
-    # 1. GRÁFICO DE FUNIL GERAL DE ATIVIDADE
+    # GRÁFICO DE FUNIL GERAL DE ATIVIDADE
     # ---------------------------------------------------------
-    st.markdown("### 🔻 1. Gráfico de Funil Geral de Atividade")
+    st.markdown("### Gráfico de Funil Geral de Atividade")
     st.caption("Visão em gráfico do crescimento de leads e etapas de avanço no funil comercial.")
 
     df_exec = df_filtered.copy()
@@ -1308,9 +1286,9 @@ elif aba_selecionada == "Relatório Executivo":
     st.divider()
 
     # ---------------------------------------------------------
-    # 2. ATIVIDADES INDIVIDUAIS (GABRIEL VS ARIEL) E METAS
+    # ATIVIDADES INDIVIDUAIS (GABRIEL VS ARIEL) E METAS
     # ---------------------------------------------------------
-    st.markdown("### 🎯 2. Atividades Individuais & Metas de Vendedores")
+    st.markdown("### Atividades Individuais & Metas de Vendedores")
     st.caption("Meta do Grupo COVEM: 50 interações/dia por vendedor (Entradas de novos leads ou movimentações nas etapas).")
 
     vendedores_covem = ["Gabriel", "Ariel"]
@@ -1378,9 +1356,9 @@ elif aba_selecionada == "Relatório Executivo":
     st.divider()
 
     # ---------------------------------------------------------
-    # 3. META BRACLEAN (TICKET MÉDIO E R$ 100K MENSAL ATÉ DEZEMBRO)
+    # META BRACLEAN (TICKET MÉDIO E R$ 100K MENSAL ATÉ DEZEMBRO)
     # ---------------------------------------------------------
-    st.markdown("### 🛢️ 3. Meta BraClean (Ticket Médio & R$ 100k Mensais até Dezembro)")
+    st.markdown("### Meta BraClean (Ticket Médio & R$ 100k Mensais até Dezembro)")
     
     df_braclean = df_exec[df_exec["Cliente"] == "BraClean"]
     faturamento_braclean = float(df_braclean[df_braclean["Etapa"] == "Fechado"]["Valor"].sum())
@@ -1430,9 +1408,9 @@ elif aba_selecionada == "Relatório Executivo":
     st.divider()
 
     # ---------------------------------------------------------
-    # 4. ESTATÍSTICA E PROBABILIDADE FUTURA (PREVISÃO E FORECAST)
+    # ESTATÍSTICA E PROBABILIDADE FUTURA (PREVISÃO E FORECAST)
     # ---------------------------------------------------------
-    st.markdown("### 🔮 4. Estatística e Probabilidade Futura (Previsão de Receita / Forecast)")
+    st.markdown("### Estatística e Probabilidade Futura (Previsão de Receita / Forecast)")
     st.caption("Estatística ponderada da receita esperada calculada sobre a taxa de conversão de cada etapa.")
 
     df_exec["Receita_Ponderada"] = df_exec["Valor"] * df_exec["Prob"]
@@ -1469,141 +1447,6 @@ elif aba_selecionada == "Relatório Executivo":
         yaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA)
     )
     st.plotly_chart(fig_forecast, use_container_width=True)
-
-    st.divider()
-
-    # ---------------------------------------------------------
-    # TABELAS DE HISTÓRICO EXISTENTES
-    # ---------------------------------------------------------
-    st.subheader("Histórico de Atividades")
-
-    df_historico_salvo = carregar_dados_historico()
-    df_crm_base = df_filtered.copy()
-
-    mes_atual_str = dt.now().strftime("%b/%y").capitalize()
-    meses_map = {"Jan": "Jan", "Feb": "Fev", "Mar": "Mar", "Apr": "Abr", "May": "Mai", "Jun": "Jun", "Jul": "Jul", "Aug": "Ago", "Sep": "Set", "Oct": "Out", "Nov": "Nov", "Dec": "Dez"}
-    for eng, pt in meses_map.items():
-        mes_atual_str = mes_atual_str.replace(eng, pt)
-
-    if not df_crm_base.empty and "Data_Cadastro" in df_crm_base.columns:
-        df_crm_base["Data_Datetime"] = pd.to_datetime(df_crm_base["Data_Cadastro"], errors="coerce")
-        df_crm_base["Mês/Ano"] = df_crm_base["Data_Datetime"].dt.strftime("%b/%y").str.capitalize()
-        for eng, pt in meses_map.items():
-            df_crm_base["Mês/Ano"] = df_crm_base["Mês/Ano"].str.replace(eng, pt, regex=False)
-
-        sub_m = df_crm_base[df_crm_base["Mês/Ano"] == mes_atual_str]
-        
-        leads_q = len(sub_m[sub_m["Etapa"].isin(["Prospecção", "Qualificação", "Reunião Agendada", "Proposta Enviada", "Fechado"])])
-        reunioes = len(sub_m[sub_m["Etapa"] == "Reunião Agendada"])
-        propostas = len(sub_m[sub_m["Etapa"] == "Proposta Enviada"])
-        fechados = len(sub_m[sub_m["Etapa"] == "Fechado"])
-
-        if df_historico_salvo.empty:
-            df_historico_salvo = pd.DataFrame([{
-                "Mês/Ano": mes_atual_str,
-                "Leads Qualificados": leads_q,
-                "Reuniões Agendadas": reunioes,
-                "Propostas Enviadas": propostas,
-                "Projetos Fechados": fechados
-            }])
-        else:
-            if mes_atual_str in df_historico_salvo["Mês/Ano"].values:
-                idx = df_historico_salvo[df_historico_salvo["Mês/Ano"] == mes_atual_str].index[0]
-                df_historico_salvo.loc[idx, "Leads Qualificados"] = leads_q
-                df_historico_salvo.loc[idx, "Reuniões Agendadas"] = reunioes
-                df_historico_salvo.loc[idx, "Propostas Enviadas"] = propostas
-                df_historico_salvo.loc[idx, "Projetos Fechados"] = fechados
-            else:
-                nova_linha_hist = pd.DataFrame([{
-                    "Mês/Ano": mes_atual_str,
-                    "Leads Qualificados": leads_q,
-                    "Reuniões Agendadas": reunioes,
-                    "Propostas Enviadas": propostas,
-                    "Projetos Fechados": fechados
-                }])
-                df_historico_salvo = pd.concat([df_historico_salvo, nova_linha_hist], ignore_index=True)
-        
-        salvar_dados_historico(df_historico_salvo)
-
-    with st.expander("Exibir / Ocultar Tabela de Histórico de Atividades", expanded=True):
-        if not df_historico_salvo.empty:
-            def colorir_tabela_historico(val, col_name):
-                if col_name == "Mês/Ano":
-                    return "background-color: #FFEA00; color: #0A0E27; font-weight: bold;"
-                elif col_name == "Leads Qualificados":
-                    return "background-color: #9D00FF; color: #FFFFFF; font-weight: bold;"
-                elif col_name == "Reuniões Agendadas":
-                    return "background-color: #FFEA00; color: #0A0E27; font-weight: bold;"
-                elif col_name == "Propostas Enviadas":
-                    return "background-color: #FF6600; color: #FFFFFF; font-weight: bold;"
-                elif col_name == "Projetos Fechados":
-                    return "background-color: #00FF66; color: #0A0E27; font-weight: bold;"
-                return ""
-
-            df_estilizado = df_historico_salvo.style.apply(lambda col: [colorir_tabela_historico(v, col.name) for v in col], axis=0)
-            st.dataframe(df_estilizado, use_container_width=True, hide_index=True)
-
-    st.divider()
-
-    st.subheader("Histórico Financeiro")
-
-    df_financeiro_salvo = carregar_dados_financeiro()
-
-    if not df_crm_base.empty and "Data_Cadastro" in df_crm_base.columns:
-        sub_m_prop = df_crm_base[(df_crm_base["Mês/Ano"] == mes_atual_str) & (df_crm_base["Etapa"] == "Proposta Enviada")]
-        sub_m_fech = df_crm_base[(df_crm_base["Mês/Ano"] == mes_atual_str) & (df_crm_base["Etapa"] == "Fechado")]
-
-        val_prop = float(sub_m_prop["Valor"].sum()) if not sub_m_prop.empty else 0.0
-        qtd_prop = int(len(sub_m_prop))
-
-        val_fech = float(sub_m_fech["Valor"].sum()) if not sub_m_fech.empty else 0.0
-        qtd_fech = int(len(sub_m_fech))
-
-        total_mes = val_prop + val_fech
-
-        str_prop_fmt = f"R$ {val_prop:,.2f} ({qtd_prop} un)".replace(",", "X").replace(".", ",").replace("X", ".")
-        str_fech_fmt = f"R$ {val_fech:,.2f} ({qtd_fech} un)".replace(",", "X").replace(".", ",").replace("X", ".")
-        str_total_fmt = f"R$ {total_mes:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-
-        if df_financeiro_salvo.empty:
-            df_financeiro_salvo = pd.DataFrame([{
-                "Mês/Ano": mes_atual_str,
-                "Propostas Enviadas": str_prop_fmt,
-                "Projetos Fechados": str_fech_fmt,
-                "Total": str_total_fmt
-            }])
-        else:
-            if mes_atual_str in df_financeiro_salvo["Mês/Ano"].values:
-                idx = df_financeiro_salvo[df_financeiro_salvo["Mês/Ano"] == mes_atual_str].index[0]
-                df_financeiro_salvo.loc[idx, "Propostas Enviadas"] = str_prop_fmt
-                df_financeiro_salvo.loc[idx, "Projetos Fechados"] = str_fech_fmt
-                df_financeiro_salvo.loc[idx, "Total"] = str_total_fmt
-            else:
-                nova_linha_fin = pd.DataFrame([{
-                    "Mês/Ano": mes_atual_str,
-                    "Propostas Enviadas": str_prop_fmt,
-                    "Projetos Fechados": str_fech_fmt,
-                    "Total": str_total_fmt
-                }])
-                df_financeiro_salvo = pd.concat([df_financeiro_salvo, nova_linha_fin], ignore_index=True)
-
-        salvar_dados_financeiro(df_financeiro_salvo)
-
-    with st.expander("Exibir / Ocultar Tabela de Histórico Financeiro", expanded=True):
-        if not df_financeiro_salvo.empty:
-            def colorir_tabela_financeiro(val, col_name):
-                if col_name == "Mês/Ano":
-                    return "background-color: #FFEA00; color: #0A0E27; font-weight: bold;"
-                elif col_name == "Propostas Enviadas":
-                    return "background-color: #FF6600; color: #FFFFFF; font-weight: bold;"
-                elif col_name == "Projetos Fechados":
-                    return "background-color: #00FF66; color: #0A0E27; font-weight: bold;"
-                elif col_name == "Total":
-                    return "background-color: #1E293B; color: #FFFFFF; font-weight: bold;"
-                return ""
-
-            df_fin_estilizado = df_financeiro_salvo.style.apply(lambda col: [colorir_tabela_financeiro(v, col.name) for v in col], axis=0)
-            st.dataframe(df_fin_estilizado, use_container_width=True, hide_index=True)
 
 # =========================================================
 # ABA 5: + NOVO CADASTRO
