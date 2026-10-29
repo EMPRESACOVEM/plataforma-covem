@@ -1437,6 +1437,7 @@ elif aba_selecionada == "Relatório Executivo":
     - **Cliente B (Ticket de R$20.000,00 a R$100.000,00 /mês):** 
     
     - **Cliente C (Ticket de R$1.500,00 a R$20.000,00 /mês):** 
+    """)
 
     st.markdown("</div>", unsafe_allow_html=True)
     st.divider()
