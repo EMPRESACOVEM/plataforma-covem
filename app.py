@@ -77,6 +77,13 @@ CORES_PERDAS = {
     "Outros": "#9D00FF"                         # Roxo Neon
 }
 
+# Cores das Barras de Classificação de Clientes
+CORES_PERFIL_BARRAS = {
+    "Cliente A": "#00E5FF",  # Azul Claro Neon
+    "Cliente B": "#FF6600",  # Laranja Neon
+    "Cliente C": "#9D00FF"   # Roxo Neon
+}
+
 # Cor de fundo dos gráficos estilo Infográfico Futurista
 FUNDO_GRAFICO_FUTURISTA = "#0A0E27"
 GRID_GRAFICO_FUTURISTA = "rgba(0, 229, 255, 0.12)"
@@ -1258,7 +1265,7 @@ elif aba_selecionada == "Dashboard":
         st.info("Nenhum lead registrado em 'Pós: Perdido' no momento.")
 
 # =========================================================
-# ABA 4: RELATÓRIO EXECUTIVO (COM CLASSIFICAÇÃO SINCRONIZADA A, B, C)
+# ABA 4: RELATÓRIO EXECUTIVO (COM GRÁFICO DE BARRAS VERTICAIS A, B, C)
 # =========================================================
 elif aba_selecionada == "Relatório Executivo":
     st.title("Relatório Executivo")
@@ -1374,62 +1381,68 @@ elif aba_selecionada == "Relatório Executivo":
     st.divider()
 
     # ---------------------------------------------------------
-    # INTELIGÊNCIA POR CLASSIFICAÇÃO DOS LEADS (CLIENTE A, B E C)
+    # NOVO GRÁFICO DE BARRAS VERTICAIS: NÚMERO DE CLIENTES (A, B, C)
     # ---------------------------------------------------------
-    st.markdown("### Inteligência de Carteira: Classificação de Leads (Cliente A, B e C)")
-    st.caption("Distribuição real dos leads cadastrados e sincronizados diretamente da base de dados.")
+    st.markdown("### Número de Clientes na Carteira COVEM por Classificação")
+    st.caption("Gráfico em barras verticais do volume de clientes cadastrados por perfil para otimizar estatísticas e probabilidades rumo à meta de R$ 100 mil até dezembro.")
 
-    df_perfil_count = df_exec.groupby("Perfil").agg(
-        Qtd_Leads=("id", "count"),
-        Valor_Pipeline=("Valor", "sum")
-    ).reset_index()
+    # Garantir que todas as 3 categorias apareçam no gráfico mesmo se contagem for 0
+    contagem_perfis_dict = {"Cliente A": 0, "Cliente B": 0, "Cliente C": 0}
+    df_temp_perf = df_exec["Perfil"].value_counts().to_dict()
+    for k in contagem_perfis_dict.keys():
+        contagem_perfis_dict[k] = int(df_temp_perf.get(k, 0))
 
-    p_col1, p_col2 = st.columns([1, 1])
+    df_barras_perfil = pd.DataFrame(list(contagem_perfis_dict.items()), columns=["Classificação", "Quantidade"])
 
-    with p_col1:
-        if not df_perfil_count.empty:
-            fig_perfil_pie = px.pie(
-                df_perfil_count,
-                values="Qtd_Leads",
-                names="Perfil",
-                title="Distribuição do Volume de Leads na Carteira",
-                hole=0.4,
-                color_discrete_sequence=["#00E5FF", "#FF6600", "#9D00FF"]
-            )
-            fig_perfil_pie.update_layout(
-                paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
-                plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
-                font=dict(color="#FFFFFF", family="Inter", size=12),
-                height=340
-            )
-            st.plotly_chart(fig_perfil_pie, use_container_width=True)
-        else:
-            st.info("Nenhum cliente cadastrado com classificação de perfil.")
+    fig_barras_perfil = px.bar(
+        df_barras_perfil,
+        x="Classificação",
+        y="Quantidade",
+        color="Classificação",
+        color_discrete_map=CORES_PERFIL_BARRAS,
+        text="Quantidade"
+    )
+    fig_barras_perfil.update_layout(
+        paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+        plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+        font=dict(color="#FFFFFF", family="Inter", size=13),
+        height=360,
+        xaxis=dict(
+            title="Classificação do Perfil",
+            showgrid=True,
+            gridcolor=GRID_GRAFICO_FUTURISTA,
+            zerolinecolor=GRID_GRAFICO_FUTURISTA
+        ),
+        yaxis=dict(
+            title="Número de Clientes",
+            showgrid=True,
+            gridcolor=GRID_GRAFICO_FUTURISTA,
+            zerolinecolor=GRID_GRAFICO_FUTURISTA
+        ),
+        showlegend=False
+    )
+    fig_barras_perfil.update_traces(textposition="outside", marker=dict(line=dict(color='#00E5FF', width=1)))
+    st.plotly_chart(fig_barras_perfil, use_container_width=True)
 
-    with p_col2:
-        st.markdown("**Probabilidade & Estatística de Receita por Perfil Avançando no Funil:**")
-        
-        df_exec["Receita_Ponderada"] = df_exec["Valor"] * df_exec["Prob"]
-        
-        qtd_a = len(df_exec[df_exec["Perfil"] == "Cliente A"])
-        qtd_b = len(df_exec[df_exec["Perfil"] == "Cliente B"])
-        qtd_c = len(df_exec[df_exec["Perfil"] == "Cliente C"])
+    # Painel analítico de probabilidade para a meta de 100k
+    df_exec["Receita_Ponderada"] = df_exec["Valor"] * df_exec["Prob"]
+    
+    val_a = float(df_exec[df_exec["Perfil"] == "Cliente A"]["Receita_Ponderada"].sum())
+    val_b = float(df_exec[df_exec["Perfil"] == "Cliente B"]["Receita_Ponderada"].sum())
+    val_c = float(df_exec[df_exec["Perfil"] == "Cliente C"]["Receita_Ponderada"].sum())
 
-        val_a = float(df_exec[df_exec["Perfil"] == "Cliente A"]["Receita_Ponderada"].sum())
-        val_b = float(df_exec[df_exec["Perfil"] == "Cliente B"]["Receita_Ponderada"].sum())
-        val_c = float(df_exec[df_exec["Perfil"] == "Cliente C"]["Receita_Ponderada"].sum())
+    st.markdown("""
+        <div style="background-color: rgba(10, 14, 39, 0.85); border: 1px solid #00E5FF; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+            <b style="color: #00E5FF; font-size: 14px;">Perspectiva Estatística para a Meta de R$ 100 mil até Dezembro:</b>
+    """, unsafe_allow_html=True)
 
-        st.markdown(f"""
-        - **Cliente A (Acima de R$ 100 mil/mês):**  
-          `{qtd_a}` clientes ativos no funil ➔ **Previsão Ponderada:** `R$ {val_a:,.2f}`.
-        
-        - **Cliente B (R$ 20 mil a R$ 100 mil/mês):**  
-          `{qtd_b}` clientes ativos no funil ➔ **Previsão Ponderada:** `R$ {val_b:,.2f}`.
-        
-        - **Cliente C (R$ 1.500 a R$ 20 mil/mês):**  
-          `{qtd_c}` clientes ativos no funil ➔ **Previsão Ponderada:** `R$ {val_c:,.2f}`.
-        """)
+    st.markdown(f"""
+    - **Cliente A (Ticket Acima de R$ 100k/mês):** `{contagem_perfis_dict['Cliente A']}` cliente(s) ➔ **Receita Ponderada Atual:** `R$ {val_a:,.2f}`. *(Necessário fechar apenas 1 conta estratégica para atingir a meta integral).*
+    - **Cliente B (Ticket R$ 20k a R$ 100k/mês):** `{contagem_perfis_dict['Cliente B']}` cliente(s) ➔ **Receita Ponderada Atual:** `R$ {val_b:,.2f}`. *(Necessário fechar cerca de 2 a 3 contas para compor os R$ 100k).*
+    - **Cliente C (Ticket R$ 1.5k a R$ 20k/mês):** `{contagem_perfis_dict['Cliente C']}` cliente(s) ➔ **Receita Ponderada Atual:** `R$ {val_c:,.2f}`. *(Volume necessário de conversões ativas no funil para tracionar o forecast).*
+    """)
 
+    st.markdown("</div>", unsafe_allow_html=True)
     st.divider()
 
     # ---------------------------------------------------------
