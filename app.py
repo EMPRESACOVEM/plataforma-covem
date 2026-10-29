@@ -1240,7 +1240,7 @@ elif aba_selecionada == "Dashboard":
         st.info("Nenhum lead registrado em 'Pós: Perdido' no momento.")
 
 # =========================================================
-# ABA 4: RELATÓRIO EXECUTIVO (SEM EMOJIS NA ESTATÍSTICA)
+# ABA 4: RELATÓRIO EXECUTIVO
 # =========================================================
 elif aba_selecionada == "Relatório Executivo":
     st.title("Relatório Executivo")
@@ -1349,6 +1349,49 @@ elif aba_selecionada == "Relatório Executivo":
     ed2.metric("Taxa de Conversão Atual (Prospecção ➔ Fechado)", f"{taxa_conversao_pros_venda:.1f}%")
     
     st.markdown("</div>", unsafe_allow_html=True)
+    st.divider()
+
+    # ---------------------------------------------------------
+    # ESTATÍSTICA E PROBABILIDADE FUTURA (PREVISÃO E FORECAST) - MOVIDO PARA CÁ
+    # ---------------------------------------------------------
+    st.markdown("### Estatística e Probabilidade Futura (Previsão de Receita / Forecast)")
+    st.caption("Estatística ponderada da receita esperada calculada sobre a taxa de conversão de cada etapa.")
+
+    df_exec["Receita_Ponderada"] = df_exec["Valor"] * df_exec["Prob"]
+    
+    val_total_pipeline = float(df_exec["Valor"].sum())
+    receita_esperada = float(df_exec["Receita_Ponderada"].sum())
+    taxa_conversao_media = (receita_esperada / val_total_pipeline * 100) if val_total_pipeline > 0 else 0.0
+
+    f1, f2, f3 = st.columns(3)
+    f1.metric("Pipeline Bruto em Negociação", f"R$ {val_total_pipeline:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+    f2.metric("Previsão Ponderada de Fechamento", f"R$ {receita_esperada:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+    f3.metric("Probabilidade Média de Conversão", f"{taxa_conversao_media:.1f}%")
+
+    df_forecast = df_exec.groupby("Etapa").agg(
+        Valor_Bruto=("Valor", "sum"),
+        Valor_Ponderado=("Receita_Ponderada", "sum")
+    ).reset_index()
+
+    fig_forecast = px.bar(
+        df_forecast,
+        x="Etapa",
+        y=["Valor_Bruto", "Valor_Ponderado"],
+        barmode="group",
+        title="Probabilidade Futura por Etapa do Funil (Bruto vs Ponderado)",
+        color_discrete_map={"Valor_Bruto": "#9D00FF", "Valor_Ponderado": "#00FF66"},
+        labels={"value": "Valor (R$)", "variable": "Tipo de Análise"}
+    )
+    fig_forecast.update_layout(
+        paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+        plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+        font=dict(color="#FFFFFF", family="Inter", size=13),
+        height=380,
+        xaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA),
+        yaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA)
+    )
+    st.plotly_chart(fig_forecast, use_container_width=True)
+
     st.divider()
 
     # ---------------------------------------------------------
@@ -1469,49 +1512,6 @@ elif aba_selecionada == "Relatório Executivo":
         yaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA)
     )
     st.plotly_chart(fig_braclean_meta, use_container_width=True)
-
-    st.divider()
-
-    # ---------------------------------------------------------
-    # ESTATÍSTICA E PROBABILIDADE FUTURA (PREVISÃO E FORECAST)
-    # ---------------------------------------------------------
-    st.markdown("### Estatística e Probabilidade Futura (Previsão de Receita / Forecast)")
-    st.caption("Estatística ponderada da receita esperada calculada sobre a taxa de conversão de cada etapa.")
-
-    df_exec["Receita_Ponderada"] = df_exec["Valor"] * df_exec["Prob"]
-    
-    val_total_pipeline = float(df_exec["Valor"].sum())
-    receita_esperada = float(df_exec["Receita_Ponderada"].sum())
-    taxa_conversao_media = (receita_esperada / val_total_pipeline * 100) if val_total_pipeline > 0 else 0.0
-
-    f1, f2, f3 = st.columns(3)
-    f1.metric("Pipeline Bruto em Negociação", f"R$ {val_total_pipeline:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
-    f2.metric("Previsão Ponderada de Fechamento", f"R$ {receita_esperada:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
-    f3.metric("Probabilidade Média de Conversão", f"{taxa_conversao_media:.1f}%")
-
-    df_forecast = df_exec.groupby("Etapa").agg(
-        Valor_Bruto=("Valor", "sum"),
-        Valor_Ponderado=("Receita_Ponderada", "sum")
-    ).reset_index()
-
-    fig_forecast = px.bar(
-        df_forecast,
-        x="Etapa",
-        y=["Valor_Bruto", "Valor_Ponderado"],
-        barmode="group",
-        title="Probabilidade Futura por Etapa do Funil (Bruto vs Ponderado)",
-        color_discrete_map={"Valor_Bruto": "#9D00FF", "Valor_Ponderado": "#00FF66"},
-        labels={"value": "Valor (R$)", "variable": "Tipo de Análise"}
-    )
-    fig_forecast.update_layout(
-        paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
-        plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
-        font=dict(color="#FFFFFF", family="Inter", size=13),
-        height=380,
-        xaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA),
-        yaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA)
-    )
-    st.plotly_chart(fig_forecast, use_container_width=True)
 
 # =========================================================
 # ABA 5: + NOVO CADASTRO
