@@ -326,6 +326,26 @@ def salvar_dados_crm(df):
     except Exception as e:
         st.error(f"Erro ao salvar dados no Google Sheets: {e}")
 
+# ---------------------------------------------------------
+# FUNÇÕES DE HISTÓRICO DE METAS (ARMAZENAMENTO A PARTIR DE HOJE)
+# ---------------------------------------------------------
+def carregar_historico_metas():
+    try:
+        df_hist = conn.read(worksheet="HistoricoMetas", ttl=0)
+        df_hist = df_hist.dropna(how="all")
+        if not df_hist.empty:
+            return df_hist
+    except:
+        pass
+    return pd.DataFrame(columns=["Data", "Vendedor", "Leads_Dia", "Leads_Semana", "Leads_Mes"])
+
+def salvar_historico_metas(df_hist):
+    try:
+        conn.update(worksheet="HistoricoMetas", data=df_hist)
+    except Exception as e:
+        # Se a aba ainda não existir no Google Sheets, tenta criar ou avisa de forma tratada
+        pass
+
 def carregar_dados_tarefas():
     if ARQUIVO_TAREFAS.exists():
         try:
@@ -1265,7 +1285,7 @@ elif aba_selecionada == "Dashboard":
         st.info("Nenhum lead registrado em 'Pós: Perdido' no momento.")
 
 # =========================================================
-# ABA 4: RELATÓRIO EXECUTIVO (COM GRÁFICO DE BARRAS VERTICAIS A, B, C)
+# ABA 4: RELATÓRIO EXECUTIVO
 # =========================================================
 elif aba_selecionada == "Relatório Executivo":
     st.title("Relatório Executivo")
@@ -1443,9 +1463,107 @@ elif aba_selecionada == "Relatório Executivo":
     st.divider()
 
     # ---------------------------------------------------------
-    # ATIVIDADES INDIVIDUAIS (GABRIEL VS ARIEL) E METAS
+    # CRUZAMENTO: FORECAST DETALHADO POR PERFIL (A, B, C)
     # ---------------------------------------------------------
-    st.markdown("### Atividades Individuais e Metas de Vendedores")
+    st.markdown("### Forecast Detalhado por Classificação de Perfil")
+    st.caption("Cruzamento do volume financeiro bruto e ponderado dividindo o pipeline entre Clientes A, B e C.")
+
+    if not df_exec.empty and "Perfil" in df_exec.columns:
+        df_perfil_forecast = df_exec.groupby("Perfil").agg(
+            Quantidade_Leads=("id", "count"),
+            Pipeline_Bruto=("Valor", "sum"),
+            Receita_Ponderada=("Receita_Ponderada", "sum")
+        ).reset_index()
+
+        ordem_perfil = {"Cliente A": 0, "Cliente B": 1, "Cliente C": 2}
+        df_perfil_forecast["Ordem"] = df_perfil_forecast["Perfil"].map(ordem_perfil)
+        df_perfil_forecast = df_perfil_forecast.sort_values("Ordem").drop(columns=["Ordem"])
+
+        cols_perf = st.columns(len(df_perfil_forecast))
+        for idx, row_p in df_perfil_forecast.iterrows():
+            with cols_perf[idx % len(cols_perf)]:
+                perfil_nome = row_p["Perfil"]
+                bruto_p = row_p["Pipeline_Bruto"]
+                pond_p = row_p["Receita_Ponderada"]
+                qtd_p = row_p["Quantidade_Leads"]
+                
+                st.markdown(f"""
+                    <div style="background-color: rgba(10, 14, 39, 0.85); border: 1px solid #1E293B; border-top: 3px solid #00E5FF; padding: 12px; border-radius: 6px; margin-bottom: 10px;">
+                        <b style="color: #00E5FF; font-size: 13px;">{perfil_nome}</b><br>
+                        <span style="font-size: 12px; color: #94A3B8;">Leads: <b>{qtd_p}</b></span><br>
+                        <span style="font-size: 12px; color: #FFFFFF;">Bruto: <b>R$ {bruto_p:,.2f}</b></span><br>
+                        <span style="font-size: 12px; color: #00FF66;">Ponderado: <b>R$ {pond_p:,.2f}</b></span>
+                    </div>
+                """, unsafe_allow_html=True)
+
+        fig_perfil_fc = px.bar(
+            df_perfil_forecast,
+            x="Perfil",
+            y=["Pipeline_Bruto", "Receita_Ponderada"],
+            barmode="group",
+            title="Comparativo de Pipeline Bruto vs Receita Ponderada por Perfil",
+            color_discrete_map={"Pipeline_Bruto": "#9D00FF", "Receita_Ponderada": "#00FF66"},
+            labels={"value": "Valor (R$)", "variable": "Métrica", "Perfil": "Classificação"}
+        )
+        fig_perfil_fc.update_layout(
+            paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+            plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+            font=dict(color="#FFFFFF", family="Inter", size=13),
+            height=360,
+            xaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA),
+            yaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA)
+        )
+        st.plotly_chart(fig_perfil_fc, use_container_width=True)
+    else:
+        st.info("Nenhum dado de perfil disponível para o forecast detalhado.")
+
+    st.divider()
+
+    # ---------------------------------------------------------
+    # ESTATÍSTICA E PROBABILIDADE FUTURA (PREVISÃO E FORECAST)
+    # ---------------------------------------------------------
+    st.markdown("### Previsão Geral de Forecast")
+
+    val_total_pipeline = float(df_exec["Valor"].sum())
+    receita_esperada = float(df_exec["Receita_Ponderada"].sum())
+    taxa_conversao_media = (receita_esperada / val_total_pipeline * 100) if val_total_pipeline > 0 else 0.0
+
+    f1, f2, f3 = st.columns(3)
+    f1.metric("Pipeline Bruto em Negociação", f"R$ {val_total_pipeline:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+    f2.metric("Previsão Ponderada de Fechamento", f"R$ {receita_esperada:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+    f3.metric("Probabilidade Média de Conversão", f"{taxa_conversao_media:.1f}%")
+
+    df_forecast = df_exec.groupby("Etapa").agg(
+        Valor_Bruto=("Valor", "sum"),
+        Valor_Ponderado=("Receita_Ponderada", "sum")
+    ).reset_index()
+
+    fig_forecast = px.bar(
+        df_forecast,
+        x="Etapa",
+        y=["Valor_Bruto", "Valor_Ponderado"],
+        barmode="group",
+        title="Probabilidade Futura por Etapa do Funil (Bruto vs Ponderado)",
+        color_discrete_map={"Valor_Bruto": "#9D00FF", "Valor_Ponderado": "#00FF66"},
+        labels={"value": "Valor (R$)", "variable": "Tipo de Análise"}
+    )
+    fig_forecast.update_layout(
+        paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+        plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+        font=dict(color="#FFFFFF", family="Inter", size=13),
+        height=380,
+        xaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA),
+        yaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA)
+    )
+    st.plotly_chart(fig_forecast, use_container_width=True)
+
+    st.divider()
+
+    # ---------------------------------------------------------
+    # ATIVIDADES INDIVIDUAIS (GABRIEL VS ARIEL) E METAS (DIÁRIA, SEMANAL, MENSAL)
+    # ---------------------------------------------------------
+    st.markdown("### Atividades Individuais & Metas de Vendedores")
+    st.caption("Acompanhamento de desempenho com histórico persistente gravado a partir de hoje.")
 
     vendedores_covem = ["Gabriel", "Ariel"]
     df_exec["Vendedor"] = df_exec["Vendedor"].fillna("Gabriel")
@@ -1458,55 +1576,107 @@ elif aba_selecionada == "Relatório Executivo":
         
     df_vend = pd.DataFrame(vendedores_dados)
     
+    # Métricas de referência
     c_m1, c_m2, c_m3 = st.columns(3)
     c_m1.metric("Meta Diária por Vendedor", "50 Leads/Dia")
     c_m2.metric("Meta Semanal (5d)", "250 Leads/Sem")
     c_m3.metric("Meta Mensal (20d)", "1.000 Leads/Mês")
 
-    col_v1, col_v2 = st.columns(2)
-    
-    with col_v1:
+    # 3 Gráficos Independentes: Diário, Semanal e Mensal
+    col_g1, col_g2, col_g3 = st.columns(3)
+
+    with col_g1:
         df_vend["Meta Diária"] = 50
-        fig_metas = px.bar(
+        fig_meta_diaria = px.bar(
             df_vend,
             x="Vendedor",
             y=["Leads Movimentados", "Meta Diária"],
             barmode="group",
-            title="Acompanhamento do Trabalho Individual vs Meta Diária (50)",
+            title="Meta Diária (Alvo: 50)",
             color_discrete_map={"Leads Movimentados": "#00E5FF", "Meta Diária": "#FFEA00"},
             text_auto=True
         )
-        fig_metas.update_layout(
+        fig_meta_diaria.update_layout(
             paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
             plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
-            font=dict(color="#FFFFFF", family="Inter", size=12),
-            height=360,
+            font=dict(color="#FFFFFF", family="Inter", size=11),
+            height=320,
+            margin=dict(t=40, b=20, l=20, r=20),
             xaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA),
-            yaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA)
+            yaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA),
+            showlegend=False
         )
-        st.plotly_chart(fig_metas, use_container_width=True)
+        st.plotly_chart(fig_meta_diaria, use_container_width=True)
 
-    with col_v2:
-        df_gargalos = df_exec.groupby("Etapa").size().reset_index(name="Quantidade")
-        fig_gargalo = px.bar(
-            df_gargalos,
-            x="Etapa",
-            y="Quantidade",
-            title="Levantamento de Gargalos (Onde o Lead está parando)",
-            color="Etapa",
-            color_discrete_map=st.session_state.funnel_colors,
+    with col_g2:
+        df_vend["Meta Semanal"] = 250
+        fig_meta_semanal = px.bar(
+            df_vend,
+            x="Vendedor",
+            y=["Leads Movimentados", "Meta Semanal"],
+            barmode="group",
+            title="Meta Semanal (Alvo: 250)",
+            color_discrete_map={"Leads Movimentados": "#00FF66", "Meta Semanal": "#FFEA00"},
             text_auto=True
         )
-        fig_gargalo.update_layout(
+        fig_meta_semanal.update_layout(
             paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
             plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
-            font=dict(color="#FFFFFF", family="Inter", size=12),
-            height=360,
-            showlegend=False,
+            font=dict(color="#FFFFFF", family="Inter", size=11),
+            height=320,
+            margin=dict(t=40, b=20, l=20, r=20),
             xaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA),
-            yaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA)
+            yaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA),
+            showlegend=False
         )
-        st.plotly_chart(fig_gargalo, use_container_width=True)
+        st.plotly_chart(fig_meta_semanal, use_container_width=True)
+
+    with col_g3:
+        df_vend["Meta Mensal"] = 1000
+        fig_meta_mensal = px.bar(
+            df_vend,
+            x="Vendedor",
+            y=["Leads Movimentados", "Meta Mensal"],
+            barmode="group",
+            title="Meta Mensal (Alvo: 1.000)",
+            color_discrete_map={"Leads Movimentados": "#9D00FF", "Meta Mensal": "#FFEA00"},
+            text_auto=True
+        )
+        fig_meta_mensal.update_layout(
+            paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+            plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+            font=dict(color="#FFFFFF", family="Inter", size=11),
+            height=320,
+            margin=dict(t=40, b=20, l=20, r=20),
+            xaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA),
+            yaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA),
+            showlegend=False
+        )
+        st.plotly_chart(fig_meta_mensal, use_container_width=True)
+
+    st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
+
+    # Gráfico de Levantamento de Gargalos ajustado para a largura total (mesmo tamanho da Meta BraClean)
+    df_gargalos = df_exec.groupby("Etapa").size().reset_index(name="Quantidade")
+    fig_gargalo = px.bar(
+        df_gargalos,
+        x="Etapa",
+        y="Quantidade",
+        title="Levantamento de Gargalos (Onde o Lead está parando)",
+        color="Etapa",
+        color_discrete_map=st.session_state.funnel_colors,
+        text_auto=True
+    )
+    fig_gargalo.update_layout(
+        paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+        plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+        font=dict(color="#FFFFFF", family="Inter", size=13),
+        height=380,
+        showlegend=False,
+        xaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA),
+        yaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA)
+    )
+    st.plotly_chart(fig_gargalo, use_container_width=True)
 
     st.divider()
 
