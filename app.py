@@ -1452,11 +1452,11 @@ elif aba_selecionada == "Relatório Executivo":
     """, unsafe_allow_html=True)
 
     st.markdown("""
-    - **Cliente A (Ticket Acima de R\$100.000,00 /mês):**
+    - **Cliente A (Acima de R\$100.000,00 /mês):**
     
-    - **Cliente B (Ticket de R\$20.000,00 a R\$100.000,00 /mês):** 
+    - **Cliente B (De R\$20.000,00 a R\$100.000,00 /mês):** 
     
-    - **Cliente C (Ticket de R\$1.500,00 a R\$20.000,00 /mês):** 
+    - **Cliente C (De R\$1.500,00 a R\$20.000,00 /mês):** 
     """)
     
     st.markdown("</div>", unsafe_allow_html=True)
@@ -1516,7 +1516,6 @@ elif aba_selecionada == "Relatório Executivo":
             x="Vendedor",
             y=["Leads Movimentados", "Meta Semanal"],
             barmode="group",
-            title="Meta Semanal (Alvo: 250)",
             color_discrete_map={"Leads Movimentados": "#00FF66", "Meta Semanal": "#FFEA00"},
             text_auto=True
         )
@@ -1539,7 +1538,6 @@ elif aba_selecionada == "Relatório Executivo":
             x="Vendedor",
             y=["Leads Movimentados", "Meta Mensal"],
             barmode="group",
-            title="Meta Mensal (Alvo: 1.000)",
             color_discrete_map={"Leads Movimentados": "#9D00FF", "Meta Mensal": "#FFEA00"},
             text_auto=True
         )
