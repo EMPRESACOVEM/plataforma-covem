@@ -1240,7 +1240,7 @@ elif aba_selecionada == "Dashboard":
         st.info("Nenhum lead registrado em 'Pós: Perdido' no momento.")
 
 # =========================================================
-# ABA 4: RELATÓRIO EXECUTIVO (COM OS 2 GRÁFICOS REORGANIZADOS)
+# ABA 4: RELATÓRIO EXECUTIVO (COM ESTATÍSTICA E PROBABILIDADE)
 # =========================================================
 elif aba_selecionada == "Relatório Executivo":
     st.title("Relatório Executivo")
@@ -1280,6 +1280,29 @@ elif aba_selecionada == "Relatório Executivo":
     else:
         st.info("Nenhum registro encontrado no bloco de Pré-Funil e Standby.")
 
+    # ---------------------------------------------------------
+    # ESTATÍSTICA 1: TAXA DE CONVERSÃO PRÉ-FUNIL -> PROSPECÇÃO
+    # ---------------------------------------------------------
+    total_novo_lead = len(df_exec[df_exec["Etapa"] == "Pré: Novo Lead"])
+    total_prospeccao = len(df_exec[df_exec["Etapa"] == "Prospecção"])
+    
+    # Probabilidade estatística (Inverso da taxa de conversão esperada pelas probabilidades ou volume real)
+    # Baseado no PROB_MAP: Novo Lead tem 5% (0.05) e Prospecção 20% (0.20)
+    # Razão estatística teórica ou empírica baseada no volume atual
+    taxa_conversao_pre_pros = (total_prospeccao / total_novo_lead * 100) if total_novo_lead > 0 else 0.0
+    leads_necessarios_pre = int(100 / (PROB_MAP["Pré: Novo Lead"] * 100 / (PROB_MAP["Prospecção"] * 100)) * 1) if PROB_MAP["Prospecção"] > 0 else 4
+    
+    # Métricas visuais estruturadas abaixo do Gráfico 1
+    st.markdown("""
+        <div style="background-color: rgba(10, 14, 39, 0.7); border: 1px solid #1E293B; border-left: 4px solid #00E5FF; padding: 12px; border-radius: 6px; margin-bottom: 15px;">
+            <b style="color: #00E5FF; font-size: 14px;">📊 Análise Estatística & Probabilidade (Pré-Funil)</b>
+    """, unsafe_allow_html=True)
+    
+    ec1, ec2 = st.columns(2)
+    ec1.metric("Leads necessários no Pré-Funil para gerar 1 Prospecção", f"~ {max(1, int(1 / PROB_MAP['Pré: Novo Lead'] * PROB_MAP['Prospecção']))} leads")
+    ec2.metric("Taxa de Conversão Atual (Pré ➔ Prospecção)", f"{taxa_conversao_pre_pros:.1f}%")
+    
+    st.markdown("</div>", unsafe_allow_html=True)
     st.divider()
 
     # ---------------------------------------------------------
@@ -1315,6 +1338,23 @@ elif aba_selecionada == "Relatório Executivo":
     else:
         st.info("Nenhum registro encontrado no bloco de Funil de Vendas e Perdidos.")
 
+    # ---------------------------------------------------------
+    # ESTATÍSTICA 2: TAXA DE CONVERSÃO PROSPECÇÃO -> VENDA (FECHADO)
+    # ---------------------------------------------------------
+    total_fechado = len(df_exec[df_exec["Etapa"] == "Fechado"])
+    taxa_conversao_pros_venda = (total_fechado / total_prospeccao * 100) if total_prospeccao > 0 else 0.0
+    
+    # Métricas visuais estruturadas abaixo do Gráfico 2
+    st.markdown("""
+        <div style="background-color: rgba(10, 14, 39, 0.7); border: 1px solid #1E293B; border-left: 4px solid #00FF66; padding: 12px; border-radius: 6px; margin-bottom: 15px;">
+            <b style="color: #00FF66; font-size: 14px;">📊 Análise Estatística & Probabilidade (Funil de Vendas)</b>
+    """, unsafe_allow_html=True)
+    
+    ed1, ed2 = st.columns(2)
+    ed1.metric("Prospecções necessárias para gerar 1 Venda (Fechado)", f"~ {max(1, int(1 / PROB_MAP['Prospecção']))} prospecções")
+    ed2.metric("Taxa de Conversão Atual (Prospecção ➔ Fechado)", f"{taxa_conversao_pros_venda:.1f}%")
+    
+    st.markdown("</div>", unsafe_allow_html=True)
     st.divider()
 
     # ---------------------------------------------------------
