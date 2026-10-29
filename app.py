@@ -1398,6 +1398,32 @@ elif aba_selecionada == "Relatório Executivo":
     st.divider()
 
     # ---------------------------------------------------------
+    # GRÁFICO DE GARGALOS POSICIONADO LOGO ABAIXO DOS FUNIS
+    # ---------------------------------------------------------
+    df_gargalos = df_exec.groupby("Etapa").size().reset_index(name="Quantidade")
+    fig_gargalo = px.bar(
+        df_gargalos,
+        x="Etapa",
+        y="Quantidade",
+        title="Levantamento de Gargalos (Onde o Lead está parando)",
+        color="Etapa",
+        color_discrete_map=st.session_state.funnel_colors,
+        text_auto=True
+    )
+    fig_gargalo.update_layout(
+        paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+        plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+        font=dict(color="#FFFFFF", family="Inter", size=13),
+        height=380,
+        showlegend=False,
+        xaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA),
+        yaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA)
+    )
+    st.plotly_chart(fig_gargalo, use_container_width=True)
+
+    st.divider()
+
+    # ---------------------------------------------------------
     # NOVO GRÁFICO DE BARRAS VERTICAIS: NÚMERO DE CLIENTES (A, B, C)
     # ---------------------------------------------------------
     st.markdown("### Classificação de Leads BraClean")
@@ -1556,29 +1582,6 @@ elif aba_selecionada == "Relatório Executivo":
         st.plotly_chart(fig_meta_mensal, use_container_width=True)
 
     st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
-
-    # Gráfico de Levantamento de Gargalos ajustado para a largura total (mesmo tamanho da Meta BraClean)
-    df_gargalos = df_exec.groupby("Etapa").size().reset_index(name="Quantidade")
-    fig_gargalo = px.bar(
-        df_gargalos,
-        x="Etapa",
-        y="Quantidade",
-        title="Levantamento de Gargalos (Onde o Lead está parando)",
-        color="Etapa",
-        color_discrete_map=st.session_state.funnel_colors,
-        text_auto=True
-    )
-    fig_gargalo.update_layout(
-        paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
-        plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
-        font=dict(color="#FFFFFF", family="Inter", size=13),
-        height=380,
-        showlegend=False,
-        xaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA),
-        yaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA)
-    )
-    st.plotly_chart(fig_gargalo, use_container_width=True)
-
     st.divider()
 
     # ---------------------------------------------------------
