@@ -1240,7 +1240,7 @@ elif aba_selecionada == "Dashboard":
         st.info("Nenhum lead registrado em 'Pós: Perdido' no momento.")
 
 # =========================================================
-# ABA 4: RELATÓRIO EXECUTIVO (COM BARRAS FINAIS E COMPACTAS)
+# ABA 4: RELATÓRIO EXECUTIVO (COM TODOS OS 3 FUNIS EM FORMATO HORIZONTAL)
 # =========================================================
 elif aba_selecionada == "Relatório Executivo":
     st.title("Relatório Executivo")
@@ -1248,7 +1248,7 @@ elif aba_selecionada == "Relatório Executivo":
     df_exec = df_filtered.copy()
 
     # ---------------------------------------------------------
-    # PARTE 1: PRÉ FUNIL (BARRAS VERTICAIS MAIS FINAS E COMPACTAS)
+    # PARTE 1: PRÉ FUNIL (ESTILO FUNIL HORIZONTAL COMPACTO)
     # ---------------------------------------------------------
     st.markdown("### Pré Funil")
     st.caption("Visão de volume e avanço das etapas iniciais de prospecção e conexão.")
@@ -1261,27 +1261,19 @@ elif aba_selecionada == "Relatório Executivo":
 
     df_pre_funil = pd.DataFrame(dados_pre)
     if not df_pre_funil.empty and df_pre_funil["Quantidade"].sum() > 0:
-        fig_pre = px.bar(
+        fig_pre = px.funnel(
             df_pre_funil,
-            x="Etapa",
-            y="Quantidade",
+            x="Quantidade",
+            y="Etapa",
             color="Etapa_Orig",
-            color_discrete_map=st.session_state.funnel_colors,
-            text="Quantidade"
+            color_discrete_map=st.session_state.funnel_colors
         )
         fig_pre.update_layout(
             paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
             plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
             font=dict(color="#FFFFFF", family="Inter", size=13),
-            height=220,
-            showlegend=False,
-            xaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA, title=""),
-            yaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA, title="")
-        )
-        fig_pre.update_traces(
-            textposition="outside", 
-            marker=dict(line=dict(color='#00E5FF', width=1)),
-            width=0.35  # Barras mais finas para otimizar espaço
+            height=240,
+            showlegend=False
         )
         st.plotly_chart(fig_pre, use_container_width=True)
     else:
@@ -1324,7 +1316,7 @@ elif aba_selecionada == "Relatório Executivo":
     st.divider()
 
     # ---------------------------------------------------------
-    # PARTE 3: PÓS FUNIL (BARRAS VERTICAIS MAIS FINAS E COMPACTAS)
+    # PARTE 3: PÓS FUNIL (ESTILO FUNIL HORIZONTAL COMPACTO)
     # ---------------------------------------------------------
     st.markdown("### Pós Funil")
     st.caption("Monitoramento de oportunidades em espera (standby) ou encerradas (perdido).")
@@ -1337,27 +1329,19 @@ elif aba_selecionada == "Relatório Executivo":
 
     df_pos_funil = pd.DataFrame(dados_pos)
     if not df_pos_funil.empty and df_pos_funil["Quantidade"].sum() > 0:
-        fig_pos = px.bar(
+        fig_pos = px.funnel(
             df_pos_funil,
-            x="Etapa",
-            y="Quantidade",
+            x="Quantidade",
+            y="Etapa",
             color="Etapa_Orig",
-            color_discrete_map=st.session_state.funnel_colors,
-            text="Quantidade"
+            color_discrete_map=st.session_state.funnel_colors
         )
         fig_pos.update_layout(
             paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
             plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
             font=dict(color="#FFFFFF", family="Inter", size=13),
-            height=220,
-            showlegend=False,
-            xaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA, title=""),
-            yaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA, title="")
-        )
-        fig_pos.update_traces(
-            textposition="outside", 
-            marker=dict(line=dict(color='#00E5FF', width=1)),
-            width=0.35  # Barras mais finas para otimizar espaço
+            height=240,
+            showlegend=False
         )
         st.plotly_chart(fig_pos, use_container_width=True)
     else:
