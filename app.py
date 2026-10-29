@@ -1322,7 +1322,7 @@ elif aba_selecionada == "Relatório Executivo":
     """, unsafe_allow_html=True)
     
     ec1, ec2 = st.columns(2)
-    ec1.metric("Leads necessários no Pré-Funil para gerar 1 Prospecção", f"~ {max(1, int(1 / PROB_MAP['Pré: Novo Lead'] * PROB_MAP['Prospecção']))} leads")
+    ec1.metric("Leads necessários no Pré-Funil para gerar 1 Prospecção", f" {max(1, int(1 / PROB_MAP['Pré: Novo Lead'] * PROB_MAP['Prospecção']))} leads")
     ec2.metric("Taxa de Conversão Atual (Pré ➔ Prospecção)", f"{taxa_conversao_pre_pros:.1f}%")
     
     st.markdown("</div>", unsafe_allow_html=True)
@@ -1372,7 +1372,7 @@ elif aba_selecionada == "Relatório Executivo":
     """, unsafe_allow_html=True)
     
     ed1, ed2 = st.columns(2)
-    ed1.metric("Prospecções necessárias para gerar 1 Venda (Fechado)", f"~ {max(1, int(1 / PROB_MAP['Prospecção']))} prospecções")
+    ed1.metric("Prospecções necessárias para gerar 1 Venda (Fechado)", f"{max(1, int(1 / PROB_MAP['Prospecção']))} prospecções")
     ed2.metric("Taxa de Conversão Atual (Prospecção ➔ Fechado)", f"{taxa_conversao_pros_venda:.1f}%")
     
     st.markdown("</div>", unsafe_allow_html=True)
