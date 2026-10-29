@@ -1494,7 +1494,6 @@ elif aba_selecionada == "Relatório Executivo":
             x="Vendedor",
             y=["Leads Movimentados", "Meta Diária"],
             barmode="group",
-            title=,
             color_discrete_map={"Leads Movimentados": "#00E5FF", "Meta Diária": "#FFEA00"},
             text_auto=True
         )
