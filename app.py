@@ -1546,7 +1546,7 @@ elif aba_selecionada == "Relatório Executivo":
             plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
             font=dict(color="#FFFFFF", family="Inter", size=11),
             height=320,
-            margin=dict(t=40, b=20, l=20, r=20),
+            margin=dict(t=40, b=20, l=20, r=20), 
             xaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA),
             yaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA),
             showlegend=False
