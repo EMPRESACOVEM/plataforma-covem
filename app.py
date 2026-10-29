@@ -21,7 +21,7 @@ st.set_page_config(
 BASE_DIR = Path(__file__).parent if "__file__" in locals() else Path.cwd()
 ARQUIVO_TAREFAS = BASE_DIR / "banco_tarefas_covem.xlsx"
 ARQUIVO_FUNDO = BASE_DIR / "fundo plataforma.jpg"
-ARQUIVO_LOGO = BASE_DIR / "logoCOVEM.png"  # Nova logo PNG atualizada
+ARQUIVO_LOGO = BASE_DIR / "logoCOVEM.png"
 
 # Nome Oficial do Grupo
 COVEM_NAME = "GRUPO COVEM"
@@ -209,6 +209,15 @@ ESTRUTURA_FUNIS = {
 
 MOTIVOS_PERDA_PADRAO = list(CORES_PERDAS.keys())
 
+# Função para classificar o perfil BraClean com base no valor
+def classificar_perfil_braclean(valor):
+    if valor >= 100000:
+        return "Perfil A (> R$ 100k - Indústria/Usinas/Mineradoras)"
+    elif 20000 <= valor < 100000:
+        return "Perfil B (R$ 20k-100k - Transportadoras Médias/Redes Postos)"
+    else:
+        return "Perfil C (R$ 1.5k-20k - Pequenas Indústrias/Frota < 50)"
+
 # ---------------------------------------------------------
 # CONEXÃO COM O GOOGLE SHEETS
 # ---------------------------------------------------------
@@ -261,7 +270,7 @@ def carregar_dados_crm():
         {
             "id": 1, "Empresa": "Grupo Delta", "Cliente": "BraClean", "Etapa": "Prospecção", 
             "Contato": "Roberto Alves", "Cargo": "Diretor Comercial", "Telefone": "(16) 99876-5432", 
-            "Email": "roberto@grupodelta.com.br", "Cidade": "Sertãozinho / SP", "Valor": 35000.0, 
+            "Email": "roberto@grupodelta.com.br", "Cidade": "Sertãozinho / SP", "Valor": 120000.0, 
             "Prob": 0.20, "Vendedor": "Gabriel", "Perda": "",
             "Data_Cadastro": str(date.today()),
             "Followup_Data": str(date.today() - timedelta(days=2)), "Followup_Nota": "Enviar apresentação institucional atualizada.", 
@@ -270,7 +279,7 @@ def carregar_dados_crm():
         {
             "id": 2, "Empresa": "Sistemas Sigma", "Cliente": "QV Energia Solar", "Etapa": "Pré: Novo Lead", 
             "Contato": "Patricia Lima", "Cargo": "Gerente de Compras", "Telefone": "(16) 99765-4321", 
-            "Email": "patricia@sigmasistemas.com.br", "Cidade": "Ribeirão Preto / SP", "Valor": 35000.0, 
+            "Email": "patricia@sigmasistemas.com.br", "Cidade": "Ribeirão Preto / SP", "Valor": 45000.0, 
             "Prob": 0.05, "Vendedor": "Ariel", "Perda": "",
             "Data_Cadastro": str(date.today()),
             "Followup_Data": str(date.today()), "Followup_Nota": "Ligar para fazer primeiro contato.", 
@@ -279,20 +288,11 @@ def carregar_dados_crm():
         {
             "id": 3, "Empresa": "Indústria Omega", "Cliente": "BraClean", "Etapa": "Proposta Enviada", 
             "Contato": "Fernando Souza", "Cargo": "Sócio-Proprietário", "Telefone": "(11) 98123-4567", 
-            "Email": "fernando@omegaind.com.br", "Cidade": "São Paulo / SP", "Valor": 65000.0, 
+            "Email": "fernando@omegaind.com.br", "Cidade": "São Paulo / SP", "Valor": 15000.0, 
             "Prob": 0.80, "Vendedor": "Ariel", "Perda": "",
             "Data_Cadastro": str(date.today()),
             "Followup_Data": str(date.today() + timedelta(days=3)), "Followup_Nota": "Alinhar fechamento de contrato.", 
             "Historico": "[30/08/2026 09:15] Reunião inicial realizada."
-        },
-        {
-            "id": 4, "Empresa": "Tecnologia Beta", "Cliente": "Elleven", "Etapa": "Qualificação", 
-            "Contato": "Carlos Eduardo", "Cargo": "Comprador", "Telefone": "(16) 98888-7777", 
-            "Email": "carlos@betatech.com", "Cidade": "Sertãozinho / SP", "Valor": 25000.0, 
-            "Prob": 0.40, "Vendedor": "Gabriel", "Perda": "",
-            "Data_Cadastro": str(date.today()),
-            "Followup_Data": "", "Followup_Nota": "", 
-            "Historico": "[25/08/2026 16:45] Lead em fase de diagnóstico."
         }
     ])
     try:
@@ -814,7 +814,7 @@ if aba_selecionada == "Gerenciamento de Tarefas":
         st.info("Nenhuma tarefa ou follow-up agendado para este horizonte de tempo.")
 
 # =========================================================
-# ABA 2: FUNIL DE VENDAS (COM SELEÇÃO DOS 3 FUNIS)
+# ABA 2: FUNIL DE VENDAS
 # =========================================================
 elif aba_selecionada == "Funil de Vendas":
     col_topo_titulo, col_topo_busca = st.columns([2, 1])
@@ -1240,7 +1240,7 @@ elif aba_selecionada == "Dashboard":
         st.info("Nenhum lead registrado em 'Pós: Perdido' no momento.")
 
 # =========================================================
-# ABA 4: RELATÓRIO EXECUTIVO
+# ABA 4: RELATÓRIO EXECUTIVO (COM SEGMENTAÇÃO A, B, C)
 # =========================================================
 elif aba_selecionada == "Relatório Executivo":
     st.title("Relatório Executivo")
@@ -1352,7 +1352,7 @@ elif aba_selecionada == "Relatório Executivo":
     st.divider()
 
     # ---------------------------------------------------------
-    # ESTATÍSTICA E PROBABILIDADE FUTURA (PREVISÃO E FORECAST) - MOVIDO PARA CÁ
+    # ESTATÍSTICA E PROBABILIDADE FUTURA (PREVISÃO E FORECAST)
     # ---------------------------------------------------------
     st.markdown("### Estatística e Probabilidade Futura (Previsão de Receita / Forecast)")
     st.caption("Estatística ponderada da receita esperada calculada sobre a taxa de conversão de cada etapa.")
@@ -1391,6 +1391,63 @@ elif aba_selecionada == "Relatório Executivo":
         yaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA)
     )
     st.plotly_chart(fig_forecast, use_container_width=True)
+
+    st.divider()
+
+    # ---------------------------------------------------------
+    # NOVA SEÇÃO: INTELIGÊNCIA POR PERFIL DE CLIENTE (PERFIL A, B, C)
+    # ---------------------------------------------------------
+    st.markdown("### Inteligência de Mercado BraClean: Perfis A, B e C")
+    st.caption("Classificação estatística baseada nas faixas operacionais e volume mensal de compra dos clientes.")
+
+    df_exec["Perfil_Cliente"] = df_exec["Valor"].apply(classificar_perfil_braclean)
+
+    df_perfil = df_exec.groupby("Perfil_Cliente").agg(
+        Qtd_Leads=("id", "count"),
+        Valor_Total=("Valor", "sum"),
+        Ticket_Medio=("Valor", "mean")
+    ).reset_index()
+
+    p_col1, p_col2 = st.columns([1, 1])
+
+    with p_col1:
+        fig_perfil_pie = px.pie(
+            df_perfil,
+            values="Valor_Total",
+            names="Perfil_Cliente",
+            title="Distribuição do Pipeline por Perfil de Cliente",
+            hole=0.4,
+            color_discrete_sequence=["#00E5FF", "#FF6600", "#9D00FF"]
+        )
+        fig_perfil_pie.update_layout(
+            paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+            plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+            font=dict(color="#FFFFFF", family="Inter", size=12),
+            height=340
+        )
+        st.plotly_chart(fig_perfil_pie, use_container_width=True)
+
+    with p_col2:
+        st.markdown("**Simulador de Esforço Estatístico para R$ 100k Mensais:**")
+        
+        avg_a = 120000.0  # Perfil A
+        avg_b = 45000.0   # Perfil B
+        avg_c = 10000.0   # Perfil C
+
+        prosp_a = int((100000 / avg_a) / 0.20) + 1
+        prosp_b = int((100000 / avg_b) / 0.20) + 1
+        prosp_c = int((100000 / avg_c) / 0.20) + 1
+
+        st.markdown(f"""
+        - **Perfil A (Usinas / Grandes Transportadoras / Mineradoras):**  
+          Ticket acima de R$ 100k/mês ➔ Necessário **1 cliente fechado** ({prosp_a} prospecções no funil).
+        
+        - **Perfil B (Transportadoras Médias / Redes >15 un.):**  
+          Ticket de R$ 20k a R$ 100k/mês ➔ Necessário **3 clientes fechados** ({prosp_b} prospecções no funil).
+        
+        - **Perfil C (Pequenas Redes / Frotas <50 cavalos):**  
+          Ticket de R$ 1,5k a R$ 20k/mês ➔ Necessário **10 clientes fechados** ({prosp_c} prospecções no funil).
+        """)
 
     st.divider()
 
