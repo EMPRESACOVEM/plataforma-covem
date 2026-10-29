@@ -1432,12 +1432,11 @@ elif aba_selecionada == "Relatório Executivo":
     """, unsafe_allow_html=True)
 
     st.markdown(f"""
-    - **Cliente A (Ticket Acima de R$ 100k/mês):**
+    - **Cliente A (Ticket Acima de R$100.000,00 /mês):**
     
-    - **Cliente B (Ticket R$ 20k a R$ 100k/mês):** 
+    - **Cliente B (Ticket de R$20.000,00 a R$100.000,00 /mês):** 
     
-    - **Cliente C (Ticket R$ 1.5k a R$ 20k/mês):** 
-    """)
+    - **Cliente C (Ticket de R$1.500,00 a R$20.000,00 /mês):** 
 
     st.markdown("</div>", unsafe_allow_html=True)
     st.divider()
