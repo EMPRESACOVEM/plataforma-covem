@@ -1386,7 +1386,6 @@ elif aba_selecionada == "Relatório Executivo":
     st.markdown("### Número de Clientes na Carteira COVEM por Classificação")
     st.caption("Gráfico em barras verticais do volume de clientes cadastrados por perfil para otimizar estatísticas e probabilidades rumo à meta de R$ 100 mil até dezembro.")
 
-    # Garantir que todas as 3 categorias apareçam no gráfico mesmo se contagem for 0
     contagem_perfis_dict = {"Cliente A": 0, "Cliente B": 0, "Cliente C": 0}
     df_temp_perf = df_exec["Perfil"].value_counts().to_dict()
     for k in contagem_perfis_dict.keys():
@@ -1424,7 +1423,6 @@ elif aba_selecionada == "Relatório Executivo":
     fig_barras_perfil.update_traces(textposition="outside", marker=dict(line=dict(color='#00E5FF', width=1)))
     st.plotly_chart(fig_barras_perfil, use_container_width=True)
 
-    # Painel analítico de probabilidade para a meta de 100k
     df_exec["Receita_Ponderada"] = df_exec["Valor"] * df_exec["Prob"]
     
     val_a = float(df_exec[df_exec["Perfil"] == "Cliente A"]["Receita_Ponderada"].sum())
@@ -1437,9 +1435,11 @@ elif aba_selecionada == "Relatório Executivo":
     """, unsafe_allow_html=True)
 
     st.markdown(f"""
-    - **Cliente A (Ticket Acima de R$ 100k/mês):** `{contagem_perfis_dict['Cliente A']}` cliente(s) ➔ **Receita Ponderada Atual:** `R$ {val_a:,.2f}`. *(Necessário fechar apenas 1 conta estratégica para atingir a meta integral).*
-    - **Cliente B (Ticket R$ 20k a R$ 100k/mês):** `{contagem_perfis_dict['Cliente B']}` cliente(s) ➔ **Receita Ponderada Atual:** `R$ {val_b:,.2f}`. *(Necessário fechar cerca de 2 a 3 contas para compor os R$ 100k).*
-    - **Cliente C (Ticket R$ 1.5k a R$ 20k/mês):** `{contagem_perfis_dict['Cliente C']}` cliente(s) ➔ **Receita Ponderada Atual:** `R$ {val_c:,.2f}`. *(Volume necessário de conversões ativas no funil para tracionar o forecast).*
+    - **Cliente A (Ticket Acima de R$ 100k/mês):** {contagem_perfis_dict['Cliente A']} cliente(s) ➔ **Receita Ponderada Atual:** R$ {val_a:,.2f}. *(Necessário fechar apenas 1 conta estratégica para atingir a meta integral).*
+    
+    - **Cliente B (Ticket R$ 20k a R$ 100k/mês):** {contagem_perfis_dict['Cliente B']} cliente(s) ➔ **Receita Ponderada Atual:** R$ {val_b:,.2f}. *(Necessário fechar cerca de 2 a 3 contas para compor os R$ 100k).*
+    
+    - **Cliente C (Ticket R$ 1.5k a R$ 20k/mês):** {contagem_perfis_dict['Cliente C']} cliente(s) ➔ **Receita Ponderada Atual:** R$ {val_c:,.2f}. *(Volume necessário de conversões ativas no funil para tracionar o forecast).*
     """)
 
     st.markdown("</div>", unsafe_allow_html=True)
