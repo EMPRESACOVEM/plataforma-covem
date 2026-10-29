@@ -1277,10 +1277,9 @@ elif aba_selecionada == "Relatório Executivo":
     df_exec["Perfil"] = df_exec["Perfil"].fillna("Cliente C")
 
     # ---------------------------------------------------------
-    # GRÁFICO 1: PRÉ-FUNIL + STANDBY
+    # GRÁFICO 1: PRÉ-FUNIL
     # ---------------------------------------------------------
     st.markdown("### Pré-Funil e Standby")
-    st.caption("Visão integrada das etapas iniciais (Novo Lead e Conexão) somadas aos leads em espera (Standby).")
 
     etapas_bloco_1 = ["Pré: Novo Lead", "Pré: Conexão", "Pós: Standby"]
     dados_bloco_1 = []
@@ -1330,10 +1329,9 @@ elif aba_selecionada == "Relatório Executivo":
     st.divider()
 
     # ---------------------------------------------------------
-    # GRÁFICO 2: FUNIL DE VENDAS PRINCIPAL + PERDIDO
+    # GRÁFICO 2: FUNIL DE VENDAS PRINCIPAL 
     # ---------------------------------------------------------
     st.markdown("### Funil de Vendas e Perdidos")
-    st.caption("Acompanhamento completo do ciclo principal de negociações incluindo o volume de leads encerrados (Perdido).")
 
     etapas_bloco_2 = ["Prospecção", "Qualificação", "Reunião Agendada", "Proposta Enviada", "Fechado", "Pós: Perdido"]
     dados_bloco_2 = []
@@ -1383,8 +1381,7 @@ elif aba_selecionada == "Relatório Executivo":
     # ---------------------------------------------------------
     # NOVO GRÁFICO DE BARRAS VERTICAIS: NÚMERO DE CLIENTES (A, B, C)
     # ---------------------------------------------------------
-    st.markdown("### Número de Clientes na Carteira COVEM por Classificação")
-    st.caption("Gráfico em barras verticais do volume de clientes cadastrados por perfil para otimizar estatísticas e probabilidades rumo à meta de R$ 100 mil até dezembro.")
+    st.markdown("### Classificação de Leads BraClean")
 
     contagem_perfis_dict = {"Cliente A": 0, "Cliente B": 0, "Cliente C": 0}
     df_temp_perf = df_exec["Perfil"].value_counts().to_dict()
@@ -1435,11 +1432,11 @@ elif aba_selecionada == "Relatório Executivo":
     """, unsafe_allow_html=True)
 
     st.markdown(f"""
-    - **Cliente A (Ticket Acima de R$ 100k/mês):** {contagem_perfis_dict['Cliente A']} cliente(s) ➔ **Receita Ponderada Atual:** R$ {val_a:,.2f}. *(Necessário fechar apenas 1 conta estratégica para atingir a meta integral).*
+    - **Cliente A (Ticket Acima de R$ 100k/mês):**
     
-    - **Cliente B (Ticket R$ 20k a R$ 100k/mês):** {contagem_perfis_dict['Cliente B']} cliente(s) ➔ **Receita Ponderada Atual:** R$ {val_b:,.2f}. *(Necessário fechar cerca de 2 a 3 contas para compor os R$ 100k).*
+    - **Cliente B (Ticket R$ 20k a R$ 100k/mês):** 
     
-    - **Cliente C (Ticket R$ 1.5k a R$ 20k/mês):** {contagem_perfis_dict['Cliente C']} cliente(s) ➔ **Receita Ponderada Atual:** R$ {val_c:,.2f}. *(Volume necessário de conversões ativas no funil para tracionar o forecast).*
+    - **Cliente C (Ticket R$ 1.5k a R$ 20k/mês):** 
     """)
 
     st.markdown("</div>", unsafe_allow_html=True)
@@ -1448,8 +1445,7 @@ elif aba_selecionada == "Relatório Executivo":
     # ---------------------------------------------------------
     # ESTATÍSTICA E PROBABILIDADE FUTURA (PREVISÃO E FORECAST)
     # ---------------------------------------------------------
-    st.markdown("### Previsão Geral de Receita Ponderada (Forecast)")
-    st.caption("Estatística ponderada acumulada considerando o valor e a probabilidade de fechamento da etapa atual.")
+    st.markdown("### Previsão Geral de Forecast")
 
     val_total_pipeline = float(df_exec["Valor"].sum())
     receita_esperada = float(df_exec["Receita_Ponderada"].sum())
@@ -1490,7 +1486,6 @@ elif aba_selecionada == "Relatório Executivo":
     # ATIVIDADES INDIVIDUAIS (GABRIEL VS ARIEL) E METAS
     # ---------------------------------------------------------
     st.markdown("### Atividades Individuais & Metas de Vendedores")
-    st.caption("Meta do Grupo COVEM: 50 interações/dia por vendedor (Entradas de novos leads ou movimentações nas etapas).")
 
     vendedores_covem = ["Gabriel", "Ariel"]
     df_exec["Vendedor"] = df_exec["Vendedor"].fillna("Gabriel")
@@ -1558,7 +1553,7 @@ elif aba_selecionada == "Relatório Executivo":
     # ---------------------------------------------------------
     # META BRACLEAN (TICKET MÉDIO E R$ 100K MENSAL ATÉ DEZEMBRO)
     # ---------------------------------------------------------
-    st.markdown("### Meta BraClean (Ticket Médio & R$ 100k Mensais até Dezembro)")
+    st.markdown("### Meta BraClean (Ticket Médio e R$ 100k Mensais até Dezembro)")
     
     df_braclean = df_exec[df_exec["Cliente"] == "BraClean"]
     faturamento_braclean = float(df_braclean[df_braclean["Etapa"] == "Fechado"]["Valor"].sum())
