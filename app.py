@@ -1279,7 +1279,7 @@ elif aba_selecionada == "Relatório Executivo":
     # ---------------------------------------------------------
     # GRÁFICO 1: PRÉ-FUNIL
     # ---------------------------------------------------------
-    st.markdown("### Pré-Funil e Standby")
+    st.markdown("### Pré-Funil")
 
     etapas_bloco_1 = ["Pré: Novo Lead", "Pré: Conexão", "Pós: Standby"]
     dados_bloco_1 = []
@@ -1331,7 +1331,7 @@ elif aba_selecionada == "Relatório Executivo":
     # ---------------------------------------------------------
     # GRÁFICO 2: FUNIL DE VENDAS PRINCIPAL 
     # ---------------------------------------------------------
-    st.markdown("### Funil de Vendas e Perdidos")
+    st.markdown("### Funil de Vendas")
 
     etapas_bloco_2 = ["Prospecção", "Qualificação", "Reunião Agendada", "Proposta Enviada", "Fechado", "Pós: Perdido"]
     dados_bloco_2 = []
