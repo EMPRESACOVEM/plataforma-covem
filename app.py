@@ -1609,7 +1609,6 @@ elif aba_selecionada == "+ Novo Cadastro":
         default_carteira_idx = CARTEIRAS_COVEM.index(cliente_sel)
 
     st.subheader(f"+ Novo Cadastro Rápido ({f'Sincronizado com: {cliente_sel}' if cliente_sel != 'TODOS' else 'Geral'})")
-    st.caption("Cadastre rapidamente uma nova empresa selecionando sua classificação.")
 
     with st.form("form_cadastro_rapido", clear_on_submit=True):
         col_r1, col_r2 = st.columns(2)
