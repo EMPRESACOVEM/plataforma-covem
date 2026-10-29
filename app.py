@@ -20,8 +20,6 @@ st.set_page_config(
 # Caminho para arquivos secundários locais
 BASE_DIR = Path(__file__).parent if "__file__" in locals() else Path.cwd()
 ARQUIVO_TAREFAS = BASE_DIR / "banco_tarefas_covem.xlsx"
-ARQUIVO_HISTORICO = BASE_DIR / "banco_historico_covem.xlsx"
-ARQUIVO_FINANCEIRO = BASE_DIR / "banco_financeiro_covem.xlsx"
 ARQUIVO_FUNDO = BASE_DIR / "fundo plataforma.jpg"
 ARQUIVO_LOGO = BASE_DIR / "logoCOVEM.png"  # Nova logo PNG atualizada
 
@@ -1242,46 +1240,116 @@ elif aba_selecionada == "Dashboard":
         st.info("Nenhum lead registrado em 'Pós: Perdido' no momento.")
 
 # =========================================================
-# ABA 4: RELATÓRIO EXECUTIVO (COM ALTERAÇÕES SOLICITADAS)
+# ABA 4: RELATÓRIO EXECUTIVO (COM FUNIS SEPARADOS EM 3 PARTES)
 # =========================================================
 elif aba_selecionada == "Relatório Executivo":
     st.title("Relatório Executivo")
 
-    # ---------------------------------------------------------
-    # GRÁFICO DE FUNIL GERAL DE ATIVIDADE
-    # ---------------------------------------------------------
-    st.markdown("### Gráfico de Funil Geral de Atividade")
-    st.caption("Visão em gráfico do crescimento de leads e etapas de avanço no funil comercial.")
-
     df_exec = df_filtered.copy()
-    etapas_ordem = list(PROB_MAP.keys())
-    
-    funil_dados = []
-    for etapa in etapas_ordem:
+
+    # ---------------------------------------------------------
+    # PARTE 1: GRÁFICO DO PRÉ FUNIL (NOVO LEAD E CONEXÃO)
+    # ---------------------------------------------------------
+    st.markdown("### Pré Funil")
+    st.caption("Visão de volume e avanço das etapas iniciais de prospecção e conexão.")
+
+    etapas_pre = ESTRUTURA_FUNIS["Pré Funil"]
+    dados_pre = []
+    for etapa in etapas_pre:
         qtd = len(df_exec[df_exec["Etapa"] == etapa])
-        funil_dados.append({"Etapa": etapa.replace("Pré: ", "").replace("Pós: ", ""), "Quantidade": qtd, "Etapa_Orig": etapa})
+        dados_pre.append({"Etapa": etapa.replace("Pré: ", ""), "Quantidade": qtd, "Etapa_Orig": etapa})
 
-    df_funil = pd.DataFrame(funil_dados)
-    df_funil_valido = df_funil[df_funil["Quantidade"] > 0]
-
-    if not df_funil_valido.empty:
-        fig_funil_exec = px.funnel(
-            df_funil_valido,
+    df_pre_funil = pd.DataFrame(dados_pre)
+    if not df_pre_funil.empty and df_pre_funil["Quantidade"].sum() > 0:
+        fig_pre = px.funnel(
+            df_pre_funil,
             x="Quantidade",
             y="Etapa",
             color="Etapa_Orig",
             color_discrete_map=st.session_state.funnel_colors
         )
-        fig_funil_exec.update_layout(
+        fig_pre.update_layout(
             paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
             plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
             font=dict(color="#FFFFFF", family="Inter", size=13),
-            height=380,
+            height=280,
             showlegend=False
         )
-        st.plotly_chart(fig_funil_exec, use_container_width=True)
+        st.plotly_chart(fig_pre, use_container_width=True)
     else:
-        st.info("Nenhum lead registrado no funil no momento.")
+        st.info("Nenhum lead registrado no Pré Funil no momento.")
+
+    st.divider()
+
+    # ---------------------------------------------------------
+    # PARTE 2: GRÁFICO DO FUNIL DE VENDAS PRINCIPAL
+    # ---------------------------------------------------------
+    st.markdown("### Funil de Vendas")
+    st.caption("Acompanhamento das etapas centrais de negociação, desde a prospecção até o fechamento.")
+
+    etapas_principal = ESTRUTURA_FUNIS["Funil de Vendas"]
+    dados_princ = []
+    for etapa in etapas_principal:
+        qtd = len(df_exec[df_exec["Etapa"] == etapa])
+        dados_princ.append({"Etapa": etapa, "Quantidade": qtd, "Etapa_Orig": etapa})
+
+    df_princ_funil = pd.DataFrame(dados_princ)
+    if not df_princ_funil.empty and df_princ_funil["Quantidade"].sum() > 0:
+        fig_princ = px.funnel(
+            df_princ_funil,
+            x="Quantidade",
+            y="Etapa",
+            color="Etapa_Orig",
+            color_discrete_map=st.session_state.funnel_colors
+        )
+        fig_princ.update_layout(
+            paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+            plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+            font=dict(color="#FFFFFF", family="Inter", size=13),
+            height=340,
+            showlegend=False
+        )
+        st.plotly_chart(fig_princ, use_container_width=True)
+    else:
+        st.info("Nenhum lead registrado no Funil de Vendas no momento.")
+
+    st.divider()
+
+    # ---------------------------------------------------------
+    # PARTE 3: GRÁFICO DO PÓS FUNIL (STANDBY E PERDIDO)
+    # ---------------------------------------------------------
+    st.markdown("### Pós Funil")
+    st.caption("Monitoramento de oportunidades em espera (standby) ou encerradas (perdido).")
+
+    etapas_pos = ESTRUTURA_FUNIS["Pós Funil"]
+    dados_pos = []
+    for etapa in etapas_pos:
+        qtd = len(df_exec[df_exec["Etapa"] == etapa])
+        dados_pos.append({"Etapa": etapa.replace("Pós: ", ""), "Quantidade": qtd, "Etapa_Orig": etapa})
+
+    df_pos_funil = pd.DataFrame(dados_pos)
+    if not df_pos_funil.empty and df_pos_funil["Quantidade"].sum() > 0:
+        fig_pos = px.bar(
+            df_pos_funil,
+            x="Etapa",
+            y="Quantidade",
+            color="Etapa_Orig",
+            color_discrete_map=st.session_state.funnel_colors,
+            text="Quantidade"
+        )
+        fig_pos.update_layout(
+            paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+            plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+            font=dict(color="#FFFFFF", family="Inter", size=13),
+            height=280,
+            showlegend=False,
+            xaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA),
+            yaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA)
+        )
+        fig_pos.update_traces(textposition="outside", marker=dict(line=dict(color='#00E5FF', width=1)))
+        st.plotly_chart(fig_pos, use_container_width=True)
+    else:
+        st.info("Nenhum lead registrado no Pós Funil no momento.")
 
     st.divider()
 
@@ -1294,7 +1362,6 @@ elif aba_selecionada == "Relatório Executivo":
     vendedores_covem = ["Gabriel", "Ariel"]
     df_exec["Vendedor"] = df_exec["Vendedor"].fillna("Gabriel")
     
-    # Garantir presença dos dois vendedores no dataset
     vendedores_dados = []
     for v in vendedores_covem:
         sub_v = df_exec[df_exec["Vendedor"].str.contains(v, case=False, na=False)]
