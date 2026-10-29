@@ -1445,7 +1445,7 @@ elif aba_selecionada == "Relatório Executivo":
     # ---------------------------------------------------------
     # ATIVIDADES INDIVIDUAIS (GABRIEL VS ARIEL) E METAS
     # ---------------------------------------------------------
-    st.markdown("### Atividades Individuais & Metas de Vendedores")
+    st.markdown("### Atividades Individuais e Metas de Vendedores")
 
     vendedores_covem = ["Gabriel", "Ariel"]
     df_exec["Vendedor"] = df_exec["Vendedor"].fillna("Gabriel")
