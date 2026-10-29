@@ -1,4 +1,4 @@
-import streamlit as st
+import streamlit as str_app
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -82,15 +82,6 @@ CORES_PERFIL_BARRAS = {
     "Cliente A": "#00E5FF",  # Azul Claro Neon
     "Cliente B": "#FF6600",  # Laranja Neon
     "Cliente C": "#9D00FF"   # Roxo Neon
-}
-
-# Mapeamento de Cores para os Gráficos de Metas e Vendedores
-CORES_METAS_VENDEDORES = {
-    "Gabriel": "#FF0033",          # Vermelho Neon
-    "Ariel": "#00E5FF",            # Azul Neon
-    "Meta Diária": "#FFEA00",      # Amarelo Neon
-    "Meta Semanal": "#FFEA00",     # Amarelo Neon
-    "Meta Mensal": "#FFEA00"       # Amarelo Neon
 }
 
 # Cor de fundo dos gráficos estilo Infográfico Futurista
@@ -1479,7 +1470,7 @@ elif aba_selecionada == "Relatório Executivo":
     df_exec["Vendedor"] = df_exec["Vendedor"].fillna("Gabriel")
     
     vendedores_dados = []
-    for v in vendedores_covem:
+    for v inendedores_covem:
         sub_v = df_exec[df_exec["Vendedor"].str.contains(v, case=False, na=False)]
         qtd_leads = len(sub_v)
         vendedores_dados.append({"Vendedor": v, "Leads Movimentados": qtd_leads})
@@ -1492,20 +1483,25 @@ elif aba_selecionada == "Relatório Executivo":
     c_m2.metric("Meta Semanal", "250 Leads/Sem")
     c_m3.metric("Meta Mensal", "1.000 Leads/Mês")
 
-    # 3 Gráficos Independentes: Diário, Semanal e Mensal (Cores Customizadas: Gabriel=Vermelho Neon, Ariel=Azul Neon, Metas=Amarelo)
+    # 3 Gráficos Independentes: Diário, Semanal e Mensal (Utilizando Graph Objects para definir a cor exata de cada barra por vendedor)
     col_g1, col_g2, col_g3 = st.columns(3)
+
+    # Cores fixas solicitadas por vendedor
+    cores_vendedores_map = {
+        "Gabriel": "#FF0033",  # Vermelho Neon
+        "Ariel": "#00E5FF"     # Azul Neon
+    }
 
     with col_g1:
         df_vend["Meta Diária"] = 50
-        fig_meta_diaria = px.bar(
-            df_vend,
-            x="Vendedor",
-            y=["Leads Movimentados", "Meta Diária"],
-            barmode="group",
-            color_discrete_map=CORES_METAS_VENDEDORES,
-            text_auto=True
-        )
+        fig_meta_diaria = go.Figure(data=[
+            go.Bar(name='Leads Movimentados', x=df_vend['Vendedor'], y=df_vend['Leads Movimentados'], 
+                   marker_color=[cores_vendedores_map.get(v, "#00E5FF") for v in df_vend['Vendedor']], text=df_vend['Leads Movimentados'], textposition='auto'),
+            go.Bar(name='Meta Diária', x=df_vend['Vendedor'], y=df_vend['Meta Diária'], 
+                   marker_color='#FFEA00', text=df_vend['Meta Diária'], textposition='auto')
+        ])
         fig_meta_diaria.update_layout(
+            barmode='group',
             paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
             plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
             font=dict(color="#FFFFFF", family="Inter", size=11),
@@ -1519,15 +1515,14 @@ elif aba_selecionada == "Relatório Executivo":
 
     with col_g2:
         df_vend["Meta Semanal"] = 250
-        fig_meta_semanal = px.bar(
-            df_vend,
-            x="Vendedor",
-            y=["Leads Movimentados", "Meta Semanal"],
-            barmode="group",
-            color_discrete_map=CORES_METAS_VENDEDORES,
-            text_auto=True
-        )
+        fig_meta_semanal = go.Figure(data=[
+            go.Bar(name='Leads Movimentados', x=df_vend['Vendedor'], y=df_vend['Leads Movimentados'], 
+                   marker_color=[cores_vendedores_map.get(v, "#00E5FF") for v in df_vend['Vendedor']], text=df_vend['Leads Movimentados'], textposition='auto'),
+            go.Bar(name='Meta Semanal', x=df_vend['Vendedor'], y=df_vend['Meta Semanal'], 
+                   marker_color='#FFEA00', text=df_vend['Meta Semanal'], textposition='auto')
+        ])
         fig_meta_semanal.update_layout(
+            barmode='group',
             paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
             plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
             font=dict(color="#FFFFFF", family="Inter", size=11),
@@ -1541,15 +1536,14 @@ elif aba_selecionada == "Relatório Executivo":
 
     with col_g3:
         df_vend["Meta Mensal"] = 1000
-        fig_meta_mensal = px.bar(
-            df_vend,
-            x="Vendedor",
-            y=["Leads Movimentados", "Meta Mensal"],
-            barmode="group",
-            color_discrete_map=CORES_METAS_VENDEDORES,
-            text_auto=True
-        )
+        fig_meta_mensal = go.Figure(data=[
+            go.Bar(name='Leads Movimentados', x=df_vend['Vendedor'], y=df_vend['Leads Movimentados'], 
+                   marker_color=[cores_vendedores_map.get(v, "#00E5FF") for v in df_vend['Vendedor']], text=df_vend['Leads Movimentados'], textposition='auto'),
+            go.Bar(name='Meta Mensal', x=df_vend['Vendedor'], y=df_vend['Meta Mensal'], 
+                   marker_color='#FFEA00', text=df_vend['Meta Mensal'], textposition='auto')
+        ])
         fig_meta_mensal.update_layout(
+            barmode='group',
             paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
             plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
             font=dict(color="#FFFFFF", family="Inter", size=11),
@@ -1562,7 +1556,6 @@ elif aba_selecionada == "Relatório Executivo":
         st.plotly_chart(fig_meta_mensal, use_container_width=True)
 
     st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
-    
 
     # Gráfico de Levantamento de Gargalos ajustado para a largura total (mesmo tamanho da Meta BraClean)
     df_gargalos = df_exec.groupby("Etapa").size().reset_index(name="Quantidade")
