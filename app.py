@@ -1240,7 +1240,7 @@ elif aba_selecionada == "Dashboard":
         st.info("Nenhum lead registrado em 'Pós: Perdido' no momento.")
 
 # =========================================================
-# ABA 4: RELATÓRIO EXECUTIVO (COM TODOS OS 3 FUNIS EM FORMATO HORIZONTAL)
+# ABA 4: RELATÓRIO EXECUTIVO (COM OS 2 GRÁFICOS REORGANIZADOS)
 # =========================================================
 elif aba_selecionada == "Relatório Executivo":
     st.title("Relatório Executivo")
@@ -1248,104 +1248,72 @@ elif aba_selecionada == "Relatório Executivo":
     df_exec = df_filtered.copy()
 
     # ---------------------------------------------------------
-    # PARTE 1: PRÉ FUNIL (ESTILO FUNIL HORIZONTAL COMPACTO)
+    # GRÁFICO 1: PRÉ-FUNIL + STANDBY
     # ---------------------------------------------------------
-    st.markdown("### Pré Funil")
-    st.caption("Visão de volume e avanço das etapas iniciais de prospecção e conexão.")
+    st.markdown("### Pré-Funil e Standby")
+    st.caption("Visão integrada das etapas iniciais (Novo Lead e Conexão) somadas aos leads em espera (Standby).")
 
-    etapas_pre = ESTRUTURA_FUNIS["Pré Funil"]
-    dados_pre = []
-    for etapa in etapas_pre:
+    etapas_bloco_1 = ["Pré: Novo Lead", "Pré: Conexão", "Pós: Standby"]
+    dados_bloco_1 = []
+    for etapa in etapas_bloco_1:
         qtd = len(df_exec[df_exec["Etapa"] == etapa])
-        dados_pre.append({"Etapa": etapa.replace("Pré: ", ""), "Quantidade": qtd, "Etapa_Orig": etapa})
+        nome_rotulo = etapa.replace("Pré: ", "").replace("Pós: ", "")
+        dados_bloco_1.append({"Etapa": nome_rotulo, "Quantidade": qtd, "Etapa_Orig": etapa})
 
-    df_pre_funil = pd.DataFrame(dados_pre)
-    if not df_pre_funil.empty and df_pre_funil["Quantidade"].sum() > 0:
-        fig_pre = px.funnel(
-            df_pre_funil,
+    df_b1 = pd.DataFrame(dados_bloco_1)
+    if not df_b1.empty and df_b1["Quantidade"].sum() > 0:
+        fig_b1 = px.funnel(
+            df_b1,
             x="Quantidade",
             y="Etapa",
             color="Etapa_Orig",
             color_discrete_map=st.session_state.funnel_colors
         )
-        fig_pre.update_layout(
+        fig_b1.update_layout(
             paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
             plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
             font=dict(color="#FFFFFF", family="Inter", size=13),
-            height=240,
+            height=260,
             showlegend=False
         )
-        st.plotly_chart(fig_pre, use_container_width=True)
+        st.plotly_chart(fig_b1, use_container_width=True)
     else:
-        st.info("Nenhum lead registrado no Pré Funil no momento.")
+        st.info("Nenhum registro encontrado no bloco de Pré-Funil e Standby.")
 
     st.divider()
 
     # ---------------------------------------------------------
-    # PARTE 2: FUNIL DE VENDAS PRINCIPAL
+    # GRÁFICO 2: FUNIL DE VENDAS PRINCIPAL + PERDIDO
     # ---------------------------------------------------------
-    st.markdown("### Funil de Vendas")
-    st.caption("Acompanhamento das etapas centrais de negociação, desde a prospecção até o fechamento.")
+    st.markdown("### Funil de Vendas e Perdidos")
+    st.caption("Acompanhamento completo do ciclo principal de negociações incluindo o volume de leads encerrados (Perdido).")
 
-    etapas_principal = ESTRUTURA_FUNIS["Funil de Vendas"]
-    dados_princ = []
-    for etapa in etapas_principal:
+    etapas_bloco_2 = ["Prospecção", "Qualificação", "Reunião Agendada", "Proposta Enviada", "Fechado", "Pós: Perdido"]
+    dados_bloco_2 = []
+    for etapa in etapas_bloco_2:
         qtd = len(df_exec[df_exec["Etapa"] == etapa])
-        dados_princ.append({"Etapa": etapa, "Quantidade": qtd, "Etapa_Orig": etapa})
+        nome_rotulo = etapa.replace("Pós: ", "")
+        dados_bloco_2.append({"Etapa": nome_rotulo, "Quantidade": qtd, "Etapa_Orig": etapa})
 
-    df_princ_funil = pd.DataFrame(dados_princ)
-    if not df_princ_funil.empty and df_princ_funil["Quantidade"].sum() > 0:
-        fig_princ = px.funnel(
-            df_princ_funil,
+    df_b2 = pd.DataFrame(dados_bloco_2)
+    if not df_b2.empty and df_b2["Quantidade"].sum() > 0:
+        fig_b2 = px.funnel(
+            df_b2,
             x="Quantidade",
             y="Etapa",
             color="Etapa_Orig",
             color_discrete_map=st.session_state.funnel_colors
         )
-        fig_princ.update_layout(
+        fig_b2.update_layout(
             paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
             plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
             font=dict(color="#FFFFFF", family="Inter", size=13),
-            height=340,
+            height=380,
             showlegend=False
         )
-        st.plotly_chart(fig_princ, use_container_width=True)
+        st.plotly_chart(fig_b2, use_container_width=True)
     else:
-        st.info("Nenhum lead registrado no Funil de Vendas no momento.")
-
-    st.divider()
-
-    # ---------------------------------------------------------
-    # PARTE 3: PÓS FUNIL (ESTILO FUNIL HORIZONTAL COMPACTO)
-    # ---------------------------------------------------------
-    st.markdown("### Pós Funil")
-    st.caption("Monitoramento de oportunidades em espera (standby) ou encerradas (perdido).")
-
-    etapas_pos = ESTRUTURA_FUNIS["Pós Funil"]
-    dados_pos = []
-    for etapa in etapas_pos:
-        qtd = len(df_exec[df_exec["Etapa"] == etapa])
-        dados_pos.append({"Etapa": etapa.replace("Pós: ", ""), "Quantidade": qtd, "Etapa_Orig": etapa})
-
-    df_pos_funil = pd.DataFrame(dados_pos)
-    if not df_pos_funil.empty and df_pos_funil["Quantidade"].sum() > 0:
-        fig_pos = px.funnel(
-            df_pos_funil,
-            x="Quantidade",
-            y="Etapa",
-            color="Etapa_Orig",
-            color_discrete_map=st.session_state.funnel_colors
-        )
-        fig_pos.update_layout(
-            paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
-            plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
-            font=dict(color="#FFFFFF", family="Inter", size=13),
-            height=240,
-            showlegend=False
-        )
-        st.plotly_chart(fig_pos, use_container_width=True)
-    else:
-        st.info("Nenhum lead registrado no Pós Funil no momento.")
+        st.info("Nenhum registro encontrado no bloco de Funil de Vendas e Perdidos.")
 
     st.divider()
 
