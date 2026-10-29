@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 import io
 import os
 import urllib.parse
@@ -253,6 +254,7 @@ def carregar_dados_crm():
                 "Pós: Lixeira": "Pós: Perdido"
             })
             
+            df_loaded["Vendedor"] = df_loaded["Vendedor"].apply(lambda x: "Gabriel" if str(x).strip() in ["", "nan", "Não informado"] else x)
             return df_loaded
     except Exception as e:
         st.warning(f"Aviso ao ler do Google Sheets: {e}. Carregando dados padrão iniciais.")
@@ -261,8 +263,8 @@ def carregar_dados_crm():
         {
             "id": 1, "Empresa": "Grupo Delta", "Cliente": "BraClean", "Etapa": "Prospecção", 
             "Contato": "Roberto Alves", "Cargo": "Diretor Comercial", "Telefone": "(16) 99876-5432", 
-            "Email": "roberto@grupodelta.com.br", "Cidade": "Sertãozinho / SP", "Valor": 50000.0, 
-            "Prob": 0.20, "Vendedor": "Lucas Mendes", "Perda": "",
+            "Email": "roberto@grupodelta.com.br", "Cidade": "Sertãozinho / SP", "Valor": 35000.0, 
+            "Prob": 0.20, "Vendedor": "Gabriel", "Perda": "",
             "Data_Cadastro": str(date.today()),
             "Followup_Data": str(date.today() - timedelta(days=2)), "Followup_Nota": "Enviar apresentação institucional atualizada.", 
             "Historico": "[01/09/2026 10:00] Primeiro contato realizado."
@@ -271,28 +273,28 @@ def carregar_dados_crm():
             "id": 2, "Empresa": "Sistemas Sigma", "Cliente": "QV Energia Solar", "Etapa": "Pré: Novo Lead", 
             "Contato": "Patricia Lima", "Cargo": "Gerente de Compras", "Telefone": "(16) 99765-4321", 
             "Email": "patricia@sigmasistemas.com.br", "Cidade": "Ribeirão Preto / SP", "Valor": 35000.0, 
-            "Prob": 0.05, "Vendedor": "Lucas Mendes", "Perda": "",
+            "Prob": 0.05, "Vendedor": "Ariel", "Perda": "",
             "Data_Cadastro": str(date.today()),
             "Followup_Data": str(date.today()), "Followup_Nota": "Ligar para fazer primeiro contato.", 
             "Historico": "[02/09/2026 14:30] Lead cadastrado no Pré Funil."
         },
         {
-            "id": 3, "Empresa": "Indústria Omega", "Cliente": "Elleven", "Etapa": "Qualificação", 
+            "id": 3, "Empresa": "Indústria Omega", "Cliente": "BraClean", "Etapa": "Proposta Enviada", 
             "Contato": "Fernando Souza", "Cargo": "Sócio-Proprietário", "Telefone": "(11) 98123-4567", 
-            "Email": "fernando@omegaind.com.br", "Cidade": "São Paulo / SP", "Valor": 80000.0, 
-            "Prob": 0.40, "Vendedor": "Gabriel Silva", "Perda": "",
+            "Email": "fernando@omegaind.com.br", "Cidade": "São Paulo / SP", "Valor": 65000.0, 
+            "Prob": 0.80, "Vendedor": "Ariel", "Perda": "",
             "Data_Cadastro": str(date.today()),
-            "Followup_Data": str(date.today() + timedelta(days=3)), "Followup_Nota": "Alinhar escopo do projeto técnico.", 
+            "Followup_Data": str(date.today() + timedelta(days=3)), "Followup_Nota": "Alinhar fechamento de contrato.", 
             "Historico": "[30/08/2026 09:15] Reunião inicial realizada."
         },
         {
-            "id": 4, "Empresa": "Tecnologia Beta", "Cliente": "BraClean", "Etapa": "Pós: Standby", 
+            "id": 4, "Empresa": "Tecnologia Beta", "Cliente": "Elleven", "Etapa": "Qualificação", 
             "Contato": "Carlos Eduardo", "Cargo": "Comprador", "Telefone": "(16) 98888-7777", 
             "Email": "carlos@betatech.com", "Cidade": "Sertãozinho / SP", "Valor": 25000.0, 
-            "Prob": 0.00, "Vendedor": "Lucas Mendes", "Perda": "Sem orçamento",
+            "Prob": 0.40, "Vendedor": "Gabriel", "Perda": "",
             "Data_Cadastro": str(date.today()),
             "Followup_Data": "", "Followup_Nota": "", 
-            "Historico": "[25/08/2026 16:45] Lead encaminhado ao Pós Funil (Standby)."
+            "Historico": "[25/08/2026 16:45] Lead em fase de diagnóstico."
         }
     ])
     try:
@@ -849,9 +851,6 @@ elif aba_selecionada == "Funil de Vendas":
             label_visibility="collapsed"
         )
 
-    # ---------------------------------------------------------
-    # SUB-MENU DE SELEÇÃO DOS 3 FUNIS (PRÉ, PRINCIPAL E PÓS)
-    # ---------------------------------------------------------
     funis_list = ["Pré Funil", "Funil de Vendas", "Pós Funil"]
     cols_funis = st.columns(3)
     
@@ -1033,7 +1032,6 @@ elif aba_selecionada == "Funil de Vendas":
             df_funil_exibicao["Telefone"].astype(str).str.lower().str.contains(termo_limpo)
         ]
 
-    # Filtrar etapas conforme o Funil Ativo
     funil_atual = st.session_state.funnel_selecionado
     etapas_visiveis = ESTRUTURA_FUNIS.get(funil_atual, ESTRUTURA_FUNIS["Funil de Vendas"])
     todas_etapas_existentes = list(PROB_MAP.keys())
@@ -1266,12 +1264,218 @@ elif aba_selecionada == "Dashboard":
         st.info("Nenhum lead registrado em 'Pós: Perdido' no momento.")
 
 # =========================================================
-# ABA 4: RELATÓRIO EXECUTIVO
+# ABA 4: RELATÓRIO EXECUTIVO (COM TODOS OS GRÁFICOS SOLICITADOS)
 # =========================================================
 elif aba_selecionada == "Relatório Executivo":
     st.title("Relatório Executivo")
 
-    st.subheader("Historico de Atividades")
+    # ---------------------------------------------------------
+    # 1. GRÁFICO DE FUNIL GERAL DE ATIVIDADE
+    # ---------------------------------------------------------
+    st.markdown("### 🔻 1. Gráfico de Funil Geral de Atividade")
+    st.caption("Visão em gráfico do crescimento de leads e etapas de avanço no funil comercial.")
+
+    df_exec = df_filtered.copy()
+    etapas_ordem = list(PROB_MAP.keys())
+    
+    funil_dados = []
+    for etapa in etapas_ordem:
+        qtd = len(df_exec[df_exec["Etapa"] == etapa])
+        funil_dados.append({"Etapa": etapa.replace("Pré: ", "").replace("Pós: ", ""), "Quantidade": qtd, "Etapa_Orig": etapa})
+
+    df_funil = pd.DataFrame(funil_dados)
+    df_funil_valido = df_funil[df_funil["Quantidade"] > 0]
+
+    if not df_funil_valido.empty:
+        fig_funil_exec = px.funnel(
+            df_funil_valido,
+            x="Quantidade",
+            y="Etapa",
+            color="Etapa_Orig",
+            color_discrete_map=st.session_state.funnel_colors
+        )
+        fig_funil_exec.update_layout(
+            paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+            plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+            font=dict(color="#FFFFFF", family="Inter", size=13),
+            height=380,
+            showlegend=False
+        )
+        st.plotly_chart(fig_funil_exec, use_container_width=True)
+    else:
+        st.info("Nenhum lead registrado no funil no momento.")
+
+    st.divider()
+
+    # ---------------------------------------------------------
+    # 2. ATIVIDADES INDIVIDUAIS (GABRIEL VS ARIEL) E METAS
+    # ---------------------------------------------------------
+    st.markdown("### 🎯 2. Atividades Individuais & Metas de Vendedores")
+    st.caption("Meta do Grupo COVEM: 50 interações/dia por vendedor (Entradas de novos leads ou movimentações nas etapas).")
+
+    vendedores_covem = ["Gabriel", "Ariel"]
+    df_exec["Vendedor"] = df_exec["Vendedor"].fillna("Gabriel")
+    
+    # Garantir presença dos dois vendedores no dataset
+    vendedores_dados = []
+    for v in vendedores_covem:
+        sub_v = df_exec[df_exec["Vendedor"].str.contains(v, case=False, na=False)]
+        qtd_leads = len(sub_v)
+        vendedores_dados.append({"Vendedor": v, "Leads Movimentados": qtd_leads})
+        
+    df_vend = pd.DataFrame(vendedores_dados)
+    
+    c_m1, c_m2, c_m3 = st.columns(3)
+    c_m1.metric("Meta Diária por Vendedor", "50 Leads/Dia")
+    c_m2.metric("Meta Semanal (5d)", "250 Leads/Sem")
+    c_m3.metric("Meta Mensal (20d)", "1.000 Leads/Mês")
+
+    col_v1, col_v2 = st.columns(2)
+    
+    with col_v1:
+        df_vend["Meta Diária"] = 50
+        fig_metas = px.bar(
+            df_vend,
+            x="Vendedor",
+            y=["Leads Movimentados", "Meta Diária"],
+            barmode="group",
+            title="Acompanhamento do Trabalho Individual vs Meta Diária (50)",
+            color_discrete_map={"Leads Movimentados": "#00E5FF", "Meta Diária": "#FFEA00"},
+            text_auto=True
+        )
+        fig_metas.update_layout(
+            paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+            plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+            font=dict(color="#FFFFFF", family="Inter", size=12),
+            height=360,
+            xaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA),
+            yaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA)
+        )
+        st.plotly_chart(fig_metas, use_container_width=True)
+
+    with col_v2:
+        df_gargalos = df_exec.groupby("Etapa").size().reset_index(name="Quantidade")
+        fig_gargalo = px.bar(
+            df_gargalos,
+            x="Etapa",
+            y="Quantidade",
+            title="Levantamento de Gargalos (Onde o Lead está parando)",
+            color="Etapa",
+            color_discrete_map=st.session_state.funnel_colors,
+            text_auto=True
+        )
+        fig_gargalo.update_layout(
+            paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+            plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+            font=dict(color="#FFFFFF", family="Inter", size=12),
+            height=360,
+            showlegend=False,
+            xaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA),
+            yaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA)
+        )
+        st.plotly_chart(fig_gargalo, use_container_width=True)
+
+    st.divider()
+
+    # ---------------------------------------------------------
+    # 3. META BRACLEAN (TICKET MÉDIO E R$ 100K MENSAL ATÉ DEZEMBRO)
+    # ---------------------------------------------------------
+    st.markdown("### 🛢️ 3. Meta BraClean (Ticket Médio & R$ 100k Mensais até Dezembro)")
+    
+    df_braclean = df_exec[df_exec["Cliente"] == "BraClean"]
+    faturamento_braclean = float(df_braclean[df_braclean["Etapa"] == "Fechado"]["Valor"].sum())
+    qtd_clientes_braclean = len(df_braclean[df_braclean["Etapa"] == "Fechado"])
+    
+    ticket_medio = (faturamento_braclean / qtd_clientes_braclean) if qtd_clientes_braclean > 0 else (df_braclean["Valor"].mean() if not df_braclean.empty else 0.0)
+    if pd.isna(ticket_medio):
+        ticket_medio = 0.0
+
+    meta_alvo = 100000.0
+    clientes_necessarios = int(meta_alvo / ticket_medio) if ticket_medio > 0 else 0
+
+    bm1, bm2, bm3, bm4 = st.columns(4)
+    bm1.metric("Meta Faturamento Mensal", f"R$ {meta_alvo:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+    bm2.metric("Faturamento Fechado Atual", f"R$ {faturamento_braclean:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+    bm3.metric("Ticket Médio BraClean", f"R$ {ticket_medio:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+    bm4.metric("Clientes Necessários (100k)", f"{clientes_necessarios} clientes ativos")
+
+    meses_proj = ["Outubro", "Novembro", "Dezembro"]
+    progresso_braclean = [faturamento_braclean, faturamento_braclean + (meta_alvo - faturamento_braclean) * 0.5, meta_alvo]
+    meta_linha = [meta_alvo, meta_alvo, meta_alvo]
+
+    df_proj_braclean = pd.DataFrame({
+        "Mês": meses_proj,
+        "Projeção de Vendas": progresso_braclean,
+        "Meta Alvo (R$ 100k)": meta_linha
+    })
+
+    fig_braclean_meta = px.line(
+        df_proj_braclean,
+        x="Mês",
+        y=["Projeção de Vendas", "Meta Alvo (R$ 100k)"],
+        markers=True,
+        title="Planejamento de Vendas Rumo a R$ 100.000,00 Mensais (BraClean)",
+        color_discrete_map={"Projeção de Vendas": "#00FF66", "Meta Alvo (R$ 100k)": "#FF0033"}
+    )
+    fig_braclean_meta.update_layout(
+        paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+        plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+        font=dict(color="#FFFFFF", family="Inter", size=13),
+        height=380,
+        xaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA),
+        yaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA)
+    )
+    st.plotly_chart(fig_braclean_meta, use_container_width=True)
+
+    st.divider()
+
+    # ---------------------------------------------------------
+    # 4. ESTATÍSTICA E PROBABILIDADE FUTURA (PREVISÃO E FORECAST)
+    # ---------------------------------------------------------
+    st.markdown("### 🔮 4. Estatística e Probabilidade Futura (Previsão de Receita / Forecast)")
+    st.caption("Estatística ponderada da receita esperada calculada sobre a taxa de conversão de cada etapa.")
+
+    df_exec["Receita_Ponderada"] = df_exec["Valor"] * df_exec["Prob"]
+    
+    val_total_pipeline = float(df_exec["Valor"].sum())
+    receita_esperada = float(df_exec["Receita_Ponderada"].sum())
+    taxa_conversao_media = (receita_esperada / val_total_pipeline * 100) if val_total_pipeline > 0 else 0.0
+
+    f1, f2, f3 = st.columns(3)
+    f1.metric("Pipeline Bruto em Negociação", f"R$ {val_total_pipeline:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+    f2.metric("Previsão Ponderada de Fechamento", f"R$ {receita_esperada:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+    f3.metric("Probabilidade Média de Conversão", f"{taxa_conversao_media:.1f}%")
+
+    df_forecast = df_exec.groupby("Etapa").agg(
+        Valor_Bruto=("Valor", "sum"),
+        Valor_Ponderado=("Receita_Ponderada", "sum")
+    ).reset_index()
+
+    fig_forecast = px.bar(
+        df_forecast,
+        x="Etapa",
+        y=["Valor_Bruto", "Valor_Ponderado"],
+        barmode="group",
+        title="Probabilidade Futura por Etapa do Funil (Bruto vs Ponderado)",
+        color_discrete_map={"Valor_Bruto": "#9D00FF", "Valor_Ponderado": "#00FF66"},
+        labels={"value": "Valor (R$)", "variable": "Tipo de Análise"}
+    )
+    fig_forecast.update_layout(
+        paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+        plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+        font=dict(color="#FFFFFF", family="Inter", size=13),
+        height=380,
+        xaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA),
+        yaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA)
+    )
+    st.plotly_chart(fig_forecast, use_container_width=True)
+
+    st.divider()
+
+    # ---------------------------------------------------------
+    # TABELAS DE HISTÓRICO EXISTENTES
+    # ---------------------------------------------------------
+    st.subheader("Histórico de Atividades")
 
     df_historico_salvo = carregar_dados_historico()
     df_crm_base = df_filtered.copy()
@@ -1338,59 +1542,10 @@ elif aba_selecionada == "Relatório Executivo":
 
             df_estilizado = df_historico_salvo.style.apply(lambda col: [colorir_tabela_historico(v, col.name) for v in col], axis=0)
             st.dataframe(df_estilizado, use_container_width=True, hide_index=True)
-        else:
-            st.info("Nenhum dado cadastrado para gerar o histórico de atividades.")
-
-    if not df_historico_salvo.empty:
-        df_melted_atv = df_historico_salvo.melt(
-            id_vars=["Mês/Ano"], 
-            value_vars=["Leads Qualificados", "Reuniões Agendadas", "Propostas Enviadas", "Projetos Fechados"],
-            var_name="Métrica", 
-            value_name="Quantidade"
-        )
-        
-        cores_atv = {
-            "Leads Qualificados": "#9D00FF",   
-            "Reuniões Agendadas": "#FFEA00",   
-            "Propostas Enviadas": "#FF6600",   
-            "Projetos Fechados": "#00FF66"    
-        }
-
-        fig_linha_atv = px.line(
-            df_melted_atv,
-            x="Mês/Ano",
-            y="Quantidade",
-            color="Métrica",
-            text="Quantidade",
-            markers=True,
-            title=f"Evolução Mensal de Atividades & Prospecção — {COVEM_NAME}",
-            color_discrete_map=cores_atv
-        )
-        fig_linha_atv.update_layout(
-            paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
-            plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
-            font=dict(color="#FFFFFF", family="Inter", size=13),
-            xaxis=dict(
-                title="MÊS / ANO",
-                showgrid=True,
-                gridcolor=GRID_GRAFICO_FUTURISTA,
-                zerolinecolor=GRID_GRAFICO_FUTURISTA
-            ),
-            yaxis=dict(
-                title="QUANTIDADE",
-                showgrid=True,
-                gridcolor=GRID_GRAFICO_FUTURISTA,
-                zerolinecolor=GRID_GRAFICO_FUTURISTA
-            ),
-            height=440,
-            legend=dict(orientation="h", yanchor="bottom", y=-0.25, xanchor="center", x=0.5, font=dict(color="#FFFFFF"))
-        )
-        fig_linha_atv.update_traces(textposition="top center", marker=dict(size=8))
-        st.plotly_chart(fig_linha_atv, use_container_width=True)
 
     st.divider()
 
-    st.subheader("Historico Financeiro")
+    st.subheader("Histórico Financeiro")
 
     df_financeiro_salvo = carregar_dados_financeiro()
 
@@ -1449,53 +1604,6 @@ elif aba_selecionada == "Relatório Executivo":
 
             df_fin_estilizado = df_financeiro_salvo.style.apply(lambda col: [colorir_tabela_financeiro(v, col.name) for v in col], axis=0)
             st.dataframe(df_fin_estilizado, use_container_width=True, hide_index=True)
-        else:
-            st.info("Nenhum dado cadastrado para gerar o histórico financeiro.")
-
-    if not df_crm_base.empty and "Data_Cadastro" in df_crm_base.columns:
-        df_graf_fin = df_crm_base[df_crm_base["Etapa"].isin(["Proposta Enviada", "Fechado"])].copy()
-        if not df_graf_fin.empty:
-            df_graf_fin["Tipo"] = df_graf_fin["Etapa"].apply(lambda x: "Propostas Enviadas" if "Proposta" in x else "Projetos Fechados")
-            df_agrupado_fin = df_graf_fin.groupby(["Mês/Ano", "Tipo"])["Valor"].sum().reset_index()
-
-            cores_fin_graf = {
-                "Propostas Enviadas": "#FF6600",
-                "Projetos Fechados": "#00FF66"
-            }
-
-            fig_linha_fin = px.line(
-                df_agrupado_fin,
-                x="Mês/Ano",
-                y="Valor",
-                color="Tipo",
-                text="Valor",
-                markers=True,
-                title=f"Evolução Financeira Mensal (R$) — {COVEM_NAME}",
-                color_discrete_map=cores_fin_graf
-            )
-            fig_linha_fin.update_layout(
-                paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
-                plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
-                font=dict(color="#FFFFFF", family="Inter", size=13),
-                xaxis=dict(
-                    title="MÊS / ANO",
-                    showgrid=True,
-                    gridcolor=GRID_GRAFICO_FUTURISTA,
-                    zerolinecolor=GRID_GRAFICO_FUTURISTA
-                ),
-                yaxis=dict(
-                    title="VALOR (R$)",
-                    showgrid=True,
-                    gridcolor=GRID_GRAFICO_FUTURISTA,
-                    zerolinecolor=GRID_GRAFICO_FUTURISTA
-                ),
-                height=440,
-                legend=dict(orientation="h", yanchor="bottom", y=-0.25, xanchor="center", x=0.5, font=dict(color="#FFFFFF"))
-            )
-            fig_linha_fin.update_traces(texttemplate='R$ %{text:,.2f}', textposition="top center", marker=dict(size=8))
-            st.plotly_chart(fig_linha_fin, use_container_width=True)
-        else:
-            st.info("Nenhum valor em propostas ou projetos fechados para exibir no gráfico financeiro.")
 
 # =========================================================
 # ABA 5: + NOVO CADASTRO
@@ -1544,7 +1652,7 @@ elif aba_selecionada == "+ Novo Cadastro":
                     "Cidade": "Não informado",
                     "Valor": 0.0,
                     "Prob": PROB_MAP[rapido_etapa],
-                    "Vendedor": "Não informado",
+                    "Vendedor": "Gabriel",
                     "Perda": "",
                     "Data_Cadastro": str(date.today()),
                     "Followup_Data": str(date.today()),
@@ -1575,7 +1683,7 @@ elif aba_selecionada == "+ Novo Cadastro":
             
         with col_f2:
             nova_cidade = st.text_input("Cidade / Estado")
-            novo_vendedor = st.text_input("Vendedor / Responsável")
+            novo_vendedor = st.selectbox("Vendedor / Responsável", options=["Gabriel", "Ariel"])
             nova_valor = st.number_input("Valor da Oportunidade (R$)", min_value=0.0, step=1000.0, format="%.2f")
             nova_etapa = st.selectbox(
                 "Etapa Inicial *", 
@@ -1602,7 +1710,6 @@ elif aba_selecionada == "+ Novo Cadastro":
                 cargo_valido = novo_cargo if 'novo_cargo' in locals() and novo_cargo else "Não informado"
                 telefone_valido = novo_telefone if 'novo_telefone' in locals() and novo_telefone else "Não informado"
                 cidade_valida = nova_cidade if 'nova_cidade' in locals() and nova_cidade else "Não informado"
-                vendedor_valido = novo_vendedor if 'novo_vendedor' in locals() and novo_vendedor else "Não informado"
 
                 nova_linha = {
                     "id": novo_id,
@@ -1616,7 +1723,7 @@ elif aba_selecionada == "+ Novo Cadastro":
                     "Cidade": cidade_valida,
                     "Valor": nova_valor,
                     "Prob": PROB_MAP[nova_etapa],
-                    "Vendedor": vendedor_valido,
+                    "Vendedor": novo_vendedor,
                     "Perda": str(motivo_perda) if "Perdido" in nova_etapa else "",
                     "Data_Cadastro": str(date.today()),
                     "Followup_Data": str(f_data_ini) if f_nota_ini else "",
