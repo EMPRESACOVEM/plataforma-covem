@@ -1240,7 +1240,7 @@ elif aba_selecionada == "Dashboard":
         st.info("Nenhum lead registrado em 'Pós: Perdido' no momento.")
 
 # =========================================================
-# ABA 4: RELATÓRIO EXECUTIVO (COM FUNIS SEPARADOS EM 3 PARTES)
+# ABA 4: RELATÓRIO EXECUTIVO (COM BARRAS FINAIS E COMPACTAS)
 # =========================================================
 elif aba_selecionada == "Relatório Executivo":
     st.title("Relatório Executivo")
@@ -1248,7 +1248,7 @@ elif aba_selecionada == "Relatório Executivo":
     df_exec = df_filtered.copy()
 
     # ---------------------------------------------------------
-    # PARTE 1: GRÁFICO DO PRÉ FUNIL (NOVO LEAD E CONEXÃO)
+    # PARTE 1: PRÉ FUNIL (BARRAS VERTICAIS MAIS FINAS E COMPACTAS)
     # ---------------------------------------------------------
     st.markdown("### Pré Funil")
     st.caption("Visão de volume e avanço das etapas iniciais de prospecção e conexão.")
@@ -1261,19 +1261,27 @@ elif aba_selecionada == "Relatório Executivo":
 
     df_pre_funil = pd.DataFrame(dados_pre)
     if not df_pre_funil.empty and df_pre_funil["Quantidade"].sum() > 0:
-        fig_pre = px.funnel(
+        fig_pre = px.bar(
             df_pre_funil,
-            x="Quantidade",
-            y="Etapa",
+            x="Etapa",
+            y="Quantidade",
             color="Etapa_Orig",
-            color_discrete_map=st.session_state.funnel_colors
+            color_discrete_map=st.session_state.funnel_colors,
+            text="Quantidade"
         )
         fig_pre.update_layout(
             paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
             plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
             font=dict(color="#FFFFFF", family="Inter", size=13),
-            height=280,
-            showlegend=False
+            height=220,
+            showlegend=False,
+            xaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA, title=""),
+            yaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA, title="")
+        )
+        fig_pre.update_traces(
+            textposition="outside", 
+            marker=dict(line=dict(color='#00E5FF', width=1)),
+            width=0.35  # Barras mais finas para otimizar espaço
         )
         st.plotly_chart(fig_pre, use_container_width=True)
     else:
@@ -1282,7 +1290,7 @@ elif aba_selecionada == "Relatório Executivo":
     st.divider()
 
     # ---------------------------------------------------------
-    # PARTE 2: GRÁFICO DO FUNIL DE VENDAS PRINCIPAL
+    # PARTE 2: FUNIL DE VENDAS PRINCIPAL
     # ---------------------------------------------------------
     st.markdown("### Funil de Vendas")
     st.caption("Acompanhamento das etapas centrais de negociação, desde a prospecção até o fechamento.")
@@ -1316,7 +1324,7 @@ elif aba_selecionada == "Relatório Executivo":
     st.divider()
 
     # ---------------------------------------------------------
-    # PARTE 3: GRÁFICO DO PÓS FUNIL (STANDBY E PERDIDO)
+    # PARTE 3: PÓS FUNIL (BARRAS VERTICAIS MAIS FINAS E COMPACTAS)
     # ---------------------------------------------------------
     st.markdown("### Pós Funil")
     st.caption("Monitoramento de oportunidades em espera (standby) ou encerradas (perdido).")
@@ -1341,12 +1349,16 @@ elif aba_selecionada == "Relatório Executivo":
             paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
             plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
             font=dict(color="#FFFFFF", family="Inter", size=13),
-            height=280,
+            height=220,
             showlegend=False,
-            xaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA),
-            yaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA)
+            xaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA, title=""),
+            yaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA, title="")
         )
-        fig_pos.update_traces(textposition="outside", marker=dict(line=dict(color='#00E5FF', width=1)))
+        fig_pos.update_traces(
+            textposition="outside", 
+            marker=dict(line=dict(color='#00E5FF', width=1)),
+            width=0.35  # Barras mais finas para otimizar espaço
+        )
         st.plotly_chart(fig_pos, use_container_width=True)
     else:
         st.info("Nenhum lead registrado no Pós Funil no momento.")
