@@ -1431,14 +1431,14 @@ elif aba_selecionada == "Relatório Executivo":
             <b style="color: #00E5FF; font-size: 14px;">Perspectiva Estatística para a Meta de R$ 100 mil até Dezembro:</b>
     """, unsafe_allow_html=True)
 
-    st.markdown(f"""
-    - **Cliente A (Ticket Acima de R$100.000,00 /mês):**
+    st.markdown("""
+    - **Cliente A (Ticket Acima de R\$100.000,00 /mês):**
     
-    - **Cliente B (Ticket de R$20.000,00 a R$100.000,00 /mês):** 
+    - **Cliente B (Ticket de R\$20.000,00 a R\$100.000,00 /mês):** 
     
-    - **Cliente C (Ticket de R$1.500,00 a R$20.000,00 /mês):** 
+    - **Cliente C (Ticket de R\$1.500,00 a R\$20.000,00 /mês):** 
     """)
-
+    
     st.markdown("</div>", unsafe_allow_html=True)
     st.divider()
 
