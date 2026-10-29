@@ -84,6 +84,15 @@ CORES_PERFIL_BARRAS = {
     "Cliente C": "#9D00FF"   # Roxo Neon
 }
 
+# Mapeamento de Cores para os Gráficos de Metas e Vendedores
+CORES_METAS_VENDEDORES = {
+    "Gabriel": "#FF0033",          # Vermelho Neon
+    "Ariel": "#00E5FF",            # Azul Neon
+    "Meta Diária": "#FFEA00",      # Amarelo Neon
+    "Meta Semanal": "#FFEA00",     # Amarelo Neon
+    "Meta Mensal": "#FFEA00"       # Amarelo Neon
+}
+
 # Cor de fundo dos gráficos estilo Infográfico Futurista
 FUNDO_GRAFICO_FUTURISTA = "#0A0E27"
 GRID_GRAFICO_FUTURISTA = "rgba(0, 229, 255, 0.12)"
@@ -343,7 +352,6 @@ def salvar_historico_metas(df_hist):
     try:
         conn.update(worksheet="HistoricoMetas", data=df_hist)
     except Exception as e:
-        # Se a aba ainda não existir no Google Sheets, tenta criar ou avisa de forma tratada
         pass
 
 def carregar_dados_tarefas():
@@ -1484,7 +1492,7 @@ elif aba_selecionada == "Relatório Executivo":
     c_m2.metric("Meta Semanal", "250 Leads/Sem")
     c_m3.metric("Meta Mensal", "1.000 Leads/Mês")
 
-    # 3 Gráficos Independentes: Diário, Semanal e Mensal
+    # 3 Gráficos Independentes: Diário, Semanal e Mensal (Cores Customizadas: Gabriel=Vermelho Neon, Ariel=Azul Neon, Metas=Amarelo)
     col_g1, col_g2, col_g3 = st.columns(3)
 
     with col_g1:
@@ -1494,7 +1502,7 @@ elif aba_selecionada == "Relatório Executivo":
             x="Vendedor",
             y=["Leads Movimentados", "Meta Diária"],
             barmode="group",
-            color_discrete_map={"Leads Movimentados": "#00E5FF", "Meta Diária": "#FFEA00"},
+            color_discrete_map=CORES_METAS_VENDEDORES,
             text_auto=True
         )
         fig_meta_diaria.update_layout(
@@ -1516,7 +1524,7 @@ elif aba_selecionada == "Relatório Executivo":
             x="Vendedor",
             y=["Leads Movimentados", "Meta Semanal"],
             barmode="group",
-            color_discrete_map={"Leads Movimentados": "#00FF66", "Meta Semanal": "#FFEA00"},
+            color_discrete_map=CORES_METAS_VENDEDORES,
             text_auto=True
         )
         fig_meta_semanal.update_layout(
@@ -1538,7 +1546,7 @@ elif aba_selecionada == "Relatório Executivo":
             x="Vendedor",
             y=["Leads Movimentados", "Meta Mensal"],
             barmode="group",
-            color_discrete_map={"Leads Movimentados": "#9D00FF", "Meta Mensal": "#FFEA00"},
+            color_discrete_map=CORES_METAS_VENDEDORES,
             text_auto=True
         )
         fig_meta_mensal.update_layout(
@@ -1554,6 +1562,7 @@ elif aba_selecionada == "Relatório Executivo":
         st.plotly_chart(fig_meta_mensal, use_container_width=True)
 
     st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
+    
 
     # Gráfico de Levantamento de Gargalos ajustado para a largura total (mesmo tamanho da Meta BraClean)
     df_gargalos = df_exec.groupby("Etapa").size().reset_index(name="Quantidade")
