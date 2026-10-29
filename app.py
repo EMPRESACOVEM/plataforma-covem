@@ -1,4 +1,4 @@
-import streamlit as str_app
+import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -1470,7 +1470,7 @@ elif aba_selecionada == "Relatório Executivo":
     df_exec["Vendedor"] = df_exec["Vendedor"].fillna("Gabriel")
     
     vendedores_dados = []
-    for v inendedores_covem:
+    for v in vendedores_covem:
         sub_v = df_exec[df_exec["Vendedor"].str.contains(v, case=False, na=False)]
         qtd_leads = len(sub_v)
         vendedores_dados.append({"Vendedor": v, "Leads Movimentados": qtd_leads})
