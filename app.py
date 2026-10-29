@@ -29,17 +29,17 @@ COVEM_NAME = "GRUPO COVEM"
 # Lista de Clientes do GRUPO COVEM
 CARTEIRAS_COVEM = ["BraClean", "QV Energia Solar", "Elleven"]
 
-# Opções Oficiais de Perfil de Cliente
+# Opções Oficiais de Classificação do Lead
 OPCOES_PERFIL = [
-    "Cliente A - Acima de R$ 100 mil/mês (Usinas, Grandes Transportadoras, Mineradoras)",
-    "Cliente B - R$ 20 mil a R$ 100 mil/mês (Transportadoras Médias, Redes > 15 unidades)",
-    "Cliente C - R$ 1.500 a R$ 20 mil/mês (Pequenas Redes, Frotas < 50 cavalos, Peq. Indústrias)"
+    "Cliente A",
+    "Cliente B",
+    "Cliente C"
 ]
 
 MAPA_PERFIL_CURTO = {
-    OPCOES_PERFIL[0]: "Cliente A (> R$ 100k/mês)",
-    OPCOES_PERFIL[1]: "Cliente B (R$ 20k a 100k/mês)",
-    OPCOES_PERFIL[2]: "Cliente C (R$ 1.5k a 20k/mês)"
+    "Cliente A": "Cliente A",
+    "Cliente B": "Cliente B",
+    "Cliente C": "Cliente C"
 }
 
 # Ticket médio estimado padrão por perfil para estatísticas de funil
@@ -259,7 +259,7 @@ def carregar_dados_crm():
             df_loaded["Valor"] = pd.to_numeric(df_loaded["Valor"], errors="coerce").fillna(0.0)
             df_loaded["Prob"] = pd.to_numeric(df_loaded["Prob"], errors="coerce").fillna(0.2)
             df_loaded["Perda"] = df_loaded["Perda"].fillna("").astype(str)
-            df_loaded["Perfil"] = df_loaded["Perfil"].fillna(OPCOES_PERFIL[2]).astype(str)
+            df_loaded["Perfil"] = df_loaded["Perfil"].fillna("Cliente C").astype(str)
             
             df_loaded["Etapa"] = df_loaded["Etapa"].replace({
                 "1. Contatado": "Prospecção",
@@ -280,7 +280,7 @@ def carregar_dados_crm():
 
     df_inicial = pd.DataFrame([
         {
-            "id": 1, "Empresa": "Usina Santa Clara", "Cliente": "BraClean", "Perfil": OPCOES_PERFIL[0], "Etapa": "Prospecção", 
+            "id": 1, "Empresa": "Usina Santa Clara", "Cliente": "BraClean", "Perfil": "Cliente A", "Etapa": "Prospecção", 
             "Contato": "Roberto Alves", "Cargo": "Diretor Operacional", "Telefone": "(16) 99876-5432", 
             "Email": "roberto@usinasantaclara.com.br", "Cidade": "Sertãozinho / SP", "Valor": 120000.0, 
             "Prob": 0.20, "Vendedor": "Gabriel", "Perda": "",
@@ -289,7 +289,7 @@ def carregar_dados_crm():
             "Historico": "[01/09/2026 10:00] Primeiro contato realizado."
         },
         {
-            "id": 2, "Empresa": "Rede Postos Aliança", "Cliente": "BraClean", "Perfil": OPCOES_PERFIL[1], "Etapa": "Qualificação", 
+            "id": 2, "Empresa": "Rede Postos Aliança", "Cliente": "BraClean", "Perfil": "Cliente B", "Etapa": "Qualificação", 
             "Contato": "Patricia Lima", "Cargo": "Gerente de Compras", "Telefone": "(16) 99765-4321", 
             "Email": "patricia@postosalianca.com.br", "Cidade": "Ribeirão Preto / SP", "Valor": 45000.0, 
             "Prob": 0.40, "Vendedor": "Ariel", "Perda": "",
@@ -298,7 +298,7 @@ def carregar_dados_crm():
             "Historico": "[02/09/2026 14:30] Lead qualificado para catálogo BraClean."
         },
         {
-            "id": 3, "Empresa": "Transportadora TransRápido", "Cliente": "BraClean", "Perfil": OPCOES_PERFIL[2], "Etapa": "Proposta Enviada", 
+            "id": 3, "Empresa": "Transportadora TransRápido", "Cliente": "BraClean", "Perfil": "Cliente C", "Etapa": "Proposta Enviada", 
             "Contato": "Fernando Souza", "Cargo": "Sócio-Proprietário", "Telefone": "(11) 98123-4567", 
             "Email": "fernando@transrapido.com.br", "Cidade": "São Paulo / SP", "Valor": 15000.0, 
             "Prob": 0.80, "Vendedor": "Ariel", "Perda": "",
@@ -903,7 +903,7 @@ elif aba_selecionada == "Funil de Vendas":
 
                     perfil_atual = str(row_edit.get("Perfil", OPCOES_PERFIL[2])).strip()
                     idx_perfil_edit = OPCOES_PERFIL.index(perfil_atual) if perfil_atual in OPCOES_PERFIL else 2
-                    edit_perfil = st.selectbox("Classificação / Perfil do Cliente", options=OPCOES_PERFIL, index=idx_perfil_edit)
+                    edit_perfil = st.selectbox("Classificação do Lead", options=OPCOES_PERFIL, index=idx_perfil_edit)
 
                     edit_contato = st.text_input("Contato", value=row_edit["Contato"])
                 with hc2:
@@ -1050,7 +1050,7 @@ elif aba_selecionada == "Funil de Vendas":
             for _, row in sub_df.iterrows():
                 st_code, st_label, st_icon = calcular_status_followup(row.get("Followup_Data", ""))
                 cliente_id = int(row['id'])
-                perfil_tag = str(row.get("Perfil", OPCOES_PERFIL[2])).split(" - ")[0]
+                perfil_tag = str(row.get("Perfil", OPCOES_PERFIL[2])).strip()
                 
                 st.markdown(f"""
                     <div style="border-left: 5px solid {cor_header}; background-color: rgba(10, 14, 39, 0.85); border-top: 1px solid #1E293B; border-right: 1px solid #1E293B; border-bottom: 1px solid #1E293B; border-radius: 4px; margin-bottom: 6px; padding: 2px;">
@@ -1265,10 +1265,9 @@ elif aba_selecionada == "Relatório Executivo":
 
     df_exec = df_filtered.copy()
 
-    # Garantir que a coluna Perfil existe
     if "Perfil" not in df_exec.columns:
-        df_exec["Perfil"] = OPCOES_PERFIL[2]
-    df_exec["Perfil"] = df_exec["Perfil"].fillna(OPCOES_PERFIL[2])
+        df_exec["Perfil"] = "Cliente C"
+    df_exec["Perfil"] = df_exec["Perfil"].fillna("Cliente C")
 
     # ---------------------------------------------------------
     # GRÁFICO 1: PRÉ-FUNIL + STANDBY
@@ -1375,15 +1374,12 @@ elif aba_selecionada == "Relatório Executivo":
     st.divider()
 
     # ---------------------------------------------------------
-    # NOVA SEÇÃO: INTELIGÊNCIA POR CLASSIFICAÇÃO DECLARADA DO CLIENTE
+    # INTELIGÊNCIA POR CLASSIFICAÇÃO DOS LEADS (CLIENTE A, B E C)
     # ---------------------------------------------------------
-    st.markdown("### Inteligência de Carteira: Classificação por Tipo de Cliente (A, B e C)")
-    st.caption("Distribuição real dos clientes cadastrados e sincronizados diretamente da base de dados.")
+    st.markdown("### Inteligência de Carteira: Classificação de Leads (Cliente A, B e C)")
+    st.caption("Distribuição real dos leads cadastrados e sincronizados diretamente da base de dados.")
 
-    # Mapear nome curto do perfil para visualização limpa
-    df_exec["Perfil_Rotulo"] = df_exec["Perfil"].apply(lambda x: MAPA_PERFIL_CURTO.get(x, "Cliente C (R$ 1.5k a 20k/mês)"))
-
-    df_perfil_count = df_exec.groupby("Perfil_Rotulo").agg(
+    df_perfil_count = df_exec.groupby("Perfil").agg(
         Qtd_Leads=("id", "count"),
         Valor_Pipeline=("Valor", "sum")
     ).reset_index()
@@ -1395,8 +1391,8 @@ elif aba_selecionada == "Relatório Executivo":
             fig_perfil_pie = px.pie(
                 df_perfil_count,
                 values="Qtd_Leads",
-                names="Perfil_Rotulo",
-                title="Distribuição do Volume de Clientes na Carteira",
+                names="Perfil",
+                title="Distribuição do Volume de Leads na Carteira",
                 hole=0.4,
                 color_discrete_sequence=["#00E5FF", "#FF6600", "#9D00FF"]
             )
@@ -1413,25 +1409,24 @@ elif aba_selecionada == "Relatório Executivo":
     with p_col2:
         st.markdown("**Probabilidade & Estatística de Receita por Perfil Avançando no Funil:**")
         
-        # Calcular probabilidade ponderada por perfil e etapa
         df_exec["Receita_Ponderada"] = df_exec["Valor"] * df_exec["Prob"]
         
-        qtd_a = len(df_exec[df_exec["Perfil"].str.contains("Cliente A", na=False)])
-        qtd_b = len(df_exec[df_exec["Perfil"].str.contains("Cliente B", na=False)])
-        qtd_c = len(df_exec[df_exec["Perfil"].str.contains("Cliente C", na=False)])
+        qtd_a = len(df_exec[df_exec["Perfil"] == "Cliente A"])
+        qtd_b = len(df_exec[df_exec["Perfil"] == "Cliente B"])
+        qtd_c = len(df_exec[df_exec["Perfil"] == "Cliente C"])
 
-        val_a = float(df_exec[df_exec["Perfil"].str.contains("Cliente A", na=False)]["Receita_Ponderada"].sum())
-        val_b = float(df_exec[df_exec["Perfil"].str.contains("Cliente B", na=False)]["Receita_Ponderada"].sum())
-        val_c = float(df_exec[df_exec["Perfil"].str.contains("Cliente C", na=False)]["Receita_Ponderada"].sum())
+        val_a = float(df_exec[df_exec["Perfil"] == "Cliente A"]["Receita_Ponderada"].sum())
+        val_b = float(df_exec[df_exec["Perfil"] == "Cliente B"]["Receita_Ponderada"].sum())
+        val_c = float(df_exec[df_exec["Perfil"] == "Cliente C"]["Receita_Ponderada"].sum())
 
         st.markdown(f"""
-        - **Clientes Tipo A (Acima de R$ 100 mil/mês):**  
+        - **Cliente A (Acima de R$ 100 mil/mês):**  
           `{qtd_a}` clientes ativos no funil ➔ **Previsão Ponderada:** `R$ {val_a:,.2f}`.
         
-        - **Clientes Tipo B (R$ 20 mil a R$ 100 mil/mês):**  
+        - **Cliente B (R$ 20 mil a R$ 100 mil/mês):**  
           `{qtd_b}` clientes ativos no funil ➔ **Previsão Ponderada:** `R$ {val_b:,.2f}`.
         
-        - **Clientes Tipo C (R$ 1.500 a R$ 20 mil/mês):**  
+        - **Cliente C (R$ 1.500 a R$ 20 mil/mês):**  
           `{qtd_c}` clientes ativos no funil ➔ **Previsão Ponderada:** `R$ {val_c:,.2f}`.
         """)
 
@@ -1606,7 +1601,7 @@ elif aba_selecionada == "+ Novo Cadastro":
         default_carteira_idx = CARTEIRAS_COVEM.index(cliente_sel)
 
     st.subheader(f"+ Novo Cadastro Rápido ({f'Sincronizado com: {cliente_sel}' if cliente_sel != 'TODOS' else 'Geral'})")
-    st.caption("Cadastre rapidamente uma nova empresa selecionando sua classificação de perfil.")
+    st.caption("Cadastre rapidamente uma nova empresa selecionando sua classificação.")
 
     with st.form("form_cadastro_rapido", clear_on_submit=True):
         col_r1, col_r2 = st.columns(2)
@@ -1614,7 +1609,7 @@ elif aba_selecionada == "+ Novo Cadastro":
         with col_r1:
             rapido_empresa = st.text_input("Nome da Empresa *")
             rapido_telefone = st.text_input("Telefone *")
-            rapido_perfil = st.selectbox("Classificação / Perfil do Cliente *", OPCOES_PERFIL, index=2)
+            rapido_perfil = st.selectbox("Classificação do Lead *", OPCOES_PERFIL, index=2)
 
         with col_r2:
             rapido_carteira = st.selectbox("Carteira *", CARTEIRAS_COVEM, index=default_carteira_idx, key="rapido_carteira")
@@ -1632,10 +1627,7 @@ elif aba_selecionada == "+ Novo Cadastro":
                 st.error("Por favor, preencha o Nome da Empresa e o Telefone.")
             else:
                 novo_id = int(df["id"].max() + 1) if not df.empty and pd.notna(df["id"].max()) else 1
-                
-                # Definir valor médio inicial automático de acordo com a classificação escolhida
-                tag_curta = "Cliente A" if "Cliente A" in rapido_perfil else ("Cliente B" if "Cliente B" in rapido_perfil else "Cliente C")
-                val_sugestao = TICKET_MEDIO_PERFIL.get(tag_curta, 8500.0)
+                val_sugestao = TICKET_MEDIO_PERFIL.get(rapido_perfil, 8500.0)
 
                 nova_linha_rapida = {
                     "id": novo_id,
@@ -1674,7 +1666,7 @@ elif aba_selecionada == "+ Novo Cadastro":
         with col_f1:
             nova_empresa = st.text_input("Nome da Empresa / Cliente *")
             novo_cliente = st.selectbox("Marca / Carteira *", CARTEIRAS_COVEM, index=default_carteira_idx, key="completo_carteira")
-            novo_perfil = st.selectbox("Classificação / Perfil do Cliente *", OPCOES_PERFIL, index=2, key="completo_perfil")
+            novo_perfil = st.selectbox("Classificação do Lead *", OPCOES_PERFIL, index=2, key="completo_perfil")
             novo_contato = st.text_input("Contato / Nome")
             novo_cargo = st.text_input("Cargo")
             novo_telefone = st.text_input("Telefone de Contato *")
