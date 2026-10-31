@@ -1076,13 +1076,13 @@ elif aba_selecionada == "Funil de Vendas":
             for _, row in sub_df.iterrows():
                 st_code, st_label, st_icon = calcular_status_followup(row.get("Followup_Data", ""))
                 cliente_id = int(row['id'])
-                perfil_tag = str(row.get("Perfil", OPCOES_PERFIL[2])).strip()
                 
                 st.markdown(f"""
                     <div style="border-left: 5px solid {cor_header}; background-color: rgba(10, 14, 39, 0.85); border-top: 1px solid #1E293B; border-right: 1px solid #1E293B; border-bottom: 1px solid #1E293B; border-radius: 4px; margin-bottom: 6px; padding: 2px;">
                 """, unsafe_allow_html=True)
                 
-                with st.expander(f"[{perfil_tag}] {row['Empresa']}"):
+                # CARTÃO DO FUNIL EXIBINDO APENAS O NOME DA EMPRESA (SEM CLASSIFICAÇÃO A, B, C)
+                with st.expander(f"{row['Empresa']}"):
                     dt_f_exib = row.get('Followup_Data', '')
                     
                     try:
@@ -1095,7 +1095,7 @@ elif aba_selecionada == "Funil de Vendas":
                         f"""
                         <div style="line-height: 1.4; margin-bottom: 8px;">
                             <span style="font-size: 13px;"><b>{row['Empresa']}</b></span><br>
-                            <span style="font-size: 11px; color: #00E5FF;">Carteira: {row.get('Cliente', 'N/A')}</span> | <span style="font-size: 11px; color: #FFEA00;">{perfil_tag}</span><br>
+                            <span style="font-size: 11px; color: #00E5FF;">Carteira: {row.get('Cliente', 'N/A')}</span><br>
                             <span style="font-size: 12px; color: #94A3B8;">Contato: {row['Contato']}</span><br>
                             <span class="phone-highlight" style="font-size: 12px;">{row.get('Telefone', 'Não informado')}</span><br>
                             <hr style="margin: 6px 0; border-color: #334155;">
@@ -1424,9 +1424,9 @@ elif aba_selecionada == "Relatório Executivo":
     st.divider()
 
     # ---------------------------------------------------------
-    # NOVO GRÁFICO DE BARRAS VERTICAIS: NÚMERO DE CLIENTES (A, B, C)
+    # GRÁFICO DE BARRAS VERTICAIS: CLASSIFICAÇÃO DE CLIENTES (A, B, C)
     # ---------------------------------------------------------
-    st.markdown("### Classificação de Leads BraClean")
+    st.markdown("### Classificação de Clientes (Ticket Médio)")
 
     contagem_perfis_dict = {"Cliente A": 0, "Cliente B": 0, "Cliente C": 0}
     df_temp_perf = df_exec["Perfil"].value_counts().to_dict()
@@ -1477,11 +1477,9 @@ elif aba_selecionada == "Relatório Executivo":
     """, unsafe_allow_html=True)
 
     st.markdown("""
-    - **Cliente A (Acima de R\$100.000,00 /mês):**
-    
-    - **Cliente B (De R\$20.000,00 a R\$100.000,00 /mês):** 
-    
-    - **Cliente C (De R\$1.500,00 a R\$20.000,00 /mês):** 
+    - **Cliente A (Acima de R\$100.000,00 /mês):** Alta relevância de ticket médio.
+    - **Cliente B (De R\$20.000,00 a R\$100.000,00 /mês):** Sustentação de pipeline corporativo.
+    - **Cliente C (De R\$1.500,00 a R\$20.000,00 /mês):** Volume de base e tráfego contínuo.
     """)
     
     st.markdown("</div>", unsafe_allow_html=True)
@@ -1509,10 +1507,8 @@ elif aba_selecionada == "Relatório Executivo":
     c_m2.metric("Meta Semanal", "250 Leads/Sem")
     c_m3.metric("Meta Mensal", "1.000 Leads/Mês")
 
-    # 3 Gráficos Independentes: Diário, Semanal e Mensal (Utilizando Graph Objects para definir a cor exata de cada barra por vendedor)
     col_g1, col_g2, col_g3 = st.columns(3)
 
-    # Cores fixas solicitadas por vendedor
     cores_vendedores_map = {
         "Gabriel": "#FF0033",  # Vermelho Neon
         "Ariel": "#00E5FF"     # Azul Neon
