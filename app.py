@@ -13,7 +13,7 @@ from streamlit_gsheets import GSheetsConnection
 
 # Configuração da página
 st.set_page_config(
-    page_title="Plataforma Executiva - BraClean",
+    page_title="COVEM",
     layout="wide"
 )
 
@@ -380,7 +380,7 @@ def calcular_status_followup(data_str):
 # ---------------------------------------------------------
 # BARRA LATERAL (CONFIGURAÇÕES E FILTROS EXCLUSIVOS BRACLEAN)
 # ---------------------------------------------------------
-st.sidebar.markdown("### Plataforma Exclusiva BraClean")
+st.sidebar.markdown("### COVEM")
 st.sidebar.divider()
 
 with st.sidebar.expander("Personalizar Cores das Etapas", expanded=False):
