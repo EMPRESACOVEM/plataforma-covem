@@ -13,21 +13,21 @@ from streamlit_gsheets import GSheetsConnection
 
 # Configuração da página
 st.set_page_config(
-    page_title="Plataforma Executiva GRUPO COVEM",
+    page_title="Plataforma Executiva - BraClean",
     layout="wide"
 )
 
 # Caminho para arquivos secundários locais
 BASE_DIR = Path(__file__).parent if "__file__" in locals() else Path.cwd()
-ARQUIVO_TAREFAS = BASE_DIR / "banco_tarefas_covem.xlsx"
+ARQUIVO_TAREFAS = BASE_DIR / "banco_tarefas_braclean.xlsx"
 ARQUIVO_FUNDO = BASE_DIR / "fundo plataforma.jpg"
 ARQUIVO_LOGO = BASE_DIR / "logoCOVEM.png"
 
-# Nome Oficial do Grupo
+# Nome Oficial / Exclusivo
 COVEM_NAME = "GRUPO COVEM"
 
-# Lista de Clientes do GRUPO COVEM
-CARTEIRAS_COVEM = ["BraClean", "QV Energia Solar", "Elleven"]
+# Apenas a BraClean como carteira ativa
+CARTEIRAS_COVEM = ["BraClean"]
 
 # Opções Oficiais de Classificação do Lead
 OPCOES_PERFIL = [
@@ -268,6 +268,13 @@ def carregar_dados_crm():
             df_loaded["Perda"] = df_loaded["Perda"].fillna("").astype(str)
             df_loaded["Perfil"] = df_loaded["Perfil"].fillna("Cliente C").astype(str)
             
+            # FILTRAGEM AUTOMÁTICA: Remove qualquer registro antigo que não seja da BraClean
+            df_loaded["Cliente"] = df_loaded["Cliente"].astype(str).str.strip()
+            df_loaded = df_loaded[df_loaded["Cliente"].str.lower() == "braclean"]
+            if df_loaded.empty:
+                # Se não sobrou nenhum, define o padrão da BraClean
+                df_loaded["Cliente"] = "BraClean"
+            
             df_loaded["Etapa"] = df_loaded["Etapa"].replace({
                 "1. Contatado": "Prospecção",
                 "2. Conversando": "Qualificação",
@@ -303,15 +310,6 @@ def carregar_dados_crm():
             "Data_Cadastro": str(date.today()),
             "Followup_Data": str(date.today()), "Followup_Nota": "Apresentar condições técnicas do catálogo.", 
             "Historico": "[02/09/2026 14:30] Lead qualificado para catálogo BraClean."
-        },
-        {
-            "id": 3, "Empresa": "Transportadora TransRápido", "Cliente": "BraClean", "Perfil": "Cliente C", "Etapa": "Proposta Enviada", 
-            "Contato": "Fernando Souza", "Cargo": "Sócio-Proprietário", "Telefone": "(11) 98123-4567", 
-            "Email": "fernando@transrapido.com.br", "Cidade": "São Paulo / SP", "Valor": 15000.0, 
-            "Prob": 0.80, "Vendedor": "Ariel", "Perda": "",
-            "Data_Cadastro": str(date.today()),
-            "Followup_Data": str(date.today() + timedelta(days=3)), "Followup_Nota": "Alinhar fechamento de pedido.", 
-            "Historico": "[30/08/2026 09:15] Reunião inicial realizada."
         }
     ])
     try:
@@ -322,28 +320,11 @@ def carregar_dados_crm():
 
 def salvar_dados_crm(df):
     try:
+        # Garante que apenas a BraClean seja salva na nuvem
+        df["Cliente"] = "BraClean"
         conn.update(worksheet="Página1", data=df)
     except Exception as e:
         st.error(f"Erro ao salvar dados no Google Sheets: {e}")
-
-# ---------------------------------------------------------
-# FUNÇÕES DE HISTÓRICO DE METAS (ARMAZENAMENTO A PARTIR DE HOJE)
-# ---------------------------------------------------------
-def carregar_historico_metas():
-    try:
-        df_hist = conn.read(worksheet="HistoricoMetas", ttl=0)
-        df_hist = df_hist.dropna(how="all")
-        if not df_hist.empty:
-            return df_hist
-    except:
-        pass
-    return pd.DataFrame(columns=["Data", "Vendedor", "Leads_Dia", "Leads_Semana", "Leads_Mes"])
-
-def salvar_historico_metas(df_hist):
-    try:
-        conn.update(worksheet="HistoricoMetas", data=df_hist)
-    except Exception as e:
-        pass
 
 def carregar_dados_tarefas():
     if ARQUIVO_TAREFAS.exists():
@@ -397,20 +378,9 @@ def calcular_status_followup(data_str):
         return "sem_data", "Sem Follow-up", '<span style="height: 10px; width: 10px; background-color: #94A3B8; border-radius: 50%; display: inline-block;" title="Sem Data"></span>'
 
 # ---------------------------------------------------------
-# BARRA LATERAL (FILTROS E CONFIGURAÇÕES)
+# BARRA LATERAL (CONFIGURAÇÕES E FILTROS EXCLUSIVOS BRACLEAN)
 # ---------------------------------------------------------
-opcoes_filtro = ["TODOS"] + CARTEIRAS_COVEM
-cliente_sel = st.sidebar.selectbox("Clientes COVEM:", opcoes_filtro)
-
-if cliente_sel != "TODOS":
-    df_filtered = df[df["Cliente"] == cliente_sel]
-    titulo_dinamico = f"Dashboard - {cliente_sel}"
-    titulo_funil = f"Gestão de Funis — {cliente_sel}"
-else:
-    df_filtered = df
-    titulo_dinamico = f"Dashboard - {COVEM_NAME}"
-    titulo_funil = f"Gestão de Funis — {COVEM_NAME}"
-
+st.sidebar.markdown("### Plataforma Exclusiva BraClean")
 st.sidebar.divider()
 
 with st.sidebar.expander("Personalizar Cores das Etapas", expanded=False):
@@ -424,13 +394,13 @@ st.sidebar.divider()
 
 buffer = io.BytesIO()
 with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-    df_filtered.to_excel(writer, index=False, sheet_name='CRM_COVEM')
+    df.to_excel(writer, index=False, sheet_name='CRM_BRACLEAN')
 buffer.seek(0)
 
 st.sidebar.download_button(
     label="Baixar Planilha Excel",
     data=buffer,
-    file_name="crm_covem.xlsx",
+    file_name="crm_braclean.xlsx",
     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     use_container_width=True
 )
@@ -495,7 +465,7 @@ aba_selecionada = st.session_state.menu_ativo
 # ---------------------------------------------------------
 # FUNÇÃO DE RENDERIZAÇÃO DA AGENDA DA SEMANA
 # ---------------------------------------------------------
-def exibir_agenda_semana(df_tarefas, df_crm, cliente_selecionado):
+def exibir_agenda_semana(df_tarefas, df_crm):
     st.markdown('<div style="margin-top: 4px;"></div>', unsafe_allow_html=True)
     
     c_sub1, c_sub2 = st.columns(2)
@@ -557,11 +527,6 @@ def exibir_agenda_semana(df_tarefas, df_crm, cliente_selecionado):
         else:
             hoje = datetime.date.today()
             df_temp = df_tarefas.copy()
-            
-            if cliente_selecionado != "TODOS":
-                empresas_da_carteira = df_crm[df_crm["Cliente"] == cliente_selecionado]["Empresa"].tolist()
-                df_temp = df_temp[df_temp["Cliente"].isin(empresas_da_carteira) | (df_temp["Cliente"] == cliente_selecionado)]
-
             df_temp["Data_Vencimento"] = pd.to_datetime(df_temp["Data_Vencimento"], errors="coerce").dt.date
 
             pendentes = df_temp[df_temp["Status"] != "Concluído"]
@@ -575,7 +540,7 @@ def exibir_agenda_semana(df_tarefas, df_crm, cliente_selecionado):
                 with st.expander("Ver Tarefas Atrasadas"):
                     if not atrasadas.empty:
                         for _, row in atrasadas.iterrows():
-                            emp_vinculada = row.get('Cliente', 'N/A')
+                            emp_vinculada = row.get('Cliente', 'BraClean')
                             tel_contato = obter_telefone_por_empresa(emp_vinculada)
                             st.markdown(f"""
                                 - **{row['Titulo']}**<br>
@@ -592,7 +557,7 @@ def exibir_agenda_semana(df_tarefas, df_crm, cliente_selecionado):
                 with st.expander("Ver Tarefas para Hoje"):
                     if not hoje_tarefas.empty:
                         for _, row in hoje_tarefas.iterrows():
-                            emp_vinculada = row.get('Cliente', 'N/A')
+                            emp_vinculada = row.get('Cliente', 'BraClean')
                             tel_contato = obter_telefone_por_empresa(emp_vinculada)
                             st.markdown(f"""
                                 - **{row['Titulo']}**<br>
@@ -607,7 +572,7 @@ def exibir_agenda_semana(df_tarefas, df_crm, cliente_selecionado):
         if df_crm.empty:
             st.info("Nenhum cliente no CRM.")
         else:
-            crm_temp = df_filtered.copy()
+            crm_temp = df.copy()
             status_list = []
             for _, r in crm_temp.iterrows():
                 st_code, st_label, st_icon = calcular_status_followup(r.get("Followup_Data", ""))
@@ -661,17 +626,10 @@ def exibir_agenda_semana(df_tarefas, df_crm, cliente_selecionado):
 # ABA 1: GERENCIADOR DE TAREFAS & CALENDÁRIO FUTURO
 # =========================================================
 if aba_selecionada == "Gerenciamento de Tarefas":
-    st.subheader(f"Gerenciamento de Tarefas — {cliente_sel}")
-    exibir_agenda_semana(st.session_state.df_tarefas, st.session_state.df_crm, cliente_sel)
+    st.subheader("Gerenciamento de Tarefas — BraClean")
+    exibir_agenda_semana(st.session_state.df_tarefas, st.session_state.df_crm)
 
-    if cliente_sel != "TODOS":
-        lista_clientes = ["Nenhum / Tarefa Geral"] + df_filtered["Empresa"].dropna().tolist()
-    else:
-        lista_clientes = (
-            ["Nenhum / Tarefa Geral"] + st.session_state.df_crm["Empresa"].dropna().tolist()
-            if not st.session_state.df_crm.empty
-            else ["Nenhum / Tarefa Geral"]
-        )
+    lista_clientes = ["Nenhum / Tarefa Geral"] + df["Empresa"].dropna().tolist()
 
     with st.expander("Criar Nova Tarefa", expanded=False):
         with st.form(key="form_nova_tarefa_crm", clear_on_submit=True):
@@ -708,7 +666,7 @@ if aba_selecionada == "Gerenciamento de Tarefas":
                 nova_linha_tarefa = {
                     "Titulo": titulo_final,
                     "Descricao": descricao,
-                    "Cliente": cliente_vinculado,
+                    "Cliente": "BraClean",
                     "Data_Vencimento": str(data_vencimento),
                     "Prioridade": prioridade,
                     "Status": "Pendente",
@@ -747,9 +705,6 @@ if aba_selecionada == "Gerenciamento de Tarefas":
     eventos_futuros = []
 
     df_tarefas_exibicao = st.session_state.df_tarefas.copy()
-    if cliente_sel != "TODOS":
-        empresas_da_carteira = df_filtered["Empresa"].tolist()
-        df_tarefas_exibicao = df_tarefas_exibicao[df_tarefas_exibicao["Cliente"].isin(empresas_da_carteira) | (df_tarefas_exibicao["Cliente"] == cliente_sel)]
 
     if not df_tarefas_exibicao.empty:
         for idx_t, t in df_tarefas_exibicao.iterrows():
@@ -763,14 +718,14 @@ if aba_selecionada == "Gerenciamento de Tarefas":
                             "Data_Formatada": dt_v.strftime("%d/%m/%Y"),
                             "Tipo": "Tarefa",
                             "Título / Ação": t["Titulo"],
-                            "Vinculado a": f"Cliente: {t.get('Cliente', 'Geral')}",
+                            "Vinculado a": f"Cliente: BraClean",
                             "Prioridade / Status": f"Prioridade: {t.get('Prioridade', 'Normal')}"
                         })
                 except:
                     pass
 
-    if not df_filtered.empty:
-        for idx_c, c in df_filtered.iterrows():
+    if not df.empty:
+        for idx_c, c in df.iterrows():
             f_dat = c.get("Followup_Data", "")
             if pd.notna(f_dat) and str(f_dat).strip() not in ["", "nan", "NaT"]:
                 try:
@@ -857,7 +812,7 @@ if aba_selecionada == "Gerenciamento de Tarefas":
 elif aba_selecionada == "Funil de Vendas":
     col_topo_titulo, col_topo_busca = st.columns([2, 1])
     with col_topo_titulo:
-        st.subheader(titulo_funil)
+        st.subheader("Gestão de Funis — BraClean")
     with col_topo_busca:
         termo_busca = st.text_input(
             "Pesquisar cliente", 
@@ -922,15 +877,7 @@ elif aba_selecionada == "Funil de Vendas":
                 hc1, hc2, hc3 = st.columns(3)
                 with hc1:
                     edit_empresa = st.text_input("Empresa", value=row_edit["Empresa"])
-                    
-                    carteira_atual_cliente = row_edit.get("Cliente", CARTEIRAS_COVEM[0])
-                    idx_carteira_edit = CARTEIRAS_COVEM.index(carteira_atual_cliente) if carteira_atual_cliente in CARTEIRAS_COVEM else 0
-                    edit_carteira = st.selectbox("Carteira / Marca", options=CARTEIRAS_COVEM, index=idx_carteira_edit)
-
-                    perfil_atual = str(row_edit.get("Perfil", OPCOES_PERFIL[2])).strip()
-                    idx_perfil_edit = OPCOES_PERFIL.index(perfil_atual) if perfil_atual in OPCOES_PERFIL else 2
-                    edit_perfil = st.selectbox("Classificação do Lead", options=OPCOES_PERFIL, index=idx_perfil_edit)
-
+                    edit_perfil = st.selectbox("Classificação do Lead", options=OPCOES_PERFIL, index=OPCOES_PERFIL.index(row_edit.get("Perfil", "Cliente C")) if row_edit.get("Perfil", "Cliente C") in OPCOES_PERFIL else 2)
                     edit_contato = st.text_input("Contato", value=row_edit["Contato"])
                 with hc2:
                     edit_cargo = st.text_input("Cargo", value=row_edit["Cargo"])
@@ -1008,7 +955,7 @@ elif aba_selecionada == "Funil de Vendas":
                         st.session_state.df_crm.loc[idx_real, "Etapa"] = edit_etapa
                         st.session_state.df_crm.loc[idx_real, "Prob"] = PROB_MAP[edit_etapa]
                         st.session_state.df_crm.loc[idx_real, "Empresa"] = edit_empresa
-                        st.session_state.df_crm.loc[idx_real, "Cliente"] = edit_carteira
+                        st.session_state.df_crm.loc[idx_real, "Cliente"] = "BraClean"
                         st.session_state.df_crm.loc[idx_real, "Perfil"] = edit_perfil
                         st.session_state.df_crm.loc[idx_real, "Contato"] = edit_contato
                         st.session_state.df_crm.loc[idx_real, "Cargo"] = edit_cargo
@@ -1042,7 +989,7 @@ elif aba_selecionada == "Funil de Vendas":
             st.markdown("</div>", unsafe_allow_html=True)
             st.divider()
 
-    df_funil_exibicao = df_filtered.copy()
+    df_funil_exibicao = df.copy()
     if termo_busca:
         termo_limpo = termo_busca.lower()
         df_funil_exibicao = df_funil_exibicao[
@@ -1081,7 +1028,6 @@ elif aba_selecionada == "Funil de Vendas":
                     <div style="border-left: 5px solid {cor_header}; background-color: rgba(10, 14, 39, 0.85); border-top: 1px solid #1E293B; border-right: 1px solid #1E293B; border-bottom: 1px solid #1E293B; border-radius: 4px; margin-bottom: 6px; padding: 2px;">
                 """, unsafe_allow_html=True)
                 
-                # CARTÃO DO FUNIL EXIBINDO APENAS O NOME DA EMPRESA (SEM CLASSIFICAÇÃO A, B, C)
                 with st.expander(f"{row['Empresa']}"):
                     dt_f_exib = row.get('Followup_Data', '')
                     
@@ -1095,7 +1041,7 @@ elif aba_selecionada == "Funil de Vendas":
                         f"""
                         <div style="line-height: 1.4; margin-bottom: 8px;">
                             <span style="font-size: 13px;"><b>{row['Empresa']}</b></span><br>
-                            <span style="font-size: 11px; color: #00E5FF;">Carteira: {row.get('Cliente', 'N/A')}</span><br>
+                            <span style="font-size: 11px; color: #00E5FF;">Carteira: BraClean</span><br>
                             <span style="font-size: 12px; color: #94A3B8;">Contato: {row['Contato']}</span><br>
                             <span class="phone-highlight" style="font-size: 12px;">{row.get('Telefone', 'Não informado')}</span><br>
                             <hr style="margin: 6px 0; border-color: #334155;">
@@ -1137,7 +1083,7 @@ elif aba_selecionada == "Funil de Vendas":
 # ABA 3: DASHBOARD
 # =========================================================
 elif aba_selecionada == "Dashboard":
-    st.markdown(f'<div class="notranslate"><h3>{titulo_dinamico}</h3></div>', unsafe_allow_html=True)
+    st.markdown('<div class="notranslate"><h3>Dashboard - BraClean</h3></div>', unsafe_allow_html=True)
     
     col_f1, _ = st.columns([2, 2])
     with col_f1:
@@ -1147,7 +1093,7 @@ elif aba_selecionada == "Dashboard":
             label_visibility="collapsed"
         )
     
-    df_dash = df_filtered.copy()
+    df_dash = df.copy()
     if "Data_Cadastro" in df_dash.columns:
         df_dash["Data_Cadastro"] = pd.to_datetime(df_dash["Data_Cadastro"], errors='coerce')
         hoje = pd.Timestamp.now()
@@ -1205,12 +1151,7 @@ elif aba_selecionada == "Dashboard":
 
     st.divider()
 
-    if cliente_sel != "TODOS":
-        titulo_grafico_funil = f"Dashboard Gráfico - {cliente_sel}"
-    else:
-        titulo_grafico_funil = f"Dashboard Gráfico - {COVEM_NAME}"
-
-    st.markdown(f'<div class="notranslate"><h3>{titulo_grafico_funil}</h3></div>', unsafe_allow_html=True)
+    st.markdown('<div class="notranslate"><h3>Dashboard Gráfico - BraClean</h3></div>', unsafe_allow_html=True)
     df_pizza = pd.DataFrame(list(contagem_calculada.items()), columns=["Etapa", "Quantidade"])
     df_pizza_valida = df_pizza[df_pizza["Quantidade"] > 0]
 
@@ -1241,7 +1182,7 @@ elif aba_selecionada == "Dashboard":
 
     st.divider()
 
-    st.markdown(f'<div class="notranslate"><h3>Gráfico de Motivo de Perda — {titulo_dinamico}</h3></div>', unsafe_allow_html=True)
+    st.markdown('<div class="notranslate"><h3>Gráfico de Motivo de Perda — BraClean</h3></div>', unsafe_allow_html=True)
     df_perdidos = df_dash[df_dash["Etapa"] == "Pós: Perdido"].copy()
     
     if not df_perdidos.empty and "Perda" in df_perdidos.columns:
@@ -1287,9 +1228,9 @@ elif aba_selecionada == "Dashboard":
 # ABA 4: RELATÓRIO EXECUTIVO
 # =========================================================
 elif aba_selecionada == "Relatório Executivo":
-    st.title("Relatório Executivo")
+    st.title("Relatório Executivo — BraClean")
 
-    df_exec = df_filtered.copy()
+    df_exec = df.copy()
 
     if "Perfil" not in df_exec.columns:
         df_exec["Perfil"] = "Cliente C"
@@ -1483,24 +1424,6 @@ elif aba_selecionada == "Relatório Executivo":
     fig_barras_perfil.update_traces(textposition="outside", marker=dict(line=dict(color='#00E5FF', width=1)))
     st.plotly_chart(fig_barras_perfil, use_container_width=True)
 
-    df_exec["Receita_Ponderada"] = df_exec["Valor"] * df_exec["Prob"]
-    
-    val_a = float(df_exec[df_exec["Perfil"] == "Cliente A"]["Receita_Ponderada"].sum())
-    val_b = float(df_exec[df_exec["Perfil"] == "Cliente B"]["Receita_Ponderada"].sum())
-    val_c = float(df_exec[df_exec["Perfil"] == "Cliente C"]["Receita_Ponderada"].sum())
-
-    st.markdown("""
-        <div style="background-color: rgba(10, 14, 39, 0.85); border: 1px solid #00E5FF; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-            <b style="color: #00E5FF; font-size: 14px;">Perspectiva Estatística para a Meta de R$ 100 mil até Dezembro:</b>
-    """, unsafe_allow_html=True)
-
-    st.markdown("""
-    - **Cliente A (Acima de R\$100.000,00 /mês):** Alta relevância de ticket médio.
-    - **Cliente B (De R\$20.000,00 a R\$100.000,00 /mês):** Sustentação de pipeline corporativo.
-    - **Cliente C (De R\$1.500,00 a R\$20.000,00 /mês):** Volume de base e tráfego contínuo.
-    """)
-    
-    st.markdown("</div>", unsafe_allow_html=True)
     st.divider()
 
     # ---------------------------------------------------------
@@ -1597,43 +1520,58 @@ elif aba_selecionada == "Relatório Executivo":
     st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
 
     # ---------------------------------------------------------
-    # GRÁFICO MACRO DE LINHAS: COMPORTAMENTO GERAL DOS VENDEDORES
+    # GRÁFICO MACRO DE LINHAS PROGRESSIVO (DIÁRIO, SEMANAL, MENSAL)
     # ---------------------------------------------------------
     st.markdown("### Visão Macro: Comportamento de Atividades dos Vendedores")
-    
-    # Exemplo estruturado de linha do tempo macro (Diário, Semanal, Mensal)
-    periodos_macro = ["Início do Período", "Fase Intermediária", "Momento Atual"]
-    
-    df_macro_comportamento = pd.DataFrame({
-        "Período": periodos_macro * len(vendedores_covem),
-        "Vendedor": [v for v in vendedores_covem for _ in periodos_macro],
-        "Volume de Atividades": [
-            # Gabriel
-            15, 35, int(df_vend[df_vend["Vendedor"] == "Gabriel"]["Leads Movimentados"].values[0] if not df_vend[df_vend["Vendedor"] == "Gabriel"].empty else 20),
-            # Ariel
-            10, 25, int(df_vend[df_vend["Vendedor"] == "Ariel"]["Leads Movimentados"].values[0] if not df_vend[df_vend["Vendedor"] == "Ariel"].empty else 15)
-        ]
-    })
+    st.markdown("Acompanhamento progressivo e automático da movimentação dos vendedores ao longo do tempo (acumulado diariamente rumo a dezembro).")
 
-    fig_macro_linhas = px.line(
-        df_macro_comportamento,
-        x="Período",
-        y="Volume de Atividades",
-        color="Vendedor",
-        markers=True,
-        title="Evolução e Tendência de Comportamento Operacional por Vendedor",
-        color_discrete_map=cores_vendedores_map
+    tipo_visao_macro = st.selectbox(
+        "Selecione a Escala Temporal:",
+        options=["Evolução Diária", "Evolução Semanal", "Evolução Mensal"],
+        key="select_visao_macro"
     )
-    fig_macro_linhas.update_layout(
-        paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
-        plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
-        font=dict(color="#FFFFFF", family="Inter", size=13),
-        height=380,
-        xaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA),
-        yaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA),
-        legend=dict(font=dict(color="#FFFFFF"))
-    )
-    st.plotly_chart(fig_macro_linhas, use_container_width=True)
+
+    df_macro_dinamico = df_exec.copy()
+    if "Data_Cadastro" in df_macro_dinamico.columns:
+        df_macro_dinamico["Data_Cadastro"] = pd.to_datetime(df_macro_dinamico["Data_Cadastro"], errors='coerce')
+        df_macro_dinamico = df_macro_dinamico.dropna(subset=["Data_Cadastro"])
+        
+        if tipo_visao_macro == "Evolução Diária":
+            df_macro_dinamico["Periodo"] = df_macro_dinamico["Data_Cadastro"].dt.strftime("%d/%m/%Y (%a)")
+            df_agrupado = df_macro_dinamico.groupby(["Periodo", "Vendedor", df_macro_dinamico["Data_Cadastro"].dt.date]).size().reset_index(name="Volume de Atividades")
+            df_agrupado = df_agrupado.sort_values(by="Data_Cadastro")
+        elif tipo_visao_macro == "Evolução Semanal":
+            df_macro_dinamico["Periodo"] = "Semana " + df_macro_dinamico["Data_Cadastro"].dt.isocalendar().week.astype(str) + " (" + df_macro_dinamico["Data_Cadastro"].dt.year.astype(str) + ")"
+            df_agrupado = df_macro_dinamico.groupby(["Periodo", "Vendedor"]).size().reset_index(name="Volume de Atividades")
+        else:
+            df_agrupado_mes = df_macro_dinamico.groupby([df_macro_dinamico["Data_Cadastro"].dt.to_period("M"), "Vendedor"]).size().reset_index(name="Volume de Atividades")
+            df_agrupado_mes["Periodo"] = df_agrupado_mes["Data_Cadastro"].dt.strftime("%B / %Y")
+            df_agrupado = df_agrupado_mes.sort_values(by="Data_Cadastro")
+    else:
+        df_agrupado = pd.DataFrame(columns=["Periodo", "Vendedor", "Volume de Atividades"])
+
+    if not df_agrupado.empty:
+        fig_macro_progressivo = px.line(
+            df_agrupado,
+            x="Periodo",
+            y="Volume de Atividades",
+            color="Vendedor",
+            markers=True,
+            title=f"Comportamento Operacional — {tipo_visao_macro}",
+            color_discrete_map=cores_vendedores_map
+        )
+        fig_macro_progressivo.update_layout(
+            paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+            plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+            font=dict(color="#FFFFFF", family="Inter", size=13),
+            height=400,
+            xaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA, title="Período"),
+            yaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA, title="Atividades Registradas"),
+            legend=dict(font=dict(color="#FFFFFF"))
+        )
+        st.plotly_chart(fig_macro_progressivo, use_container_width=True)
+    else:
+        st.info("Ainda não há registros suficientes com data para traçar a evolução macro.")
 
     st.divider()
 
@@ -1642,11 +1580,10 @@ elif aba_selecionada == "Relatório Executivo":
     # ---------------------------------------------------------
     st.markdown("### Meta BraClean (Ticket Médio e R$ 100k Mensais até Dezembro)")
     
-    df_braclean = df_exec[df_exec["Cliente"] == "BraClean"]
-    faturamento_braclean = float(df_braclean[df_braclean["Etapa"] == "Fechado"]["Valor"].sum())
-    qtd_clientes_braclean = len(df_braclean[df_braclean["Etapa"] == "Fechado"])
+    faturamento_braclean = float(df_exec[df_exec["Etapa"] == "Fechado"]["Valor"].sum())
+    qtd_clientes_braclean = len(df_exec[df_exec["Etapa"] == "Fechado"])
     
-    ticket_medio = (faturamento_braclean / qtd_clientes_braclean) if qtd_clientes_braclean > 0 else (df_braclean["Valor"].mean() if not df_braclean.empty else 0.0)
+    ticket_medio = (faturamento_braclean / qtd_clientes_braclean) if qtd_clientes_braclean > 0 else (df_exec["Valor"].mean() if not df_exec.empty else 0.0)
     if pd.isna(ticket_medio):
         ticket_medio = 0.0
 
@@ -1691,11 +1628,7 @@ elif aba_selecionada == "Relatório Executivo":
 # ABA 5: + NOVO CADASTRO
 # =========================================================
 elif aba_selecionada == "+ Novo Cadastro":
-    default_carteira_idx = 0
-    if cliente_sel != "TODOS" and cliente_sel in CARTEIRAS_COVEM:
-        default_carteira_idx = CARTEIRAS_COVEM.index(cliente_sel)
-
-    st.subheader(f"+ Novo Cadastro Rápido ({f'Sincronizado com: {cliente_sel}' if cliente_sel != 'TODOS' else 'Geral'})")
+    st.subheader("+ Novo Cadastro Rápido (BraClean)")
 
     with st.form("form_cadastro_rapido", clear_on_submit=True):
         col_r1, col_r2 = st.columns(2)
@@ -1706,7 +1639,6 @@ elif aba_selecionada == "+ Novo Cadastro":
             rapido_perfil = st.selectbox("Classificação do Lead *", OPCOES_PERFIL, index=2)
 
         with col_r2:
-            rapido_carteira = st.selectbox("Carteira *", CARTEIRAS_COVEM, index=default_carteira_idx, key="rapido_carteira")
             rapido_etapa = st.selectbox(
                 "Etapa / Funil Inicial *", 
                 list(PROB_MAP.keys()), 
@@ -1726,7 +1658,7 @@ elif aba_selecionada == "+ Novo Cadastro":
                 nova_linha_rapida = {
                     "id": novo_id,
                     "Empresa": rapido_empresa,
-                    "Cliente": rapido_carteira,
+                    "Cliente": "BraClean",
                     "Perfil": rapido_perfil,
                     "Etapa": rapido_etapa,
                     "Contato": "Não informado",
@@ -1752,14 +1684,13 @@ elif aba_selecionada == "+ Novo Cadastro":
                 st.rerun()
 
     st.write("---")
-    st.subheader(f"Cadastrar Oportunidade Completa ({f'Sincronizado com: {cliente_sel}' if cliente_sel != 'TODOS' else 'Geral'})")
+    st.subheader("Cadastrar Oportunidade Completa (BraClean)")
     
     with st.form("form_oportunidade", clear_on_submit=True):
         col_f1, col_f2 = st.columns(2)
         
         with col_f1:
             nova_empresa = st.text_input("Nome da Empresa / Cliente *")
-            novo_cliente = st.selectbox("Marca / Carteira *", CARTEIRAS_COVEM, index=default_carteira_idx, key="completo_carteira")
             novo_perfil = st.selectbox("Classificação do Lead *", OPCOES_PERFIL, index=2, key="completo_perfil")
             novo_contato = st.text_input("Contato / Nome")
             novo_cargo = st.text_input("Cargo")
@@ -1792,14 +1723,14 @@ elif aba_selecionada == "+ Novo Cadastro":
                 
                 email_valido = nova_email if 'nova_email' in locals() and nova_email else "Não informado"
                 contato_valido = novo_contato if 'novo_contato' in locals() and novo_contato else "Não informado"
-                cargo_valido = novo_cargo if 'novo_cargo' in locals() and novo_cargo else "Não informado"
+                cargo_valido = novo_cargo if 'nova_cargo' in locals() and novo_cargo else "Não informado"
                 telefone_valido = novo_telefone if 'novo_telefone' in locals() and novo_telefone else "Não informado"
                 cidade_valida = nova_cidade if 'nova_cidade' in locals() and nova_cidade else "Não informado"
 
                 nova_linha = {
                     "id": novo_id,
                     "Empresa": nova_empresa,
-                    "Cliente": novo_cliente,
+                    "Cliente": "BraClean",
                     "Perfil": novo_perfil,
                     "Etapa": nova_etapa,
                     "Contato": contato_valido,
