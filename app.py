@@ -13,7 +13,7 @@ from streamlit_gsheets import GSheetsConnection
 
 # Configuração da página
 st.set_page_config(
-    page_title="Plataforma Executiva - BraClean",
+    page_title="COVEM",
     layout="wide"
 )
 
@@ -381,7 +381,7 @@ def calcular_status_followup(data_str):
 if ARQUIVO_LOGO.exists():
     st.sidebar.image(str(ARQUIVO_LOGO), use_container_width=True)
 
-st.sidebar.markdown("### Plataforma Exclusiva BraClean")
+st.sidebar.markdown("###BraClean")
 st.sidebar.divider()
 
 with st.sidebar.expander("Personalizar Cores das Etapas", expanded=False):
@@ -1525,8 +1525,7 @@ elif aba_selecionada == "Relatório Executivo":
     # ---------------------------------------------------------
     # GRÁFICO MACRO DE LINHAS PROGRESSIVO (DIÁRIO, SEMANAL, MENSAL)
     # ---------------------------------------------------------
-    st.markdown("### Visão Macro: Comportamento de Atividades dos Vendedores")
-    st.markdown("Acompanhamento progressivo e automático da movimentação dos vendedores ao longo do tempo (acumulado diariamente rumo a dezembro).")
+    st.markdown("### Visão Macro de Atividades dos Vendedores")
 
     tipo_visao_macro = st.selectbox(
         "Selecione a Escala Temporal:",
