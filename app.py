@@ -1398,9 +1398,22 @@ elif aba_selecionada == "Relatório Executivo":
     st.divider()
 
     # ---------------------------------------------------------
-    # GRÁFICO DE GARGALOS POSICIONADO LOGO ABAIXO DOS FUNIS
+    # GRÁFICO DE GARGALOS ORDENADO PELA SEQUÊNCIA DO FUNIL
     # ---------------------------------------------------------
+    ordem_gargalos = [
+        "Pré: Novo Lead", 
+        "Pré: Conexão", 
+        "Prospecção", 
+        "Qualificação", 
+        "Reunião Agendada", 
+        "Proposta Enviada", 
+        "Fechado", 
+        "Pós: Standby", 
+        "Pós: Perdido"
+    ]
+    
     df_gargalos = df_exec.groupby("Etapa").size().reset_index(name="Quantidade")
+    
     fig_gargalo = px.bar(
         df_gargalos,
         x="Etapa",
@@ -1408,7 +1421,8 @@ elif aba_selecionada == "Relatório Executivo":
         title="Levantamento de Gargalos (Onde o Lead está parando)",
         color="Etapa",
         color_discrete_map=st.session_state.funnel_colors,
-        text_auto=True
+        text_auto=True,
+        category_orders={"Etapa": ordem_gargalos}
     )
     fig_gargalo.update_layout(
         paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
@@ -1416,7 +1430,11 @@ elif aba_selecionada == "Relatório Executivo":
         font=dict(color="#FFFFFF", family="Inter", size=13),
         height=380,
         showlegend=False,
-        xaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA),
+        xaxis=dict(
+            gridcolor=GRID_GRAFICO_FUTURISTA,
+            categoryorder="array",
+            categoryarray=ordem_gargalos
+        ),
         yaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA)
     )
     st.plotly_chart(fig_gargalo, use_container_width=True)
@@ -1501,7 +1519,6 @@ elif aba_selecionada == "Relatório Executivo":
         
     df_vend = pd.DataFrame(vendedores_dados)
     
-    # Métricas de referência
     c_m1, c_m2, c_m3 = st.columns(3)
     c_m1.metric("Meta Diária", "50 Leads/Dia")
     c_m2.metric("Meta Semanal", "250 Leads/Sem")
