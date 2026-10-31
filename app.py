@@ -13,7 +13,7 @@ from streamlit_gsheets import GSheetsConnection
 
 # Configuração da página
 st.set_page_config(
-    page_title="COVEM",
+    page_title="Plataforma Executiva - BraClean",
     layout="wide"
 )
 
@@ -381,7 +381,7 @@ def calcular_status_followup(data_str):
 if ARQUIVO_LOGO.exists():
     st.sidebar.image(str(ARQUIVO_LOGO), use_container_width=True)
 
-st.sidebar.markdown("### BraClean ")
+st.sidebar.markdown("### Plataforma Exclusiva BraClean")
 st.sidebar.divider()
 
 with st.sidebar.expander("Personalizar Cores das Etapas", expanded=False):
@@ -1450,10 +1450,12 @@ elif aba_selecionada == "Relatório Executivo":
 
     col_g1, col_g2, col_g3 = st.columns(3)
 
+    # CORES SOLICITADAS: Gabriel = Verde Neon, Ariel = Azul Neon, Meta = Roxo Neon
     cores_vendedores_map = {
-        "Gabriel": "#FF0033",  # Vermelho Neon
+        "Gabriel": "#00FF66",  # Verde Neon
         "Ariel": "#00E5FF"     # Azul Neon
     }
+    cor_meta_barra = "#9D00FF" # Roxo Neon
 
     with col_g1:
         df_vend["Meta Diária"] = 50
@@ -1461,7 +1463,7 @@ elif aba_selecionada == "Relatório Executivo":
             go.Bar(name='Leads Movimentados', x=df_vend['Vendedor'], y=df_vend['Leads Movimentados'], 
                    marker_color=[cores_vendedores_map.get(v, "#00E5FF") for v in df_vend['Vendedor']], text=df_vend['Leads Movimentados'], textposition='auto'),
             go.Bar(name='Meta Diária', x=df_vend['Vendedor'], y=df_vend['Meta Diária'], 
-                   marker_color='#FFEA00', text=df_vend['Meta Diária'], textposition='auto')
+                   marker_color=cor_meta_barra, text=df_vend['Meta Diária'], textposition='auto')
         ])
         fig_meta_diaria.update_layout(
             barmode='group',
@@ -1482,7 +1484,7 @@ elif aba_selecionada == "Relatório Executivo":
             go.Bar(name='Leads Movimentados', x=df_vend['Vendedor'], y=df_vend['Leads Movimentados'], 
                    marker_color=[cores_vendedores_map.get(v, "#00E5FF") for v in df_vend['Vendedor']], text=df_vend['Leads Movimentados'], textposition='auto'),
             go.Bar(name='Meta Semanal', x=df_vend['Vendedor'], y=df_vend['Meta Semanal'], 
-                   marker_color='#FFEA00', text=df_vend['Meta Semanal'], textposition='auto')
+                   marker_color=cor_meta_barra, text=df_vend['Meta Semanal'], textposition='auto')
         ])
         fig_meta_semanal.update_layout(
             barmode='group',
@@ -1503,7 +1505,7 @@ elif aba_selecionada == "Relatório Executivo":
             go.Bar(name='Leads Movimentados', x=df_vend['Vendedor'], y=df_vend['Leads Movimentados'], 
                    marker_color=[cores_vendedores_map.get(v, "#00E5FF") for v in df_vend['Vendedor']], text=df_vend['Leads Movimentados'], textposition='auto'),
             go.Bar(name='Meta Mensal', x=df_vend['Vendedor'], y=df_vend['Meta Mensal'], 
-                   marker_color='#FFEA00', text=df_vend['Meta Mensal'], textposition='auto')
+                   marker_color=cor_meta_barra, text=df_vend['Meta Mensal'], textposition='auto')
         ])
         fig_meta_mensal.update_layout(
             barmode='group',
@@ -1724,7 +1726,7 @@ elif aba_selecionada == "+ Novo Cadastro":
                 
                 email_valido = nova_email if 'nova_email' in locals() and nova_email else "Não informado"
                 contato_valido = novo_contato if 'novo_contato' in locals() and novo_contato else "Não informado"
-                cargo_valido = novo_cargo if 'nova_cargo' in locals() and novo_cargo else "Não informado"
+                cargo_valido = novo_cargo if 'novo_cargo' in locals() and novo_cargo else "Não informado"
                 telefone_valido = novo_telefone if 'novo_telefone' in locals() and novo_telefone else "Não informado"
                 cidade_valida = nova_cidade if 'nova_cidade' in locals() and nova_cidade else "Não informado"
 
