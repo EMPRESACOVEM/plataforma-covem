@@ -13,7 +13,7 @@ from streamlit_gsheets import GSheetsConnection
 
 # Configuração da página
 st.set_page_config(
-    page_title="COVEM",
+    page_title="Plataforma Executiva - BraClean",
     layout="wide"
 )
 
@@ -272,7 +272,6 @@ def carregar_dados_crm():
             df_loaded["Cliente"] = df_loaded["Cliente"].astype(str).str.strip()
             df_loaded = df_loaded[df_loaded["Cliente"].str.lower() == "braclean"]
             if df_loaded.empty:
-                # Se não sobrou nenhum, define o padrão da BraClean
                 df_loaded["Cliente"] = "BraClean"
             
             df_loaded["Etapa"] = df_loaded["Etapa"].replace({
@@ -320,7 +319,6 @@ def carregar_dados_crm():
 
 def salvar_dados_crm(df):
     try:
-        # Garante que apenas a BraClean seja salva na nuvem
         df["Cliente"] = "BraClean"
         conn.update(worksheet="Página1", data=df)
     except Exception as e:
@@ -378,9 +376,12 @@ def calcular_status_followup(data_str):
         return "sem_data", "Sem Follow-up", '<span style="height: 10px; width: 10px; background-color: #94A3B8; border-radius: 50%; display: inline-block;" title="Sem Data"></span>'
 
 # ---------------------------------------------------------
-# BARRA LATERAL (CONFIGURAÇÕES E FILTROS EXCLUSIVOS BRACLEAN)
+# BARRA LATERAL (LOGO PEQUENA COVEM E CONFIGURAÇÕES)
 # ---------------------------------------------------------
-st.sidebar.markdown("### COVEM")
+if ARQUIVO_LOGO.exists():
+    st.sidebar.image(str(ARQUIVO_LOGO), width_percent=60, use_container_width=True)
+
+st.sidebar.markdown("### Plataforma Exclusiva BraClean")
 st.sidebar.divider()
 
 with st.sidebar.expander("Personalizar Cores das Etapas", expanded=False):
@@ -1723,7 +1724,7 @@ elif aba_selecionada == "+ Novo Cadastro":
                 
                 email_valido = nova_email if 'nova_email' in locals() and nova_email else "Não informado"
                 contato_valido = novo_contato if 'novo_contato' in locals() and novo_contato else "Não informado"
-                cargo_valido = novo_cargo if 'nova_cargo' in locals() and novo_cargo else "Não informado"
+                cargo_valido = novo_cargo if 'novo_cargo' in locals() and novo_cargo else "Não informado"
                 telefone_valido = novo_telefone if 'novo_telefone' in locals() and novo_telefone else "Não informado"
                 cidade_valida = nova_cidade if 'nova_cidade' in locals() and nova_cidade else "Não informado"
 
