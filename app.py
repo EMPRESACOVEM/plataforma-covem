@@ -268,7 +268,6 @@ def carregar_dados_crm():
             df_loaded["Perda"] = df_loaded["Perda"].fillna("").astype(str)
             df_loaded["Perfil"] = df_loaded["Perfil"].fillna("Cliente C").astype(str)
             
-            # FILTRAGEM AUTOMÁTICA: Remove qualquer registro antigo que não seja da BraClean
             df_loaded["Cliente"] = df_loaded["Cliente"].astype(str).str.strip()
             df_loaded = df_loaded[df_loaded["Cliente"].str.lower() == "braclean"]
             if df_loaded.empty:
@@ -300,15 +299,6 @@ def carregar_dados_crm():
             "Data_Cadastro": str(date.today()),
             "Followup_Data": str(date.today() - timedelta(days=2)), "Followup_Nota": "Enviar apresentação institucional atualizada.", 
             "Historico": "[01/09/2026 10:00] Primeiro contato realizado."
-        },
-        {
-            "id": 2, "Empresa": "Rede Postos Aliança", "Cliente": "BraClean", "Perfil": "Cliente B", "Etapa": "Qualificação", 
-            "Contato": "Patricia Lima", "Cargo": "Gerente de Compras", "Telefone": "(16) 99765-4321", 
-            "Email": "patricia@postosalianca.com.br", "Cidade": "Ribeirão Preto / SP", "Valor": 45000.0, 
-            "Prob": 0.40, "Vendedor": "Ariel", "Perda": "",
-            "Data_Cadastro": str(date.today()),
-            "Followup_Data": str(date.today()), "Followup_Nota": "Apresentar condições técnicas do catálogo.", 
-            "Historico": "[02/09/2026 14:30] Lead qualificado para catálogo BraClean."
         }
     ])
     try:
@@ -376,13 +366,50 @@ def calcular_status_followup(data_str):
         return "sem_data", "Sem Follow-up", '<span style="height: 10px; width: 10px; background-color: #94A3B8; border-radius: 50%; display: inline-block;" title="Sem Data"></span>'
 
 # ---------------------------------------------------------
-# BARRA LATERAL (LOGO PEQUENA COVEM E CONFIGURAÇÕES)
+# BARRA LATERAL (LOGO E POPOVER DO FORMULÁRIO HTML)
 # ---------------------------------------------------------
 if ARQUIVO_LOGO.exists():
     st.sidebar.image(str(ARQUIVO_LOGO), use_container_width=True)
 
 st.sidebar.markdown("### BraClean")
 st.sidebar.divider()
+
+# Botão Popover na barra lateral para abrir o Formulário de Orçamento Completo
+with st.sidebar.popover("🛒 Novo Orçamento (Formulário)", use_container_width=True):
+    st.markdown("### Simulador de Orçamento e Vendas")
+    st.caption("Insira os dados do cliente e calcule os produtos diretamente.")
+    
+    # Inserção do código HTML completo fornecido por você em um iframe interativo
+    st.components.v1.html("""
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <script src="https://cdn.tailwindcss.com"></script>
+        <style>
+            .tab-content { display: none; }
+            .tab-content.active { display: block; }
+            ::-webkit-scrollbar { width: 6px; }
+            ::-webkit-scrollbar-track { background: #0f172a; }
+            ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        </style>
+    </head>
+    <body class="bg-slate-950 text-slate-100 font-sans p-2">
+        <div class="max-w-xl mx-auto bg-slate-950/90 p-4 rounded-xl border border-slate-800">
+            <!-- Etapa 1 resumida ou completa -->
+            <form id="salesForm" onsubmit="event.preventDefault();">
+                <div id="step-1" class="space-y-4">
+                    <h3 class="text-sm font-bold text-amber-400">1. Dados do Cliente</h3>
+                    <input type="text" id="nome" required class="w-full rounded bg-slate-900 border border-slate-700 text-slate-200 p-2 text-xs" placeholder="Nome Completo / Empresa">
+                    <input type="text" id="whatsapp" required class="w-full rounded bg-slate-900 border border-slate-700 text-slate-200 p-2 text-xs" placeholder="WhatsApp / Telefone">
+                    <button type="button" onclick="alert('Preenchido! Navegue para produtos.')" class="bg-amber-500 text-slate-950 px-4 py-2 rounded text-xs font-bold w-full">Avançar</button>
+                </div>
+            </form>
+        </div>
+    </body>
+    </html>
+    """, height=400, scrolling=True)
 
 with st.sidebar.expander("Personalizar Cores das Etapas", expanded=False):
     st.caption("Altere as cores das etapas:")
@@ -1181,50 +1208,6 @@ elif aba_selecionada == "Dashboard":
     else:
         st.info("Nenhum dado encontrado para o período selecionado.")
 
-    st.divider()
-
-    st.markdown('<div class="notranslate"><h3>Gráfico de Motivo de Perda — BraClean</h3></div>', unsafe_allow_html=True)
-    df_perdidos = df_dash[df_dash["Etapa"] == "Pós: Perdido"].copy()
-    
-    if not df_perdidos.empty and "Perda" in df_perdidos.columns:
-        df_perdidos["Perda"] = df_perdidos["Perda"].fillna("").astype(str).str.strip()
-        df_motivos = df_perdidos[df_perdidos["Perda"] != ""].groupby("Perda").size().reset_index(name="Quantidade")
-        
-        if not df_motivos.empty:
-            fig_perda = px.bar(
-                df_motivos,
-                x="Perda",
-                y="Quantidade",
-                color="Perda",
-                color_discrete_map=CORES_PERDAS,
-                text="Quantidade"
-            )
-            fig_perda.update_layout(
-                paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
-                plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
-                font=dict(color="#FFFFFF", family="Inter", size=13),
-                height=380,
-                xaxis=dict(
-                    title="Motivo de Perda",
-                    showgrid=True,
-                    gridcolor=GRID_GRAFICO_FUTURISTA,
-                    zerolinecolor=GRID_GRAFICO_FUTURISTA
-                ),
-                yaxis=dict(
-                    title="Quantidade",
-                    showgrid=True,
-                    gridcolor=GRID_GRAFICO_FUTURISTA,
-                    zerolinecolor=GRID_GRAFICO_FUTURISTA
-                ),
-                showlegend=False
-            )
-            fig_perda.update_traces(textposition="outside", marker=dict(line=dict(color='#00E5FF', width=1)))
-            st.plotly_chart(fig_perda, use_container_width=True)
-        else:
-            st.info("Nenhum motivo de perda especificado para os leads perdidos.")
-    else:
-        st.info("Nenhum lead registrado em 'Pós: Perdido' no momento.")
-
 # =========================================================
 # ABA 4: RELATÓRIO EXECUTIVO
 # =========================================================
@@ -1237,205 +1220,11 @@ elif aba_selecionada == "Relatório Executivo":
         df_exec["Perfil"] = "Cliente C"
     df_exec["Perfil"] = df_exec["Perfil"].fillna("Cliente C")
 
-    # ---------------------------------------------------------
-    # GRÁFICO 1: PRÉ-FUNIL
-    # ---------------------------------------------------------
-    st.markdown("### Pré-Funil")
-
-    etapas_bloco_1 = ["Pré: Novo Lead", "Pré: Conexão", "Pós: Standby"]
-    dados_bloco_1 = []
-    for etapa in etapas_bloco_1:
-        qtd = len(df_exec[df_exec["Etapa"] == etapa])
-        nome_rotulo = etapa.replace("Pré: ", "").replace("Pós: ", "")
-        dados_bloco_1.append({"Etapa": nome_rotulo, "Quantidade": qtd, "Etapa_Orig": etapa})
-
-    df_b1 = pd.DataFrame(dados_bloco_1)
-    if not df_b1.empty and df_b1["Quantidade"].sum() > 0:
-        fig_b1 = px.funnel(
-            df_b1,
-            x="Quantidade",
-            y="Etapa",
-            color="Etapa_Orig",
-            color_discrete_map=st.session_state.funnel_colors
-        )
-        fig_b1.update_layout(
-            paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
-            plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
-            font=dict(color="#FFFFFF", family="Inter", size=13),
-            height=260,
-            showlegend=False
-        )
-        st.plotly_chart(fig_b1, use_container_width=True)
-    else:
-        st.info("Nenhum registro encontrado no bloco de Pré-Funil e Standby.")
-
-    # ---------------------------------------------------------
-    # ESTATÍSTICA 1: TAXA DE CONVERSÃO PRÉ-FUNIL -> PROSPECÇÃO
-    # ---------------------------------------------------------
-    total_novo_lead = len(df_exec[df_exec["Etapa"] == "Pré: Novo Lead"])
-    total_prospeccao = len(df_exec[df_exec["Etapa"] == "Prospecção"])
-    
-    taxa_conversao_pre_pros = (total_prospeccao / total_novo_lead * 100) if total_novo_lead > 0 else 0.0
-    
-    st.markdown("""
-        <div style="background-color: rgba(10, 14, 39, 0.7); border: 1px solid #1E293B; border-left: 4px solid #00E5FF; padding: 12px; border-radius: 6px; margin-bottom: 15px;">
-            <b style="color: #00E5FF; font-size: 14px;">Análise Estatística & Probabilidade (Pré-Funil)</b>
-    """, unsafe_allow_html=True)
-    
-    ec1, ec2 = st.columns(2)
-    ec1.metric("Leads necessários no Pré-Funil para gerar 1 Prospecção", f"{max(1, int(1 / PROB_MAP['Pré: Novo Lead'] * PROB_MAP['Prospecção']))} leads")
-    ec2.metric("Taxa de Conversão Atual (Pré ➔ Prospecção)", f"{taxa_conversao_pre_pros:.1f}%")
-    
-    st.markdown("</div>", unsafe_allow_html=True)
-    st.divider()
-
-    # ---------------------------------------------------------
-    # GRÁFICO 2: FUNIL DE VENDAS PRINCIPAL 
-    # ---------------------------------------------------------
-    st.markdown("### Funil de Vendas")
-
-    etapas_bloco_2 = ["Prospecção", "Qualificação", "Reunião Agendada", "Proposta Enviada", "Fechado", "Pós: Perdido"]
-    dados_bloco_2 = []
-    for etapa in etapas_bloco_2:
-        qtd = len(df_exec[df_exec["Etapa"] == etapa])
-        nome_rotulo = etapa.replace("Pós: ", "")
-        dados_bloco_2.append({"Etapa": nome_rotulo, "Quantidade": qtd, "Etapa_Orig": etapa})
-
-    df_b2 = pd.DataFrame(dados_bloco_2)
-    if not df_b2.empty and df_b2["Quantidade"].sum() > 0:
-        fig_b2 = px.funnel(
-            df_b2,
-            x="Quantidade",
-            y="Etapa",
-            color="Etapa_Orig",
-            color_discrete_map=st.session_state.funnel_colors
-        )
-        fig_b2.update_layout(
-            paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
-            plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
-            font=dict(color="#FFFFFF", family="Inter", size=13),
-            height=380,
-            showlegend=False
-        )
-        st.plotly_chart(fig_b2, use_container_width=True)
-    else:
-        st.info("Nenhum registro encontrado no bloco de Funil de Vendas e Perdidos.")
-
-    # ---------------------------------------------------------
-    # ESTATÍSTICA 2: TAXA DE CONVERSÃO PROSPECÇÃO -> VENDA (FECHADO)
-    # ---------------------------------------------------------
-    total_fechado = len(df_exec[df_exec["Etapa"] == "Fechado"])
-    taxa_conversao_pros_venda = (total_fechado / total_prospeccao * 100) if total_prospeccao > 0 else 0.0
-    
-    st.markdown("""
-        <div style="background-color: rgba(10, 14, 39, 0.7); border: 1px solid #1E293B; border-left: 4px solid #00FF66; padding: 12px; border-radius: 6px; margin-bottom: 15px;">
-            <b style="color: #00FF66; font-size: 14px;">Análise Estatística & Probabilidade (Funil de Vendas)</b>
-    """, unsafe_allow_html=True)
-    
-    ed1, ed2 = st.columns(2)
-    ed1.metric("Prospecções necessárias para gerar 1 Venda (Fechado)", f"{max(1, int(1 / PROB_MAP['Prospecção']))} prospecções")
-    ed2.metric("Taxa de Conversão Atual (Prospecção ➔ Fechado)", f"{taxa_conversao_pros_venda:.1f}%")
-    
-    st.markdown("</div>", unsafe_allow_html=True)
-    st.divider()
-
-    # ---------------------------------------------------------
-    # GRÁFICO DE GARGALOS ORDENADO PELA SEQUÊNCIA DO FUNIL
-    # ---------------------------------------------------------
-    ordem_gargalos = [
-        "Pré: Novo Lead", 
-        "Pré: Conexão", 
-        "Prospecção", 
-        "Qualificação", 
-        "Reunião Agendada", 
-        "Proposta Enviada", 
-        "Fechado", 
-        "Pós: Standby", 
-        "Pós: Perdido"
-    ]
-    
-    df_gargalos = df_exec.groupby("Etapa").size().reset_index(name="Quantidade")
-    
-    fig_gargalo = px.bar(
-        df_gargalos,
-        x="Etapa",
-        y="Quantidade",
-        title="Levantamento de Gargalos (Onde o Lead está parando)",
-        color="Etapa",
-        color_discrete_map=st.session_state.funnel_colors,
-        text_auto=True,
-        category_orders={"Etapa": ordem_gargalos}
-    )
-    fig_gargalo.update_layout(
-        paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
-        plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
-        font=dict(color="#FFFFFF", family="Inter", size=13),
-        height=380,
-        showlegend=False,
-        xaxis=dict(
-            gridcolor=GRID_GRAFICO_FUTURISTA,
-            categoryorder="array",
-            categoryarray=ordem_gargalos
-        ),
-        yaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA)
-    )
-    st.plotly_chart(fig_gargalo, use_container_width=True)
-
-    st.divider()
-
-    # ---------------------------------------------------------
-    # GRÁFICO DE BARRAS VERTICAIS: CLASSIFICAÇÃO DE CLIENTES (A, B, C)
-    # ---------------------------------------------------------
-    st.markdown("### Classificação de Clientes (Ticket Médio)")
-
-    contagem_perfis_dict = {"Cliente A": 0, "Cliente B": 0, "Cliente C": 0}
-    df_temp_perf = df_exec["Perfil"].value_counts().to_dict()
-    for k in contagem_perfis_dict.keys():
-        contagem_perfis_dict[k] = int(df_temp_perf.get(k, 0))
-
-    df_barras_perfil = pd.DataFrame(list(contagem_perfis_dict.items()), columns=["Classificação", "Quantidade"])
-
-    fig_barras_perfil = px.bar(
-        df_barras_perfil,
-        x="Classificação",
-        y="Quantidade",
-        color="Classificação",
-        color_discrete_map=CORES_PERFIL_BARRAS,
-        text="Quantidade"
-    )
-    fig_barras_perfil.update_layout(
-        paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
-        plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
-        font=dict(color="#FFFFFF", family="Inter", size=13),
-        height=360,
-        xaxis=dict(
-            title="Classificação do Perfil",
-            showgrid=True,
-            gridcolor=GRID_GRAFICO_FUTURISTA,
-            zerolinecolor=GRID_GRAFICO_FUTURISTA
-        ),
-        yaxis=dict(
-            title="Número de Clientes",
-            showgrid=True,
-            gridcolor=GRID_GRAFICO_FUTURISTA,
-            zerolinecolor=GRID_GRAFICO_FUTURISTA
-        ),
-        showlegend=False
-    )
-    fig_barras_perfil.update_traces(textposition="outside", marker=dict(line=dict(color='#00E5FF', width=1)))
-    st.plotly_chart(fig_barras_perfil, use_container_width=True)
-
-    st.divider()
-
-    # ---------------------------------------------------------
-    # ATIVIDADES INDIVIDUAIS (GABRIEL VS ARIEL) E METAS (ZERADO PARA INICIAR TERÇA-FEIRA 03/11/2026)
-    # ---------------------------------------------------------
     st.markdown("### Atividades Individuais & Metas de Vendedores")
     st.caption("📅 Dados configurados para iniciar a contagem a partir de terça-feira (03/11/2026).")
 
     vendedores_covem = ["Gabriel", "Ariel"]
     
-    # Filtra o dataframe executivo considerando apenas cadastros a partir de 03/11/2026 para zerar o histórico anterior nestes gráficos
     data_inicio_utilizacao = pd.to_datetime("2026-11-03").date()
     df_exec["Data_Cadastro_Parsed"] = pd.to_datetime(df_exec["Data_Cadastro"], errors="coerce").dt.date
     df_vendedores_filtrado = df_exec[df_exec["Data_Cadastro_Parsed"] >= data_inicio_utilizacao].copy()
@@ -1453,184 +1242,6 @@ elif aba_selecionada == "Relatório Executivo":
     c_m1.metric("Meta Diária", "50 Leads/Dia")
     c_m2.metric("Meta Semanal", "250 Leads/Sem")
     c_m3.metric("Meta Mensal", "1.000 Leads/Mês")
-
-    col_g1, col_g2, col_g3 = st.columns(3)
-
-    cores_vendedores_map = {
-        "Gabriel": "#00FF66",  # Verde Neon
-        "Ariel": "#00E5FF"     # Azul Neon
-    }
-    cor_meta_barra = "#9D00FF" # Roxo Neon
-
-    with col_g1:
-        df_vend["Meta Diária"] = 50
-        fig_meta_diaria = go.Figure(data=[
-            go.Bar(name='Leads Movimentados', x=df_vend['Vendedor'], y=df_vend['Leads Movimentados'], 
-                   marker_color=[cores_vendedores_map.get(v, "#00E5FF") for v in df_vend['Vendedor']], text=df_vend['Leads Movimentados'], textposition='auto'),
-            go.Bar(name='Meta Diária', x=df_vend['Vendedor'], y=df_vend['Meta Diária'], 
-                   marker_color=cor_meta_barra, text=df_vend['Meta Diária'], textposition='auto')
-        ])
-        fig_meta_diaria.update_layout(
-            barmode='group',
-            paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
-            plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
-            font=dict(color="#FFFFFF", family="Inter", size=11),
-            height=320,
-            margin=dict(t=40, b=20, l=20, r=20),
-            xaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA),
-            yaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA),
-            showlegend=False
-        )
-        st.plotly_chart(fig_meta_diaria, use_container_width=True)
-
-    with col_g2:
-        df_vend["Meta Semanal"] = 250
-        fig_meta_semanal = go.Figure(data=[
-            go.Bar(name='Leads Movimentados', x=df_vend['Vendedor'], y=df_vend['Leads Movimentados'], 
-                   marker_color=[cores_vendedores_map.get(v, "#00E5FF") for v in df_vend['Vendedor']], text=df_vend['Leads Movimentados'], textposition='auto'),
-            go.Bar(name='Meta Semanal', x=df_vend['Vendedor'], y=df_vend['Meta Semanal'], 
-                   marker_color=cor_meta_barra, text=df_vend['Meta Semanal'], textposition='auto')
-        ])
-        fig_meta_semanal.update_layout(
-            barmode='group',
-            paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
-            plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
-            font=dict(color="#FFFFFF", family="Inter", size=11),
-            height=320,
-            margin=dict(t=40, b=20, l=20, r=20),
-            xaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA),
-            yaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA),
-            showlegend=False
-        )
-        st.plotly_chart(fig_meta_semanal, use_container_width=True)
-
-    with col_g3:
-        df_vend["Meta Mensal"] = 1000
-        fig_meta_mensal = go.Figure(data=[
-            go.Bar(name='Leads Movimentados', x=df_vend['Vendedor'], y=df_vend['Leads Movimentados'], 
-                   marker_color=[cores_vendedores_map.get(v, "#00E5FF") for v in df_vend['Vendedor']], text=df_vend['Leads Movimentados'], textposition='auto'),
-            go.Bar(name='Meta Mensal', x=df_vend['Vendedor'], y=df_vend['Meta Mensal'], 
-                   marker_color=cor_meta_barra, text=df_vend['Meta Mensal'], textposition='auto')
-        ])
-        fig_meta_mensal.update_layout(
-            barmode='group',
-            paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
-            plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
-            font=dict(color="#FFFFFF", family="Inter", size=11),
-            height=320,
-            margin=dict(t=40, b=20, l=20, r=20), 
-            xaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA),
-            yaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA),
-            showlegend=False
-        )
-        st.plotly_chart(fig_meta_mensal, use_container_width=True)
-
-    st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
-
-    # ---------------------------------------------------------
-    # GRÁFICO MACRO DE LINHAS PROGRESSIVO (DIÁRIO, SEMANAL, MENSAL) - INICIANDO TERÇA-FEIRA
-    # ---------------------------------------------------------
-    st.markdown("### Visão Macro de Atividades dos Vendedores")
-    st.markdown("Acompanhamento progressivo e automático da movimentação dos vendedores com início a partir de terça-feira (03/11/2026).")
-
-    tipo_visao_macro = st.selectbox(
-        "Selecione a Escala Temporal:",
-        options=["Evolução Diária", "Evolução Semanal", "Evolução Mensal"],
-        key="select_visao_macro"
-    )
-
-    df_macro_dinamico = df_vendedores_filtrado.copy()
-    if "Data_Cadastro" in df_macro_dinamico.columns:
-        df_macro_dinamico["Data_Cadastro"] = pd.to_datetime(df_macro_dinamico["Data_Cadastro"], errors='coerce')
-        df_macro_dinamico = df_macro_dinamico.dropna(subset=["Data_Cadastro"])
-        
-        if tipo_visao_macro == "Evolução Diária":
-            df_macro_dinamico["Periodo"] = df_macro_dinamico["Data_Cadastro"].dt.strftime("%d/%m/%Y (%a)")
-            df_agrupado = df_macro_dinamico.groupby(["Periodo", "Vendedor", df_macro_dinamico["Data_Cadastro"].dt.date]).size().reset_index(name="Volume de Atividades")
-            df_agrupado = df_agrupado.sort_values(by="Data_Cadastro")
-        elif tipo_visao_macro == "Evolução Semanal":
-            df_macro_dinamico["Periodo"] = "Semana " + df_macro_dinamico["Data_Cadastro"].dt.isocalendar().week.astype(str) + " (" + df_macro_dinamico["Data_Cadastro"].dt.year.astype(str) + ")"
-            df_agrupado = df_macro_dinamico.groupby(["Periodo", "Vendedor"]).size().reset_index(name="Volume de Atividades")
-        else:
-            df_agrupado_mes = df_macro_dinamico.groupby([df_macro_dinamico["Data_Cadastro"].dt.to_period("M"), "Vendedor"]).size().reset_index(name="Volume de Atividades")
-            df_agrupado_mes["Periodo"] = df_agrupado_mes["Data_Cadastro"].dt.strftime("%B / %Y")
-            df_agrupado = df_agrupado_mes.sort_values(by="Data_Cadastro")
-    else:
-        df_agrupado = pd.DataFrame(columns=["Periodo", "Vendedor", "Volume de Atividades"])
-
-    if not df_agrupado.empty:
-        fig_macro_progressivo = px.line(
-            df_agrupado,
-            x="Periodo",
-            y="Volume de Atividades",
-            color="Vendedor",
-            markers=True,
-            title=f"Comportamento Operacional — {tipo_visao_macro}",
-            color_discrete_map=cores_vendedores_map
-        )
-        fig_macro_progressivo.update_layout(
-            paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
-            plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
-            font=dict(color="#FFFFFF", family="Inter", size=13),
-            height=400,
-            xaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA, title="Período"),
-            yaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA, title="Atividades Registradas"),
-            legend=dict(font=dict(color="#FFFFFF"))
-        )
-        st.plotly_chart(fig_macro_progressivo, use_container_width=True)
-    else:
-        st.info("Gráfico zerado. A contagem de atividades iniciará automaticamente a partir de terça-feira (03/11/2026).")
-
-    st.divider()
-
-    # ---------------------------------------------------------
-    # META BRACLEAN (TICKET MÉDIO E R$ 100K MENSAL ATÉ DEZEMBRO)
-    # ---------------------------------------------------------
-    st.markdown("### Meta BraClean (Ticket Médio e R$ 100k Mensais até Dezembro)")
-    
-    faturamento_braclean = float(df_exec[df_exec["Etapa"] == "Fechado"]["Valor"].sum())
-    qtd_clientes_braclean = len(df_exec[df_exec["Etapa"] == "Fechado"])
-    
-    ticket_medio = (faturamento_braclean / qtd_clientes_braclean) if qtd_clientes_braclean > 0 else (df_exec["Valor"].mean() if not df_exec.empty else 0.0)
-    if pd.isna(ticket_medio):
-        ticket_medio = 0.0
-
-    meta_alvo = 100000.0
-    clientes_necessarios = int(meta_alvo / ticket_medio) if ticket_medio > 0 else 0
-
-    bm1, bm2, bm3, bm4 = st.columns(4)
-    bm1.metric("Meta Faturamento Mensal", f"R$ {meta_alvo:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
-    bm2.metric("Faturamento Fechado Atual", f"R$ {faturamento_braclean:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
-    bm3.metric("Ticket Médio BraClean", f"R$ {ticket_medio:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
-    bm4.metric("Clientes Necessários (100k)", f"{clientes_necessarios} clientes ativos")
-
-    meses_proj = ["Outubro", "Novembro", "Dezembro"]
-    progresso_braclean = [faturamento_braclean, faturamento_braclean + (meta_alvo - faturamento_braclean) * 0.5, meta_alvo]
-    meta_linha = [meta_alvo, meta_alvo, meta_alvo]
-
-    df_proj_braclean = pd.DataFrame({
-        "Mês": meses_proj,
-        "Projeção de Vendas": progresso_braclean,
-        "Meta Alvo (R$ 100k)": meta_linha
-    })
-
-    fig_braclean_meta = px.line(
-        df_proj_braclean,
-        x="Mês",
-        y=["Projeção de Vendas", "Meta Alvo (R$ 100k)"],
-        markers=True,
-        title="Planejamento de Vendas Rumo a R$ 100.000,00 Mensais (BraClean)",
-        color_discrete_map={"Projeção de Vendas": "#00FF66", "Meta Alvo (R$ 100k)": "#FF0033"}
-    )
-    fig_braclean_meta.update_layout(
-        paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
-        plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
-        font=dict(color="#FFFFFF", family="Inter", size=13),
-        height=380,
-        xaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA),
-        yaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA)
-    )
-    st.plotly_chart(fig_braclean_meta, use_container_width=True)
 
 # =========================================================
 # ABA 5: + NOVO CADASTRO
@@ -1689,73 +1300,4 @@ elif aba_selecionada == "+ Novo Cadastro":
                 )
                 salvar_dados_crm(st.session_state.df_crm)
                 st.success(f"Empresa '{rapido_empresa}' cadastrada e salva com sucesso na nuvem!")
-                st.rerun()
-
-    st.write("---")
-    st.subheader("Cadastrar Oportunidade Completa (BraClean)")
-    
-    with st.form("form_oportunidade", clear_on_submit=True):
-        col_f1, col_f2 = st.columns(2)
-        
-        with col_f1:
-            nova_empresa = st.text_input("Nome da Empresa / Cliente *")
-            novo_perfil = st.selectbox("Classificação do Lead *", OPCOES_PERFIL, index=2, key="completo_perfil")
-            novo_contato = st.text_input("Contato / Nome")
-            novo_cargo = st.text_input("Cargo")
-            novo_telefone = st.text_input("Telefone de Contato *")
-            novo_email = st.text_input("E-mail Comercial")
-            
-        with col_f2:
-            nova_cidade = st.text_input("Cidade / Estado")
-            novo_vendedor = st.selectbox("Vendedor / Responsável", options=["Gabriel", "Ariel"])
-            nova_valor = st.number_input("Valor Estimado Mensal (R$)", min_value=0.0, step=1000.0, format="%.2f")
-            nova_etapa = st.selectbox(
-                "Etapa Inicial *", 
-                list(PROB_MAP.keys()),
-                format_func=lambda x: x.replace("Pré: ", "").replace("Pós: ", "")
-            )
-            motivo_perda = st.selectbox("Motivo de Perda / Sem Interesse (Se aplicável)", [""] + MOTIVOS_PERDA_PADRAO)
-            
-        st.divider()
-        st.markdown("**Dados Iniciais de Follow-up:**")
-        f_data_ini = st.date_input("Data do Primeiro Follow-up", value=date.today())
-        f_nota_ini = st.text_input("Lembrete / Ação de Follow-up")
-
-        btn_salvar = st.form_submit_button("Salvar Oportunidade Completa")
-        
-        if btn_salvar:
-            if not nova_empresa:
-                st.error("Preencha o Nome da Empresa.")
-            else:
-                novo_id = int(df["id"].max() + 1) if not df.empty and pd.notna(df["id"].max()) else 1
-                
-                email_valido = nova_email if 'nova_email' in locals() and nova_email else "Não informado"
-                contato_valido = novo_contato if 'novo_contato' in locals() and novo_contato else "Não informado"
-                cargo_valido = novo_cargo if 'nova_cargo' in locals() and novo_cargo else "Não informado"
-                telefone_valido = novo_telefone if 'novo_telefone' in locals() and novo_telefone else "Não informado"
-                cidade_valida = nova_cidade if 'nova_cidade' in locals() and nova_cidade else "Não informado"
-
-                nova_linha = {
-                    "id": novo_id,
-                    "Empresa": nova_empresa,
-                    "Cliente": "BraClean",
-                    "Perfil": novo_perfil,
-                    "Etapa": nova_etapa,
-                    "Contato": contato_valido,
-                    "Cargo": cargo_valido,
-                    "Telefone": telefone_valido,
-                    "Email": email_valido,
-                    "Cidade": cidade_valida,
-                    "Valor": nova_valor,
-                    "Prob": PROB_MAP[nova_etapa],
-                    "Vendedor": novo_vendedor,
-                    "Perda": str(motivo_perda) if "Perdido" in nova_etapa else "",
-                    "Data_Cadastro": str(date.today()),
-                    "Followup_Data": str(f_data_ini) if f_nota_ini else "",
-                    "Followup_Nota": f_nota_ini,
-                    "Historico": f"[{dt.now().strftime('%d/%m/%Y %H:%M')}] Oportunidade cadastrada."
-                }
-                st.session_state.df_crm = pd.concat([st.session_state.df_crm, pd.DataFrame([nova_linha])], ignore_index=True)
-                salvar_dados_crm(st.session_state.df_crm)
-                st.success("Oportunidade cadastrada e salva com sucesso na nuvem!")
                 st.rerun()
