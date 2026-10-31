@@ -327,23 +327,37 @@ def salvar_dados_crm(df):
         st.error(f"Erro ao salvar dados no Google Sheets: {e}")
 
 # ---------------------------------------------------------
-# FUNÇÕES DE HISTÓRICO DE METAS (ARMAZENAMENTO A PARTIR DE HOJE)
+# FUNÇÕES DE SINCRONIZAÇÃO DA TABELA MACRO COM GOOGLE SHEETS
 # ---------------------------------------------------------
-def carregar_historico_metas():
+@st.cache_data(ttl=0)
+def carregar_dados_macro_sheets():
     try:
-        df_hist = conn.read(worksheet="HistoricoMetas", ttl=0)
-        df_hist = df_hist.dropna(how="all")
-        if not df_hist.empty:
-            return df_hist
-    except:
+        df_loaded = conn.read(worksheet="HistoricoMetas", ttl=0)
+        df_loaded = df_loaded.dropna(how="all")
+        if not df_loaded.empty:
+            df_loaded["Volume de Atividades"] = pd.to_numeric(df_loaded["Volume de Atividades"], errors="coerce").fillna(0).astype(int)
+            return df_loaded
+    except Exception:
         pass
-    return pd.DataFrame(columns=["Data", "Vendedor", "Leads_Dia", "Leads_Semana", "Leads_Mes"])
+    
+    return pd.DataFrame([
+        {"Periodo_Tipo": "Semanal", "Periodo": "Semana 1", "Vendedor": "Gabriel", "Volume de Atividades": 45},
+        {"Periodo_Tipo": "Semanal", "Periodo": "Semana 2", "Vendedor": "Gabriel", "Volume de Atividades": 60},
+        {"Periodo_Tipo": "Semanal", "Periodo": "Semana 3", "Vendedor": "Gabriel", "Volume de Atividades": 85},
+        {"Periodo_Tipo": "Semanal", "Periodo": "Semana 4", "Vendedor": "Gabriel", "Volume de Atividades": 110},
+        {"Periodo_Tipo": "Semanal", "Periodo": "Semana 1", "Vendedor": "Ariel", "Volume de Atividades": 30},
+        {"Periodo_Tipo": "Semanal", "Periodo": "Semana 2", "Vendedor": "Ariel", "Volume de Atividades": 50},
+        {"Periodo_Tipo": "Semanal", "Periodo": "Semana 3", "Vendedor": "Ariel", "Volume de Atividades": 70},
+        {"Periodo_Tipo": "Semanal", "Periodo": "Semana 4", "Vendedor": "Ariel", "Volume de Atividades": 95},
+    ])
 
-def salvar_historico_metas(df_hist):
+def salvar_dados_macro_sheets(df_macro):
     try:
-        conn.update(worksheet="HistoricoMetas", data=df_hist)
+        conn.update(worksheet="HistoricoMetas", data=df_macro)
+        return True
     except Exception as e:
-        pass
+        st.error(f"Erro ao salvar na aba 'HistoricoMetas' do Google Sheets: {e}")
+        return False
 
 def carregar_dados_tarefas():
     if ARQUIVO_TAREFAS.exists():
@@ -1081,7 +1095,6 @@ elif aba_selecionada == "Funil de Vendas":
                     <div style="border-left: 5px solid {cor_header}; background-color: rgba(10, 14, 39, 0.85); border-top: 1px solid #1E293B; border-right: 1px solid #1E293B; border-bottom: 1px solid #1E293B; border-radius: 4px; margin-bottom: 6px; padding: 2px;">
                 """, unsafe_allow_html=True)
                 
-                # CARTÃO DO FUNIL EXIBINDO APENAS O NOME DA EMPRESA (SEM CLASSIFICAÇÃO A, B, C)
                 with st.expander(f"{row['Empresa']}"):
                     dt_f_exib = row.get('Followup_Data', '')
                     
@@ -1597,43 +1610,65 @@ elif aba_selecionada == "Relatório Executivo":
     st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
 
     # ---------------------------------------------------------
-    # GRÁFICO MACRO DE LINHAS: COMPORTAMENTO GERAL DOS VENDEDORES
+    # GRÁFICO MACRO AVANÇADO E TABELA EDITÁVEL (COM GOOGLE SHEETS)
     # ---------------------------------------------------------
-    st.markdown("### Visão Macro: Comportamento de Atividades dos Vendedores")
-    
-    # Exemplo estruturado de linha do tempo macro (Diário, Semanal, Mensal)
-    periodos_macro = ["Início do Período", "Fase Intermediária", "Momento Atual"]
-    
-    df_macro_comportamento = pd.DataFrame({
-        "Período": periodos_macro * len(vendedores_covem),
-        "Vendedor": [v for v in vendedores_covem for _ in periodos_macro],
-        "Volume de Atividades": [
-            # Gabriel
-            15, 35, int(df_vend[df_vend["Vendedor"] == "Gabriel"]["Leads Movimentados"].values[0] if not df_vend[df_vend["Vendedor"] == "Gabriel"].empty else 20),
-            # Ariel
-            10, 25, int(df_vend[df_vend["Vendedor"] == "Ariel"]["Leads Movimentados"].values[0] if not df_vend[df_vend["Vendedor"] == "Ariel"].empty else 15)
-        ]
-    })
+    st.markdown("### Visão Macro Avançada: Comportamento de Atividades dos Vendedores")
+    st.markdown("Gerencie e edite os registros temporais de prospecção por **Dias**, **Semanas** ou **Meses**. As alterações podem ser salvas diretamente no Google Sheets.")
 
-    fig_macro_linhas = px.line(
-        df_macro_comportamento,
-        x="Período",
-        y="Volume de Atividades",
-        color="Vendedor",
-        markers=True,
-        title="Evolução e Tendência de Comportamento Operacional por Vendedor",
-        color_discrete_map=cores_vendedores_map
+    if 'df_macro_prospeccao' not in st.session_state:
+        st.session_state.df_macro_prospeccao = carregar_dados_macro_sheets()
+
+    filtro_temporal = st.radio(
+        "Selecione a Visão Temporal:",
+        options=["Diário (Segunda a Sexta)", "Semanal (Semana 1 a 4)", "Mensal (Janeiro a Dezembro)"],
+        horizontal=True
     )
-    fig_macro_linhas.update_layout(
-        paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
-        plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
-        font=dict(color="#FFFFFF", family="Inter", size=13),
-        height=380,
-        xaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA),
-        yaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA),
-        legend=dict(font=dict(color="#FFFFFF"))
+
+    st.markdown("#### ✏️ Tabela Editável de Prospecção Sincronizada")
+    
+    df_macro_editado = st.data_editor(
+        st.session_state.df_macro_prospeccao,
+        num_rows="dynamic",
+        use_container_width=True,
+        key="editor_dados_macro_gsheets"
     )
-    st.plotly_chart(fig_macro_linhas, use_container_width=True)
+
+    col_btn_salvar, col_btn_recarregar = st.columns([2, 2])
+
+    with col_btn_salvar:
+        if st.button("💾 Salvar Alterações no Google Sheets", use_container_width=True):
+            if salvar_dados_macro_sheets(df_macro_editado):
+                st.session_state.df_macro_prospeccao = df_macro_editado
+                st.success("Dados de prospecção salvos com sucesso na nuvem (aba HistoricoMetas)!")
+                st.rerun()
+
+    with col_btn_recarregar:
+        if st.button("🔄 Recarregar Dados da Nuvem", use_container_width=True):
+            st.session_state.df_macro_prospeccao = carregar_dados_macro_sheets()
+            st.rerun()
+
+    if not df_macro_editado.empty:
+        fig_macro_linhas_avancado = px.line(
+            df_macro_editado,
+            x="Periodo",
+            y="Volume de Atividades",
+            color="Vendedor",
+            markers=True,
+            title=f"Evolução Operacional de Vendas ({filtro_temporal})",
+            color_discrete_map=cores_vendedores_map
+        )
+        fig_macro_linhas_avancado.update_layout(
+            paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+            plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+            font=dict(color="#FFFFFF", family="Inter", size=13),
+            height=400,
+            xaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA, title="Período Temporal"),
+            yaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA, title="Volume de Leads / Atividades"),
+            legend=dict(font=dict(color="#FFFFFF"))
+        )
+        st.plotly_chart(fig_macro_linhas_avancado, use_container_width=True)
+    else:
+        st.info("Insira registros na tabela acima para gerar o gráfico macro.")
 
     st.divider()
 
