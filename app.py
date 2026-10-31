@@ -379,7 +379,7 @@ def calcular_status_followup(data_str):
 # BARRA LATERAL (LOGO PEQUENA COVEM E CONFIGURAÇÕES)
 # ---------------------------------------------------------
 if ARQUIVO_LOGO.exists():
-    st.sidebar.image(str(ARQUIVO_LOGO), width_percent=60, use_container_width=True)
+    st.sidebar.image(str(ARQUIVO_LOGO), use_container_width=True)
 
 st.sidebar.markdown("### Plataforma Exclusiva BraClean")
 st.sidebar.divider()
@@ -1724,7 +1724,7 @@ elif aba_selecionada == "+ Novo Cadastro":
                 
                 email_valido = nova_email if 'nova_email' in locals() and nova_email else "Não informado"
                 contato_valido = novo_contato if 'novo_contato' in locals() and novo_contato else "Não informado"
-                cargo_valido = novo_cargo if 'novo_cargo' in locals() and novo_cargo else "Não informado"
+                cargo_valido = novo_cargo if 'nova_cargo' in locals() and novo_cargo else "Não informado"
                 telefone_valido = novo_telefone if 'novo_telefone' in locals() and novo_telefone else "Não informado"
                 cidade_valida = nova_cidade if 'nova_cidade' in locals() and nova_cidade else "Não informado"
 
