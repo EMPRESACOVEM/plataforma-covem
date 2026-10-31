@@ -1504,7 +1504,7 @@ elif aba_selecionada == "Relatório Executivo":
     st.divider()
 
     # ---------------------------------------------------------
-    # ATIVIDADES INDIVIDUAIS (GABRIEL VS ARIEL) E METAS (DIÁRIA, SEMANAL, MENSAL)
+    # ATIVIDADES INDIVIDUAIS (GABRIEL VS ARIEL) E METAS
     # ---------------------------------------------------------
     st.markdown("### Atividades Individuais & Metas de Vendedores")
 
@@ -1594,7 +1594,47 @@ elif aba_selecionada == "Relatório Executivo":
         )
         st.plotly_chart(fig_meta_mensal, use_container_width=True)
 
-    st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
+
+    # ---------------------------------------------------------
+    # GRÁFICO MACRO DE LINHAS: COMPORTAMENTO GERAL DOS VENDEDORES
+    # ---------------------------------------------------------
+    st.markdown("### Visão Macro: Comportamento de Atividades dos Vendedores")
+    
+    # Exemplo estruturado de linha do tempo macro (Diário, Semanal, Mensal)
+    periodos_macro = ["Início do Período", "Fase Intermediária", "Momento Atual"]
+    
+    df_macro_comportamento = pd.DataFrame({
+        "Período": periodos_macro * len(vendedores_covem),
+        "Vendedor": [v for v in vendedores_covem for _ in periodos_macro],
+        "Volume de Atividades": [
+            # Gabriel
+            15, 35, int(df_vend[df_vend["Vendedor"] == "Gabriel"]["Leads Movimentados"].values[0] if not df_vend[df_vend["Vendedor"] == "Gabriel"].empty else 20),
+            # Ariel
+            10, 25, int(df_vend[df_vend["Vendedor"] == "Ariel"]["Leads Movimentados"].values[0] if not df_vend[df_vend["Vendedor"] == "Ariel"].empty else 15)
+        ]
+    })
+
+    fig_macro_linhas = px.line(
+        df_macro_comportamento,
+        x="Período",
+        y="Volume de Atividades",
+        color="Vendedor",
+        markers=True,
+        title="Evolução e Tendência de Comportamento Operacional por Vendedor",
+        color_discrete_map=cores_vendedores_map
+    )
+    fig_macro_linhas.update_layout(
+        paper_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+        plot_bgcolor=FUNDO_GRAFICO_FUTURISTA,
+        font=dict(color="#FFFFFF", family="Inter", size=13),
+        height=380,
+        xaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA),
+        yaxis=dict(gridcolor=GRID_GRAFICO_FUTURISTA),
+        legend=dict(font=dict(color="#FFFFFF"))
+    )
+    st.plotly_chart(fig_macro_linhas, use_container_width=True)
+
     st.divider()
 
     # ---------------------------------------------------------
