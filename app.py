@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px 
+import plotly.express as px
 import plotly.graph_objects as go
 import io
 import os
@@ -381,7 +381,7 @@ def calcular_status_followup(data_str):
 if ARQUIVO_LOGO.exists():
     st.sidebar.image(str(ARQUIVO_LOGO), use_container_width=True)
 
-st.sidebar.markdown("###BraClean")
+st.sidebar.markdown("### BraClean")
 st.sidebar.divider()
 
 with st.sidebar.expander("Personalizar Cores das Etapas", expanded=False):
@@ -1428,16 +1428,22 @@ elif aba_selecionada == "Relatório Executivo":
     st.divider()
 
     # ---------------------------------------------------------
-    # ATIVIDADES INDIVIDUAIS (GABRIEL VS ARIEL) E METAS
+    # ATIVIDADES INDIVIDUAIS (GABRIEL VS ARIEL) E METAS (ZERADO PARA INICIAR TERÇA-FEIRA 03/11/2026)
     # ---------------------------------------------------------
     st.markdown("### Atividades Individuais & Metas de Vendedores")
+    st.caption("📅 Dados configurados para iniciar a contagem a partir de terça-feira (03/11/2026).")
 
     vendedores_covem = ["Gabriel", "Ariel"]
-    df_exec["Vendedor"] = df_exec["Vendedor"].fillna("Gabriel")
+    
+    # Filtra o dataframe executivo considerando apenas cadastros a partir de 03/11/2026 para zerar o histórico anterior nestes gráficos
+    data_inicio_utilizacao = pd.to_datetime("2026-11-03").date()
+    df_exec["Data_Cadastro_Parsed"] = pd.to_datetime(df_exec["Data_Cadastro"], errors="coerce").dt.date
+    df_vendedores_filtrado = df_exec[df_exec["Data_Cadastro_Parsed"] >= data_inicio_utilizacao].copy()
+    df_vendedores_filtrado["Vendedor"] = df_vendedores_filtrado["Vendedor"].fillna("Gabriel")
     
     vendedores_dados = []
     for v in vendedores_covem:
-        sub_v = df_exec[df_exec["Vendedor"].str.contains(v, case=False, na=False)]
+        sub_v = df_vendedores_filtrado[df_vendedores_filtrado["Vendedor"].str.contains(v, case=False, na=False)]
         qtd_leads = len(sub_v)
         vendedores_dados.append({"Vendedor": v, "Leads Movimentados": qtd_leads})
         
@@ -1450,7 +1456,6 @@ elif aba_selecionada == "Relatório Executivo":
 
     col_g1, col_g2, col_g3 = st.columns(3)
 
-    # CORES SOLICITADAS: Gabriel = Verde Neon, Ariel = Azul Neon, Meta = Roxo Neon
     cores_vendedores_map = {
         "Gabriel": "#00FF66",  # Verde Neon
         "Ariel": "#00E5FF"     # Azul Neon
@@ -1523,9 +1528,10 @@ elif aba_selecionada == "Relatório Executivo":
     st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
 
     # ---------------------------------------------------------
-    # GRÁFICO MACRO DE LINHAS PROGRESSIVO (DIÁRIO, SEMANAL, MENSAL)
+    # GRÁFICO MACRO DE LINHAS PROGRESSIVO (DIÁRIO, SEMANAL, MENSAL) - INICIANDO TERÇA-FEIRA
     # ---------------------------------------------------------
     st.markdown("### Visão Macro de Atividades dos Vendedores")
+    st.markdown("Acompanhamento progressivo e automático da movimentação dos vendedores com início a partir de terça-feira (03/11/2026).")
 
     tipo_visao_macro = st.selectbox(
         "Selecione a Escala Temporal:",
@@ -1533,7 +1539,7 @@ elif aba_selecionada == "Relatório Executivo":
         key="select_visao_macro"
     )
 
-    df_macro_dinamico = df_exec.copy()
+    df_macro_dinamico = df_vendedores_filtrado.copy()
     if "Data_Cadastro" in df_macro_dinamico.columns:
         df_macro_dinamico["Data_Cadastro"] = pd.to_datetime(df_macro_dinamico["Data_Cadastro"], errors='coerce')
         df_macro_dinamico = df_macro_dinamico.dropna(subset=["Data_Cadastro"])
@@ -1573,7 +1579,7 @@ elif aba_selecionada == "Relatório Executivo":
         )
         st.plotly_chart(fig_macro_progressivo, use_container_width=True)
     else:
-        st.info("Ainda não há registros suficientes com data para traçar a evolução macro.")
+        st.info("Gráfico zerado. A contagem de atividades iniciará automaticamente a partir de terça-feira (03/11/2026).")
 
     st.divider()
 
@@ -1725,7 +1731,7 @@ elif aba_selecionada == "+ Novo Cadastro":
                 
                 email_valido = nova_email if 'nova_email' in locals() and nova_email else "Não informado"
                 contato_valido = novo_contato if 'novo_contato' in locals() and novo_contato else "Não informado"
-                cargo_valido = novo_cargo if 'novo_cargo' in locals() and novo_cargo else "Não informado"
+                cargo_valido = novo_cargo if 'nova_cargo' in locals() and novo_cargo else "Não informado"
                 telefone_valido = novo_telefone if 'novo_telefone' in locals() and novo_telefone else "Não informado"
                 cidade_valida = nova_cidade if 'nova_cidade' in locals() and nova_cidade else "Não informado"
 
