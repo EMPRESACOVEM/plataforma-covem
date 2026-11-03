@@ -311,13 +311,13 @@ def configurar_gemini_api():
             if api_key_env:
                 genai.configure(api_key=api_key_env)
                 return True
-    except Exception:
-        pass
+    except Exception as e:
+        st.error(f"Erro interno ao configurar Gemini: {e}")
     return False
 
 def gerar_briefing_matinal_ia(df_crm, df_tarefas):
     if not configurar_gemini_api():
-        return "Erro: Chave da API do Gemini não configurada."
+        return "Erro: Chave da API do Gemini não configurada corretamente no Streamlit."
     
     hoje_dt = date.today()
     hoje_str = hoje_dt.strftime("%Y-%m-%d")
@@ -397,6 +397,69 @@ def gerar_briefing_matinal_ia(df_crm, df_tarefas):
 def processar_relatorio_fim_de_dia(texto_relatorio, df_crm):
     if not configurar_gemini_api():
         st.error("Chave da API do Gemini não configurada nos secrets do Streamlit.")
+        return False
+
+    lista_leads_ativos = df_crm[["Empresa", "Etapa", "Contato"]].to_dict(orient="records")
+
+    prompt = f"""
+    Você é o motor de IA de um CRM comercial de alta performance (GRUPO COVEM - BraClean).
+    Aqui está a lista de leads ativos cadastrados atualmente no sistema:
+    {json.dumps(lista_leads_ativos, ensure_ascii=False)}
+
+    O vendedor enviou o seguinte relatório de fim de dia em texto corrido/livre:
+    "{texto_relatorio}"
+
+    Instruções estritas de processamento:
+    Analise o texto e identifique quais empresas/leads foram mencionados, quais foram as atualizações, mudanças de etapa, se houve novo agendamento de follow-up (formato YYYY-MM-DD) e um breve resumo para a linha do tempo (Histórico).
+    
+    Retorne estritamente um array JSON válido contendo objetos com as seguintes chaves exatas:
+    - "lead_name": nome exato ou próximo da empresa
+    - "nova_etapa": se houver mudança, coloque o nome exato; caso contrário, "Manter"
+    - "proximo_follow_up": data YYYY-MM-DD se houver, ou null
+    - "nota_historico": resumo executivo
+    """
+
+    try:
+        model = genai.GenerativeModel('gemini-2.5-flash')
+        response = model.generate_content(
+            prompt,
+            generation_config={"response_mime_type": "application/json"}
+        )
+        
+        updates_json = json.loads(response.text)
+        
+        atualizacoes_realizadas = 0
+        for update in updates_json:
+            nome_alvo = str(update.get("lead_name", "")).strip().lower()
+            if not nome_alvo:
+                continue
+                
+            for idx, row in df_crm.iterrows():
+                if str(row["Empresa"]).strip().lower() == nome_alvo:
+                    nova_etapa = update.get("nova_etapa", "Manter")
+                    if nova_etapa and nova_etapa != "Manter" and nova_etapa in PROB_MAP:
+                        df_crm.loc[idx, "Etapa"] = nova_etapa
+                        df_crm.loc[idx, "Prob"] = PROB_MAP[nova_etapa]
+                        if "Perdido" in nova_etapa:
+                            df_crm.loc[idx, "Perda"] = "Outros"
+
+                    novo_fu = update.get("proximo_follow_up")
+                    if novo_fu:
+                        df_crm.loc[idx, "Followup_Data"] = str(novo_fu)[:10]
+
+                    nota_hist = update.get("nota_historico", "Atualização via IA no fim do dia.")
+                    timestamp_atual = dt.now().strftime("%d/%m/%Y %H:%M")
+                    novo_registro = f"[{timestamp_atual}] (IA Fim de Dia) {nota_hist}"
+                    
+                    hist_atual = str(row["Historico"]) if pd.notna(row["Historico"]) else ""
+                    df_crm.loc[idx, "Historico"] = novo_registro + ("\n" + hist_atual if hist_atual.strip() else "")
+                    df_crm.loc[idx, "Followup_Nota"] = nota_hist
+                    atualizacoes_realizadas += 1
+                    break
+                    
+        return atualizacoes_realizadas
+    except Exception as e:
+        st.error(f"Erro ao processar o relatório com a Gemini API: {e}")
         return False
 
     lista_leads_ativos = df_crm[["Empresa", "Etapa", "Contato"]].to_dict(orient="records")
