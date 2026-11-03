@@ -464,7 +464,7 @@ st.markdown("""
 aba_selecionada = st.session_state.menu_ativo
 
 # =========================================================
-# ABA 1: GERENCIADOR DE TAREFAS & AGENDA UNIFICADA COM ATRASADOS
+# ABA 1: GERENCIADOR DE TAREFAS & AGENDA UNIFICADA COM FILTROS SEPARADOS
 # =========================================================
 if aba_selecionada == "Gerenciamento de Tarefas":
     st.subheader("Gerenciamento de Tarefas — BraClean")
@@ -528,21 +528,19 @@ if aba_selecionada == "Gerenciamento de Tarefas":
     with col_h1:
         horizonte = st.selectbox(
             "Horizonte de Visualização:",
-            ["Incluir Atrasados + Próximos 7 Dias", "Incluir Atrasados + Próximos 15 Dias", "Incluir Atrasados + Próximos 30 Dias", "Todos os Registros (Incluindo Atrasados)"],
+            [
+                "Atrasados", 
+                "Próximos 7 Dias", 
+                "Próximos 15 Dias", 
+                "Próximos 30 Dias", 
+                "Todos os Registros"
+            ],
             label_visibility="collapsed"
         )
 
     hoje = date.today()
-    if "7 Dias" in horizonte:
-        limite_data = hoje + timedelta(days=7)
-    elif "15 Dias" in horizonte:
-        limite_data = hoje + timedelta(days=15)
-    elif "30 Dias" in horizonte:
-        limite_data = hoje + timedelta(days=30)
-    else:
-        limite_data = hoje + timedelta(days=3650) # Todos os futuros e antigos
 
-    eventos_futuros = []
+    eventos_brutos = []
 
     df_tarefas_exibicao = st.session_state.df_tarefas.copy()
 
@@ -551,19 +549,18 @@ if aba_selecionada == "Gerenciamento de Tarefas":
             if pd.notna(t.get("Data_Vencimento")):
                 try:
                     dt_v = dt.strptime(str(t["Data_Vencimento"])[:10], "%Y-%m-%d").date()
-                    # Inclui se estiver no período ou se estiver atrasado (menor que hoje)
-                    if dt_v <= limite_data:
-                        status_atraso_str = "Atrasada 🔴" if dt_v < hoje else f"Prioridade: {t.get('Prioridade', 'Normal')}"
-                        eventos_futuros.append({
-                            "origem": "tarefa",
-                            "index_original": idx_t,
-                            "Data_Formatada": dt_v.strftime("%d/%m/%Y"),
-                            "Data_Obj": dt_v,
-                            "Tipo": "Tarefa",
-                            "Título / Ação": t["Titulo"],
-                            "Vinculado a": f"Cliente: {t.get('Cliente', 'BraClean')}",
-                            "Prioridade / Status": status_atraso_str
-                        })
+                    status_atraso_str = "Atrasada 🔴" if dt_v < hoje else f"Prioridade: {t.get('Prioridade', 'Normal')}"
+                    eventos_brutos.append({
+                        "origem": "tarefa",
+                        "index_original": idx_t,
+                        "Data_Formatada": dt_v.strftime("%d/%m/%Y"),
+                        "Data_Obj": dt_v,
+                        "Tipo": "Tarefa",
+                        "Título / Ação": t["Titulo"],
+                        "Vinculado a": f"Cliente: {t.get('Cliente', 'BraClean')}",
+                        "Prioridade / Status": status_atraso_str,
+                        "is_atrasado": dt_v < hoje
+                    })
                 except:
                     pass
 
@@ -573,30 +570,52 @@ if aba_selecionada == "Gerenciamento de Tarefas":
             if pd.notna(f_dat) and str(f_dat).strip() not in ["", "nan", "NaT"]:
                 try:
                     dt_f = dt.strptime(str(f_dat)[:10], "%Y-%m-%d").date()
-                    if dt_f <= limite_data:
-                        status_atraso_str = "Atrasado 🔴" if dt_f < hoje else f"Etapa: {c['Etapa']}"
-                        eventos_futuros.append({
-                            "origem": "crm",
-                            "index_original": idx_c,
-                            "Data_Formatada": dt_f.strftime("%d/%m/%Y"),
-                            "Data_Obj": dt_f,
-                            "Tipo": "Follow-up CRM",
-                            "Título / Ação": c.get("Followup_Nota", "Contato Comercial"),
-                            "Vinculado a": f"Empresa: {c['Empresa']} ({c.get('Contato', 'Não informado')})",
-                            "Prioridade / Status": status_atraso_str
-                        })
+                    status_atraso_str = "Atrasado 🔴" if dt_f < hoje else f"Etapa: {c['Etapa']}"
+                    eventos_brutos.append({
+                        "origem": "crm",
+                        "index_original": idx_c,
+                        "Data_Formatada": dt_f.strftime("%d/%m/%Y"),
+                        "Data_Obj": dt_f,
+                        "Tipo": "Follow-up CRM",
+                        "Título / Ação": c.get("Followup_Nota", "Contato Comercial"),
+                        "Vinculado a": f"Empresa: {c['Empresa']} ({c.get('Contato', 'Não informado')})",
+                        "Prioridade / Status": status_atraso_str,
+                        "is_atrasado": dt_f < hoje
+                    })
                 except:
                     pass
 
-    if eventos_futuros:
-        df_futuro = pd.DataFrame(eventos_futuros)
+    # Filtragem exata conforme solicitado por Gabriel
+    eventos_filtrados = []
+    for ev in eventos_brutos:
+        dt_ev = ev["Data_Obj"]
+        atrasado = ev["is_atrasado"]
+
+        if horizonte == "Atrasados":
+            if atrasado:
+                eventos_filtrados.append(ev)
+        elif horizonte == "Próximos 7 Dias":
+            if not atrasado and hoje <= dt_ev <= (hoje + timedelta(days=7)):
+                eventos_filtrados.append(ev)
+        elif horizonte == "Próximos 15 Dias":
+            if not atrasado and hoje <= dt_ev <= (hoje + timedelta(days=15)):
+                eventos_filtrados.append(ev)
+        elif horizonte == "Próximos 30 Dias":
+            if not atrasado and hoje <= dt_ev <= (hoje + timedelta(days=30)):
+                eventos_filtrados.append(ev)
+        elif horizonte == "Todos os Registros":
+            # Inclui tanto atrasados quanto futuros de qualquer data
+            eventos_filtrados.append(ev)
+
+    if eventos_filtrados:
+        df_futuro = pd.DataFrame(eventos_filtrados)
         df_futuro = df_futuro.sort_values(by="Data_Obj", ascending=True).reset_index(drop=True)
 
-        with st.expander(f"Ver compromissos e atrasados no período ({len(df_futuro)} encontrados)", expanded=True):
-            total_atrasados = len(df_futuro[df_futuro["Data_Obj"] < hoje])
+        with st.expander(f"Ver registros ({len(df_futuro)} encontrados para '{horizonte}')", expanded=True):
+            total_atrasados_lista = len(df_futuro[df_futuro["is_atrasado"] == True])
             c_m1, c_m2, c_m3 = st.columns(3)
-            c_m1.metric("Total de Registros", len(df_futuro))
-            c_m2.metric("Itens Atrasados 🔴", total_atrasados)
+            c_m1.metric("Total no Filtro", len(df_futuro))
+            c_m2.metric("Itens Atrasados 🔴", total_atrasados_lista)
             c_m3.metric("Follow-ups de CRM", len(df_futuro[df_futuro["Tipo"] == "Follow-up CRM"]))
 
             st.divider()
@@ -650,7 +669,7 @@ if aba_selecionada == "Gerenciamento de Tarefas":
                             st.success("Atualizado com sucesso!")
                             st.rerun()
     else:
-        st.info("Nenhuma tarefa ou follow-up encontrado para este filtro.")
+        st.info(f"Nenhum registro encontrado para o filtro selecionado ('{horizonte}').")
 
 # =========================================================
 # ABA 2: FUNIL DE VENDAS
@@ -1573,7 +1592,7 @@ elif aba_selecionada == "+ Novo Cadastro":
             else:
                 novo_id = int(df["id"].max() + 1) if not df.empty and pd.notna(df["id"].max()) else 1
                 
-                email_valido = nova_email if 'nova_email' in locals() and nova_email else "Não informado"
+                email_valido = nova_email if 'nova_email' in locals() else "Não informado"
                 contato_valido = novo_contato if 'novo_contato' in locals() else "Não informado"
                 cargo_valido = novo_cargo if 'novo_cargo' in locals() else "Não informado"
                 telefone_valido = novo_telefone if 'novo_telefone' in locals() else "Não informado"
