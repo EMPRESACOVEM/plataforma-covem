@@ -319,7 +319,6 @@ def salvar_dados_tarefas(df):
 # FUNÇÕES DE AUTOMAÇÃO (DIVISÃO DE 20 PARA CADA DA BASE GERAL)
 # ---------------------------------------------------------
 def obter_lotes_diarios_followup(df_crm):
-    # Pega todos os clientes da base geral que possuem follow-up agendado ou pendente
     df_pendentes = df_crm[
         (df_crm["Followup_Data"].notna()) & 
         (df_crm["Followup_Data"] != "") & 
@@ -328,11 +327,8 @@ def obter_lotes_diarios_followup(df_crm):
     ].copy()
     
     df_pendentes["Data_Alvo"] = pd.to_datetime(df_pendentes["Followup_Data"], errors="coerce").dt.date
-    
-    # Ordena da data mais antiga (mais atrasada) para a mais recente
     df_pendentes = df_pendentes.sort_values(by="Data_Alvo", ascending=True).reset_index(drop=True)
     
-    # Separa os primeiros 20 para o Gabriel e os próximos 20 para o Ariel da base geral
     lista_gabriel = df_pendentes.iloc[0:20]
     lista_ariel = df_pendentes.iloc[20:40]
     
@@ -524,10 +520,10 @@ if aba_selecionada == "Gerenciamento de Tarefas":
     st.subheader("Gerenciamento de Tarefas — BraClean")
 
     # ---------------------------------------------------------
-    # SEÇÃO: LISTAS DIÁRIAS (20 PARA GABRIEL E 20 PARA ARIEL DA BASE GERAL)
+    # SEÇÃO: LISTAS DIÁRIAS SIMPLIFICADAS (EMPRESA, RESPONSÁVEL, TEL, SITUAÇÃO)
     # ---------------------------------------------------------
     with st.expander("Listas Diárias de Follow-up (20 Leads para Gabriel e 20 para Ariel)", expanded=True):
-        st.caption("Divisão automática de 20 clientes da base geral para cada vendedor fazer o follow-up diário (priorizando os mais atrasados).")
+        st.caption("Formato direto: Empresa | Responsável | Telefone | Situação atual na BraClean.")
         tab_g, tab_a = st.tabs(["Gabriel", "Ariel"])
         
         hoje = date.today()
@@ -538,11 +534,14 @@ if aba_selecionada == "Gerenciamento de Tarefas":
             if not lista_g_df.empty:
                 texto_copia_g = ""
                 for idx_l, row_l in lista_g_df.reset_index(drop=True).iterrows():
-                    dt_f_fmt = str(row_l['Followup_Data'])[:10]
-                    atrasado_txt = " [ATRASADO]" if dt_f_fmt < str(hoje) else ""
-                    linha_formatada = f"{idx_l+1}. {row_l['Empresa']} | Contato: {row_l['Contato']} | Tel: {row_l['Telefone']} | Data: {dt_f_fmt}{atrasado_txt} | Nota: {row_l['Followup_Nota']}\n"
+                    empresa_val = row_l['Empresa']
+                    resp_val = row_l['Contato']
+                    tel_val = row_l['Telefone']
+                    nota_val = row_l['Followup_Nota'] if row_l['Followup_Nota'] else "Sem observações registradas."
+                    
+                    linha_formatada = f"{idx_l+1}. Empresa: {empresa_val} | Responsável: {resp_val} | Tel: {tel_val} | Situação: {nota_val}\n"
                     texto_copia_g += linha_formatada
-                    st.markdown(f"- **{row_l['Empresa']}** | Contato: {row_l['Contato']} | Tel: `{row_l['Telefone']}` | Data: {dt_f_fmt}{atrasado_txt} \n  *Nota:* {row_l['Followup_Nota']}")
+                    st.markdown(f"- **{empresa_val}** | Resp: {resp_val} | Tel: `{tel_val}` — *Situação:* {nota_val}")
                 
                 st.markdown("<br>", unsafe_allow_html=True)
                 st.text_area("Texto formatado para copiar (Gabriel):", value=texto_copia_g, height=150, key="txt_copia_gabriel")
@@ -554,11 +553,14 @@ if aba_selecionada == "Gerenciamento de Tarefas":
             if not lista_a_df.empty:
                 texto_copia_a = ""
                 for idx_l, row_l in lista_a_df.reset_index(drop=True).iterrows():
-                    dt_f_fmt = str(row_l['Followup_Data'])[:10]
-                    atrasado_txt = " [ATRASADO]" if dt_f_fmt < str(hoje) else ""
-                    linha_formatada = f"{idx_l+1}. {row_l['Empresa']} | Contato: {row_l['Contato']} | Tel: {row_l['Telefone']} | Data: {dt_f_fmt}{atrasado_txt} | Nota: {row_l['Followup_Nota']}\n"
+                    empresa_val = row_l['Empresa']
+                    resp_val = row_l['Contato']
+                    tel_val = row_l['Telefone']
+                    nota_val = row_l['Followup_Nota'] if row_l['Followup_Nota'] else "Sem observações registradas."
+                    
+                    linha_formatada = f"{idx_l+1}. Empresa: {empresa_val} | Responsável: {resp_val} | Tel: {tel_val} | Situação: {nota_val}\n"
                     texto_copia_a += linha_formatada
-                    st.markdown(f"- **{row_l['Empresa']}** | Contato: {row_l['Contato']} | Tel: `{row_l['Telefone']}` | Data: {dt_f_fmt}{atrasado_txt} \n  *Nota:* {row_l['Followup_Nota']}")
+                    st.markdown(f"- **{empresa_val}** | Resp: {resp_val} | Tel: `{tel_val}` — *Situação:* {nota_val}")
                 
                 st.markdown("<br>", unsafe_allow_html=True)
                 st.text_area("Texto formatado para copiar (Ariel):", value=texto_copia_a, height=150, key="txt_copia_ariel")
