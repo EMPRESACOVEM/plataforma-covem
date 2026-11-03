@@ -103,7 +103,7 @@ if 'sub_menu_tarefas' not in st.session_state:
 if 'editando_agenda_idx' not in st.session_state:
     st.session_state.editando_agenda_idx = None
 
-# Função para carregar a imagem de fundo local via Base64 e injetar estilos customizados dos Cards
+# Função para carregar a imagem de fundo local via Base64 e injetar estilos customizados absolutos
 def aplicar_fundo_personalizado(image_path):
     css_fundo = ""
     if image_path.exists():
@@ -182,28 +182,40 @@ def aplicar_fundo_personalizado(image_path):
             }}
 
             /* ---------------------------------------------------------
-               ESTILIZAÇÃO FORÇADA DOS CARDS DO MENU PRINCIPAL (PRATA)
+               ESTILIZAÇÃO ABSOLUTA DO MENU PRINCIPAL (PRATA METÁLICO)
                --------------------------------------------------------- */
-            div.main-menu-col div.stButton > button {{
-                background: linear-gradient(135deg, rgba(71, 85, 105, 0.95) 0%, rgba(30, 41, 59, 0.95) 100%) !important;
-                color: #F8FAFC !important;
-                border: 2px solid #94A3B8 !important;
-                border-top: 4px solid #E2E8F0 !important;
-                border-radius: 10px !important;
-                font-weight: 800 !important;
-                font-size: 15px !important;
-                padding-top: 16px !important;
-                padding-bottom: 16px !important;
-                box-shadow: 0 6px 16px rgba(0, 0, 0, 0.6) !important;
-                width: 100% !important;
+            .covem-main-btn {{
+                display: block;
+                width: 100%;
+                background: linear-gradient(135deg, rgba(51, 65, 85, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%) !important;
+                color: #E2E8F0 !important;
+                border: 1px solid #64748B !important;
+                border-top: 3px solid #CBD5E1 !important;
+                border-radius: 8px !important;
+                font-weight: 700 !important;
+                font-size: 13px !important;
+                text-align: center;
+                padding: 14px 8px !important;
+                text-decoration: none !important;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
+                transition: all 0.2s ease-in-out;
             }}
 
-            div.main-menu-col div.stButton > button:hover {{
-                background: linear-gradient(135deg, rgba(100, 116, 139, 0.95) 0%, rgba(51, 65, 85, 0.95) 100%) !important;
-                border-color: #FFFFFF !important;
+            .covem-main-btn:hover {{
+                border-color: #F1F5F9 !important;
                 color: #FFFFFF !important;
-                box-shadow: 0 0 20px rgba(226, 232, 240, 0.5) !important;
+                background: linear-gradient(135deg, rgba(71, 85, 105, 0.95) 0%, rgba(30, 41, 59, 0.98) 100%) !important;
+                box-shadow: 0 0 15px rgba(203, 213, 225, 0.35) !important;
                 transform: translateY(-2px);
+            }}
+
+            .covem-main-btn.active {{
+                background: linear-gradient(135deg, rgba(100, 116, 139, 0.95) 0%, rgba(51, 65, 85, 0.98) 100%) !important;
+                color: #FFFFFF !important;
+                border: 2px solid #F1F5F9 !important;
+                border-top: 5px solid #FFFFFF !important;
+                font-weight: 800 !important;
+                box-shadow: 0 0 20px rgba(241, 245, 249, 0.4) !important;
             }}
 
             /* ---------------------------------------------------------
@@ -447,6 +459,13 @@ if 'df_tarefas' not in st.session_state:
 if 'cliente_editando_id' not in st.session_state:
     st.session_state.cliente_editando_id = None
 
+# Sincronização via Query Params para os botões do Menu Principal
+query_params = st.query_params
+if "menu" in query_params:
+    aba_url = query_params["menu"]
+    if aba_url in ["Gerenciamento de Tarefas", "Funil de Vendas", "Dashboard", "Relatório Executivo", "+ Novo Cadastro"]:
+        st.session_state.menu_ativo = aba_url
+
 df = st.session_state.df_crm
 
 # ---------------------------------------------------------
@@ -512,7 +531,7 @@ with col_l2:
 st.divider()
 
 # ---------------------------------------------------------
-# MENU HORIZONTAL PRINCIPAL EM CARDS (PRATA METÁLICO)
+# MENU HORIZONTAL PRINCIPAL EM CARDS (PRATA METÁLICO ABSOLUTO)
 # ---------------------------------------------------------
 abas_disponiveis = [
     "Gerenciamento de Tarefas",
@@ -527,32 +546,17 @@ cols_menu = st.columns(len(abas_disponiveis))
 for i, nome_aba in enumerate(abas_disponiveis):
     with cols_menu[i]:
         is_active = (st.session_state.menu_ativo == nome_aba)
+        classe_ativa = "active" if is_active else ""
         
-        # Envolve na classe principal com div dedicada para forçar o CSS
-        st.markdown('<div class="main-menu-col">', unsafe_allow_html=True)
-        
-        if is_active:
-            st.markdown(
-                f"""
-                <style>
-                div[data-testid="column"]:nth-of-type({i+1}) div.main-menu-col div.stButton > button {{
-                    background: linear-gradient(135deg, rgba(148, 163, 184, 0.95) 0%, rgba(71, 85, 105, 0.95) 100%) !important;
-                    color: #FFFFFF !important;
-                    border: 2px solid #FFFFFF !important;
-                    border-top: 5px solid #F8FAFC !important;
-                    font-weight: 800 !important;
-                    box-shadow: 0 0 22px rgba(255, 255, 255, 0.5) !important;
-                }}
-                </style>
-                """,
-                unsafe_allow_html=True
-            )
-        
-        if st.button(nome_aba, key=f"menu_card_{i}", use_container_width=True):
-            st.session_state.menu_ativo = nome_aba
-            st.rerun()
-            
-        st.markdown('</div>', unsafe_allow_html=True)
+        # Link HTML customizado que atualiza instantaneamente a sessão e a página
+        st.markdown(
+            f"""
+            <a href="?menu={urllib.parse.quote(nome_aba)}" class="covem-main-btn {classe_ativa}" target="_self">
+                {nome_aba}
+            </a>
+            """,
+            unsafe_allow_html=True
+        )
 
 st.markdown("""
     <div style='margin-top: 30px; margin-bottom: 30px;'>
