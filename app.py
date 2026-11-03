@@ -520,10 +520,10 @@ if aba_selecionada == "Gerenciamento de Tarefas":
     st.subheader("Gerenciamento de Tarefas — BraClean")
 
     # ---------------------------------------------------------
-    # SEÇÃO: LISTAS DIÁRIAS SIMPLIFICADAS (EMPRESA, RESPONSÁVEL, TEL, SITUAÇÃO)
+    # SEÇÃO: LISTAS DIÁRIAS SIMPLIFICADAS (EMPRESA, RESPONSÁVEL, TEL)
     # ---------------------------------------------------------
     with st.expander("Listas Diárias de Follow-up (20 Leads para Gabriel e 20 para Ariel)", expanded=True):
-        st.caption("Formato direto: Empresa | Responsável | Telefone | Situação atual na BraClean.")
+        st.caption("Visualização simplificada em lista vertical limpa para fácil leitura e disparo.")
         tab_g, tab_a = st.tabs(["Gabriel", "Ariel"])
         
         hoje = date.today()
@@ -532,38 +532,36 @@ if aba_selecionada == "Gerenciamento de Tarefas":
         with tab_g:
             st.markdown("### Lote de Follow-up: Gabriel (20 Clientes)")
             if not lista_g_df.empty:
-                texto_copia_g = ""
                 for idx_l, row_l in lista_g_df.reset_index(drop=True).iterrows():
-                    empresa_val = row_l['Empresa']
+                    empresa_val = str(row_l['Empresa']).upper()
                     resp_val = row_l['Contato']
                     tel_val = row_l['Telefone']
-                    nota_val = row_l['Followup_Nota'] if row_l['Followup_Nota'] else "Sem observações registradas."
                     
-                    linha_formatada = f"{idx_l+1}. Empresa: {empresa_val} | Responsável: {resp_val} | Tel: {tel_val} | Situação: {nota_val}\n"
-                    texto_copia_g += linha_formatada
-                    st.markdown(f"- **{empresa_val}** | Resp: {resp_val} | Tel: `{tel_val}` — *Situação:* {nota_val}")
-                
-                st.markdown("<br>", unsafe_allow_html=True)
-                st.text_area("Texto formatado para copiar (Gabriel):", value=texto_copia_g, height=150, key="txt_copia_gabriel")
+                    st.markdown(f"""
+                        <div style="background-color: rgba(10, 14, 39, 0.6); border: 1px solid #1E293B; padding: 10px 14px; border-radius: 6px; margin-bottom: 8px; font-family: 'Inter', sans-serif;">
+                            <b style="color: #00E5FF; font-size: 14px;">{idx_l + 1}. {empresa_val}</b><br>
+                            <span style="color: #E2E8F0; font-size: 13px;">Responsável: {resp_val}</span><br>
+                            <span style="color: #94A3B8; font-size: 13px;">Telefone: <code>{tel_val}</code></span>
+                        </div>
+                    """, unsafe_allow_html=True)
             else:
                 st.info("Nenhum follow-up pendente na base para Gabriel.")
                 
         with tab_a:
             st.markdown("### Lote de Follow-up: Ariel (20 Clientes)")
             if not lista_a_df.empty:
-                texto_copia_a = ""
                 for idx_l, row_l in lista_a_df.reset_index(drop=True).iterrows():
-                    empresa_val = row_l['Empresa']
+                    empresa_val = str(row_l['Empresa']).upper()
                     resp_val = row_l['Contato']
                     tel_val = row_l['Telefone']
-                    nota_val = row_l['Followup_Nota'] if row_l['Followup_Nota'] else "Sem observações registradas."
                     
-                    linha_formatada = f"{idx_l+1}. Empresa: {empresa_val} | Responsável: {resp_val} | Tel: {tel_val} | Situação: {nota_val}\n"
-                    texto_copia_a += linha_formatada
-                    st.markdown(f"- **{empresa_val}** | Resp: {resp_val} | Tel: `{tel_val}` — *Situação:* {nota_val}")
-                
-                st.markdown("<br>", unsafe_allow_html=True)
-                st.text_area("Texto formatado para copiar (Ariel):", value=texto_copia_a, height=150, key="txt_copia_ariel")
+                    st.markdown(f"""
+                        <div style="background-color: rgba(10, 14, 39, 0.6); border: 1px solid #1E293B; padding: 10px 14px; border-radius: 6px; margin-bottom: 8px; font-family: 'Inter', sans-serif;">
+                            <b style="color: #00E5FF; font-size: 14px;">{idx_l + 1}. {empresa_val}</b><br>
+                            <span style="color: #E2E8F0; font-size: 13px;">Responsável: {resp_val}</span><br>
+                            <span style="color: #94A3B8; font-size: 13px;">Telefone: <code>{tel_val}</code></span>
+                        </div>
+                    """, unsafe_allow_html=True)
             else:
                 st.info("Nenhum follow-up pendente na base para Ariel.")
 
