@@ -349,7 +349,6 @@ def salvar_dados_tarefas(df):
 # ---------------------------------------------------------
 def configurar_gemini_api():
     try:
-        # Tenta buscar a chave de API nos segredos do Streamlit
         if "GEMINI_API_KEY" in st.secrets:
             genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
             return True
@@ -357,7 +356,6 @@ def configurar_gemini_api():
             genai.configure(api_key=st.secrets["gemini"]["api_key"])
             return True
         else:
-            # Tenta buscar nas variáveis de ambiente padrão do sistema
             api_key_env = os.environ.get("GEMINI_API_KEY")
             if api_key_env:
                 genai.configure(api_key=api_key_env)
@@ -372,7 +370,6 @@ def gerar_briefing_matinal_ia(df_crm, df_tarefas):
     
     hoje = date.today().strftime("%Y-%m-%d")
     
-    # Filtra tarefas e follow-ups de hoje
     tarefas_hoje = []
     if not df_tarefas.empty and "Data_Vencimento" in df_tarefas.columns:
         t_copia = df_tarefas.copy()
@@ -390,11 +387,11 @@ def gerar_briefing_matinal_ia(df_crm, df_tarefas):
             followups_hoje.append(f"- Cliente: {r.get('Empresa')} | Contato: {r.get('Contato')} | Nota: {r.get('Followup_Nota')}")
 
     if not tarefas_hoje and not followups_hoje:
-        return "Nenhum compromisso específico ou tarefa agendada estritamente para hoje. Excelente dia para prospecção ativa e expansão de carteira!"
+        return "Nenhum compromisso específico ou tarefa agendada para hoje. Excelente dia para prospecção ativa e expansão de carteira."
 
     prompt = f"""
     Você é o Diretor Comercial e Assessor Executivo do GRUPO COVEM (conta BraClean).
-    Com base nas demandas agendadas para hoje ({hoje}), elabore um Briefing Matinal motivador, direto, executivo e estratégico para o vendedor.
+    Com base nas demandas agendadas para hoje ({hoje}), elabore um Briefing Matinal direto, executivo e estratégico para o vendedor.
     
     Tarefas de hoje:
     {chr(10).join(tarefas_hoje) if tarefas_hoje else "Nenhuma tarefa cadastrada."}
@@ -402,7 +399,7 @@ def gerar_briefing_matinal_ia(df_crm, df_tarefas):
     Follow-ups de hoje no CRM:
     {chr(10).join(followups_hoje) if followups_hoje else "Nenhum follow-up no CRM."}
     
-    Escreva um resumo em bullet points destacando as prioridades absolutas do dia. Seja objetivo e profissional.
+    Escreva um resumo em bullet points destacando as prioridades absolutas do dia. Seja objetivo e profissional. Não utilize emojis.
     """
 
     try:
@@ -446,7 +443,6 @@ def processar_relatorio_fim_de_dia(texto_relatorio, df_crm):
         
         updates_json = json.loads(response.text)
         
-        # Executa a atualização no DataFrame do CRM
         atualizacoes_realizadas = 0
         for update in updates_json:
             nome_alvo = str(update.get("lead_name", "")).strip().lower()
@@ -455,7 +451,6 @@ def processar_relatorio_fim_de_dia(texto_relatorio, df_crm):
                 
             for idx, row in df_crm.iterrows():
                 if str(row["Empresa"]).strip().lower() == nome_alvo:
-                    # Atualiza etapa se houver modificação
                     nova_etapa = update.get("nova_etapa", "Manter")
                     if nova_etapa and nova_etapa != "Manter" and nova_etapa in PROB_MAP:
                         df_crm.loc[idx, "Etapa"] = nova_etapa
@@ -463,12 +458,10 @@ def processar_relatorio_fim_de_dia(texto_relatorio, df_crm):
                         if "Perdido" in nova_etapa:
                             df_crm.loc[idx, "Perda"] = "Outros"
 
-                    # Atualiza data de follow-up se houver
                     novo_fu = update.get("proximo_follow_up")
                     if novo_fu:
                         df_crm.loc[idx, "Followup_Data"] = str(novo_fu)[:10]
 
-                    # Adiciona nota ao Histórico (Linha do Tempo)
                     nota_hist = update.get("nota_historico", "Atualização via IA no fim do dia.")
                     timestamp_atual = dt.now().strftime("%d/%m/%Y %H:%M")
                     novo_registro = f"[{timestamp_atual}] (IA Fim de Dia) {nota_hist}"
@@ -773,45 +766,35 @@ def exibir_agenda_semana(df_tarefas, df_crm):
 # ABA 1: GERENCIADOR DE TAREFAS & CALENDÁRIO FUTURO
 # =========================================================
 if aba_selecionada == "Gerenciamento de Tarefas":
-    st.subheader("Gerenciamento de Tarefas & Agente IA — BraClean")
+    st.subheader("Gerenciamento de Tarefas - BraClean")
     
-    # =====================================================
-    # SEÇÃO DO AGENTE DE IA (BRIEFING MATINAL & FIM DE DIA)
-    # =====================================================
-    with st.container():
-        st.markdown("""
-            <div style="background: linear-gradient(135deg, rgba(10, 14, 39, 0.95) 0%, rgba(5, 11, 24, 0.95) 100%); border: 1px solid #00E5FF; padding: 20px; border-radius: 10px; margin-bottom: 25px; box-shadow: 0 0 15px rgba(0, 229, 255, 0.15);">
-                <h4 style="color: #00E5FF; margin-top: 0; margin-bottom: 10px;">🤖 Assistente de IA Comercial (Gemini)</h4>
-                <p style="font-size: 13px; color: #94A3B8;">Gere o seu briefing matinal ou atualize o CRM automaticamente colando o relatório do dia abaixo.</p>
-        """, unsafe_allow_html=True)
+    col_ia_1, col_ia_2 = st.columns(2)
 
-        col_ia_1, col_ia_2 = st.columns(2)
+    with col_ia_1:
+        if st.button("Gerar Briefing Matinal com IA", use_container_width=True):
+            with st.spinner("Gerando briefing de prioridades do dia..."):
+                briefing_texto = gerar_briefing_matinal_ia(st.session_state.df_crm, st.session_state.df_tarefas)
+                if briefing_texto:
+                    st.info(briefing_texto)
 
-        with col_ia_1:
-            if st.button("☀️ Gerar Briefing Matinal com IA", use_container_width=True):
-                with st.spinner("Gerando briefing de prioridades do dia..."):
-                    briefing_texto = gerar_briefing_matinal_ia(st.session_state.df_crm, st.session_state.df_tarefas)
-                    if briefing_texto:
-                        st.info(briefing_texto)
+    with col_ia_2:
+        with st.popover("Processar Fim de Dia com IA", use_container_width=True):
+            st.markdown("**Relatório de Fim de Dia:**")
+            st.caption("Cole abaixo as anotações corridas do seu dia de vendas.")
+            texto_fim_dia = st.text_area("Relatório bruto:", placeholder="Digite ou cole aqui...", label_visibility="collapsed")
+            
+            if st.button("Processar e Atualizar CRM", use_container_width=True):
+                if not texto_fim_dia.strip():
+                    st.warning("Insira o texto com o resumo do dia.")
+                else:
+                    with st.spinner("A IA está processando o relatório e atualizando o CRM..."):
+                        qtd_atualizada = processar_relatorio_fim_de_dia(texto_fim_dia, st.session_state.df_crm)
+                        if qtd_atualizada is not False:
+                            salvar_dados_crm(st.session_state.df_crm)
+                            st.success(f"CRM atualizado com sucesso! ({qtd_atualizada} lead(s) processados).")
+                            st.rerun()
 
-        with col_ia_2:
-            with st.popover("🌙 Processar Fim de Dia com IA", use_container_width=True):
-                st.markdown("**Relatório de Fim de Dia:**")
-                st.caption("Cole abaixo as anotações corridas do seu dia de vendas (ex: 'Falei com a Usina Santa Clara, fecharam contrato, passar para Fechado...').")
-                texto_fim_dia = st.text_area("Relatório bruto:", placeholder="Digite ou cole aqui...", label_visibility="collapsed")
-                
-                if st.button("Processar e Atualizar CRM", use_container_width=True):
-                    if not texto_fim_dia.strip():
-                        st.warning("Insira o texto com o resumo do dia.")
-                    else:
-                        with st.spinner("A IA está processando o relatório e atualizando o CRM..."):
-                            qtd_atualizada = processar_relatorio_fim_de_dia(st.session_state.df_crm, texto_fim_dia)
-                            if qtd_atualizada is not False:
-                                salvar_dados_crm(st.session_state.df_crm)
-                                st.success(f"CRM atualizado com sucesso! ({qtd_atualizada} lead(s) processados).")
-                                st.rerun()
-
-        st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("<div style='margin-bottom: 15px;'></div>", unsafe_allow_html=True)
 
     exibir_agenda_semana(st.session_state.df_tarefas, st.session_state.df_crm)
 
@@ -1002,7 +985,7 @@ elif aba_selecionada == "Funil de Vendas":
     with col_topo_busca:
         termo_busca = st.text_input(
             "Pesquisar cliente", 
-            placeholder="🔍 Buscar por empresa, contato...", 
+            placeholder="Buscar por empresa, contato...", 
             label_visibility="collapsed"
         )
 
@@ -1105,7 +1088,7 @@ elif aba_selecionada == "Funil de Vendas":
                 if historico_atual.strip():
                     for linha_hist in historico_atual.split("\n"):
                         if linha_hist.strip():
-                            st.markdown(f"- 🕒 `{linha_hist.strip()}`")
+                            st.markdown(f"- `{linha_hist.strip()}`")
                 else:
                     st.caption("Nenhum registro na linha do tempo ainda.")
                 
@@ -1616,11 +1599,10 @@ elif aba_selecionada == "Relatório Executivo":
     # ATIVIDADES INDIVIDUAIS (GABRIEL VS ARIEL) E METAS (ZERADO PARA INICIAR TERÇA-FEIRA 03/11/2026)
     # ---------------------------------------------------------
     st.markdown("### Atividades Individuais & Metas de Vendedores")
-    st.caption("📅 Dados configurados para iniciar a contagem a partir de terça-feira (03/11/2026).")
+    st.caption("Dados configurados para iniciar a contagem a partir de terça-feira (03/11/2026).")
 
     vendedores_covem = ["Gabriel", "Ariel"]
     
-    # Filtra o dataframe executivo considerando apenas cadastros a partir de 03/11/2026 para zerar o histórico anterior nestes gráficos
     data_inicio_utilizacao = pd.to_datetime("2026-11-03").date()
     df_exec["Data_Cadastro_Parsed"] = pd.to_datetime(df_exec["Data_Cadastro"], errors="coerce").dt.date
     df_vendedores_filtrado = df_exec[df_exec["Data_Cadastro_Parsed"] >= data_inicio_utilizacao].copy()
@@ -1918,7 +1900,7 @@ elif aba_selecionada == "+ Novo Cadastro":
                 contato_valido = novo_contato if 'novo_contato' in locals() and novo_contato else "Não informado"
                 cargo_valido = novo_cargo if 'novo_cargo' in locals() and novo_cargo else "Não informado"
                 telefone_valido = novo_telefone if 'novo_telefone' in locals() and novo_telefone else "Não informado"
-                cidade_valida = nova_cidade if 'nova_cidade`' in locals() and nova_cidade else "Não informado"
+                cidade_valida = nova_cidade if 'nova_cidade' in locals() and nova_cidade else "Não informado"
 
                 nova_linha = {
                     "id": novo_id,
