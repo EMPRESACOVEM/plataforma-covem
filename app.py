@@ -98,7 +98,7 @@ if 'funnel_selecionado' not in st.session_state:
     st.session_state.funnel_selecionado = "Funil de Vendas"
 
 if 'sub_menu_tarefas' not in st.session_state:
-    st.session_state.sub_menu_tarefas = "Tarefas"
+    st.session_state.sub_menu_tarefas = "Tarefas Diárias"
 
 if 'editando_agenda_idx' not in st.session_state:
     st.session_state.editando_agenda_idx = None
@@ -514,22 +514,52 @@ st.markdown("""
 aba_selecionada = st.session_state.menu_ativo
 
 # =========================================================
-# ABA 1: GERENCIADOR DE TAREFAS & AGENDA UNIFICADA COM FILTROS SEPARADOS
+# ABA 1: GERENCIAMENTO DE TAREFAS (ORGANIZADO EM SUBMENUS)
 # =========================================================
 if aba_selecionada == "Gerenciamento de Tarefas":
     st.subheader("Gerenciamento de Tarefas")
 
+    # SUBMENU HORIZONTAL LIMPO (SEM EMOJIS)
+    sub_opcoes = ["Tarefas Diárias", "Agenda & Follow Up", "Criar Nova Tarefa"]
+    cols_sub = st.columns(3)
+
+    for idx_s, nome_sub in enumerate(sub_opcoes):
+        with cols_sub[idx_s]:
+            is_sub_active = (st.session_state.sub_menu_tarefas == nome_sub)
+            if is_sub_active:
+                st.markdown(
+                    f"""
+                    <style>
+                    div[data-testid="column"]:nth-of-type({idx_s+1}) div.stButton > button {{
+                        background-color: #00E5FF !important;
+                        color: #0A0E27 !important;
+                        border: 1px solid #00E5FF !important;
+                        font-weight: 700 !important;
+                        box-shadow: 0 0 10px rgba(0, 229, 255, 0.4);
+                    }}
+                    </style>
+                    """,
+                    unsafe_allow_html=True
+                )
+            if st.button(nome_sub, key=f"btn_sub_tarefa_{idx_s}", use_container_width=True):
+                st.session_state.sub_menu_tarefas = nome_sub
+                st.rerun()
+
+    st.markdown("<div style='margin-bottom: 25px;'></div>", unsafe_allow_html=True)
+    sub_selecionado = st.session_state.sub_menu_tarefas
+
     # ---------------------------------------------------------
-    # SEÇÃO: LISTAS DIÁRIAS SIMPLIFICADAS (EMPRESA EM BRANCO, RESPONSÁVEL, TEL)
+    # OPÇÃO 1: TAREFAS DIÁRIAS & RELATÓRIO DO DIA
     # ---------------------------------------------------------
-    with st.expander("Lista Diária", expanded=True):
-        tab_g, tab_a = st.tabs(["Gabriel", "Ariel"])
+    if sub_selecionado == "Tarefas Diárias":
+        st.markdown("### Listas Diárias de Contato")
         
+        tab_g, tab_a = st.tabs(["Gabriel", "Ariel"])
         hoje = date.today()
         lista_g_df, lista_a_df = obter_lotes_diarios_followup(st.session_state.df_crm)
         
         with tab_g:
-            st.markdown("### Tarefa Diária: Gabriel")
+            st.markdown("#### Lote Diário: Gabriel")
             if not lista_g_df.empty:
                 for idx_l, row_l in lista_g_df.reset_index(drop=True).iterrows():
                     empresa_val = str(row_l['Empresa']).upper()
@@ -547,7 +577,7 @@ if aba_selecionada == "Gerenciamento de Tarefas":
                 st.info("Nenhum follow-up pendente na base para Gabriel.")
                 
         with tab_a:
-            st.markdown("### Tarefa Diária: Ariel")
+            st.markdown("#### Lote Diário: Ariel")
             if not lista_a_df.empty:
                 for idx_l, row_l in lista_a_df.reset_index(drop=True).iterrows():
                     empresa_val = str(row_l['Empresa']).upper()
@@ -564,10 +594,9 @@ if aba_selecionada == "Gerenciamento de Tarefas":
             else:
                 st.info("Nenhum follow-up pendente na base para Ariel.")
 
-    # ---------------------------------------------------------
-    # SEÇÃO: LEITOR INTELIGENTE DE RELATÓRIO DO DIA
-    # ---------------------------------------------------------
-    with st.expander("Relatório do Dia (Input Rápido)", expanded=False):
+        st.divider()
+
+        st.markdown("### Relatório do Dia (Input Rápido)")
         col_rel1, col_rel2 = st.columns([1, 2])
         with col_rel1:
             vendedor_relatorio = st.selectbox("Vendedor Responsável", ["Gabriel", "Ariel"], key="sel_vend_rel")
@@ -584,97 +613,95 @@ if aba_selecionada == "Gerenciamento de Tarefas":
             else:
                 st.warning("Insira o texto do relatório antes de processar.")
 
-    st.divider()
-
     # ---------------------------------------------------------
-    # SEÇÃO: AGENDA DE TAREFAS E FOLLOW UP (E REGISTROS)
+    # OPÇÃO 2: AGENDA DE TAREFAS E FOLLOW UP
     # ---------------------------------------------------------
-    st.subheader("Agenda de Tarefas e Follow Up")
+    elif sub_selecionado == "Agenda & Follow Up":
+        st.markdown("### Agenda de Tarefas e Follow Up")
 
-    col_h1, col_h2 = st.columns([2, 2])
-    with col_h1:
-        horizonte = st.selectbox(
-            "Horizonte de Visualização:",
-            [
-                "Atrasados", 
-                "Próximos 7 Dias", 
-                "Próximos 15 Dias", 
-                "Próximos 30 Dias", 
-                "Todos os Registros"
-            ],
-            label_visibility="collapsed"
-        )
+        hoje = date.today()
+        col_h1, col_h2 = st.columns([2, 2])
+        with col_h1:
+            horizonte = st.selectbox(
+                "Horizonte de Visualização:",
+                [
+                    "Atrasados", 
+                    "Próximos 7 Dias", 
+                    "Próximos 15 Dias", 
+                    "Próximos 30 Dias", 
+                    "Todos os Registros"
+                ],
+                label_visibility="collapsed"
+            )
 
-    eventos_brutos = []
+        eventos_brutos = []
+        df_tarefas_exibicao = st.session_state.df_tarefas.copy()
 
-    df_tarefas_exibicao = st.session_state.df_tarefas.copy()
+        if not df_tarefas_exibicao.empty:
+            for idx_t, t in df_tarefas_exibicao.iterrows():
+                if pd.notna(t.get("Data_Vencimento")):
+                    try:
+                        dt_v = dt.strptime(str(t["Data_Vencimento"])[:10], "%Y-%m-%d").date()
+                        status_atraso_str = "Atrasada" if dt_v < hoje else f"Prioridade: {t.get('Prioridade', 'Normal')}"
+                        eventos_brutos.append({
+                            "origem": "tarefa",
+                            "index_original": idx_t,
+                            "Data_Formatada": dt_v.strftime("%d/%m/%Y"),
+                            "Data_Obj": dt_v,
+                            "Tipo": "Tarefa",
+                            "Título / Ação": t["Titulo"],
+                            "Vinculado a": f"Cliente: {t.get('Cliente', 'BraClean')}",
+                            "Prioridade / Status": status_atraso_str,
+                            "is_atrasado": dt_v < hoje
+                        })
+                    except:
+                        pass
 
-    if not df_tarefas_exibicao.empty:
-        for idx_t, t in df_tarefas_exibicao.iterrows():
-            if pd.notna(t.get("Data_Vencimento")):
-                try:
-                    dt_v = dt.strptime(str(t["Data_Vencimento"])[:10], "%Y-%m-%d").date()
-                    status_atraso_str = "Atrasada" if dt_v < hoje else f"Prioridade: {t.get('Prioridade', 'Normal')}"
-                    eventos_brutos.append({
-                        "origem": "tarefa",
-                        "index_original": idx_t,
-                        "Data_Formatada": dt_v.strftime("%d/%m/%Y"),
-                        "Data_Obj": dt_v,
-                        "Tipo": "Tarefa",
-                        "Título / Ação": t["Titulo"],
-                        "Vinculado a": f"Cliente: {t.get('Cliente', 'BraClean')}",
-                        "Prioridade / Status": status_atraso_str,
-                        "is_atrasado": dt_v < hoje
-                    })
-                except:
-                    pass
+        if not df.empty:
+            for idx_c, c in df.iterrows():
+                f_dat = c.get("Followup_Data", "")
+                if pd.notna(f_dat) and str(f_dat).strip() not in ["", "nan", "NaT"]:
+                    try:
+                        dt_f = dt.strptime(str(f_dat)[:10], "%Y-%m-%d").date()
+                        status_atraso_str = "Atrasado" if dt_f < hoje else f"Etapa: {c['Etapa']}"
+                        eventos_brutos.append({
+                            "origem": "crm",
+                            "index_original": idx_c,
+                            "Data_Formatada": dt_f.strftime("%d/%m/%Y"),
+                            "Data_Obj": dt_f,
+                            "Tipo": "Follow-up CRM",
+                            "Título / Ação": c.get("Followup_Nota", "Contato Comercial"),
+                            "Vinculado a": f"Empresa: {c['Empresa']} ({c.get('Contato', 'Não informado')})",
+                            "Prioridade / Status": status_atraso_str,
+                            "is_atrasado": dt_f < hoje
+                        })
+                    except:
+                        pass
 
-    if not df.empty:
-        for idx_c, c in df.iterrows():
-            f_dat = c.get("Followup_Data", "")
-            if pd.notna(f_dat) and str(f_dat).strip() not in ["", "nan", "NaT"]:
-                try:
-                    dt_f = dt.strptime(str(f_dat)[:10], "%Y-%m-%d").date()
-                    status_atraso_str = "Atrasado" if dt_f < hoje else f"Etapa: {c['Etapa']}"
-                    eventos_brutos.append({
-                        "origem": "crm",
-                        "index_original": idx_c,
-                        "Data_Formatada": dt_f.strftime("%d/%m/%Y"),
-                        "Data_Obj": dt_f,
-                        "Tipo": "Follow-up CRM",
-                        "Título / Ação": c.get("Followup_Nota", "Contato Comercial"),
-                        "Vinculado a": f"Empresa: {c['Empresa']} ({c.get('Contato', 'Não informado')})",
-                        "Prioridade / Status": status_atraso_str,
-                        "is_atrasado": dt_f < hoje
-                    })
-                except:
-                    pass
+        eventos_filtrados = []
+        for ev in eventos_brutos:
+            dt_ev = ev["Data_Obj"]
+            atrasado = ev["is_atrasado"]
 
-    eventos_filtrados = []
-    for ev in eventos_brutos:
-        dt_ev = ev["Data_Obj"]
-        atrasado = ev["is_atrasado"]
-
-        if horizonte == "Atrasados":
-            if atrasado:
+            if horizonte == "Atrasados":
+                if atrasado:
+                    eventos_filtrados.append(ev)
+            elif horizonte == "Próximos 7 Dias":
+                if not atrasado and hoje <= dt_ev <= (hoje + timedelta(days=7)):
+                    eventos_filtrados.append(ev)
+            elif horizonte == "Próximos 15 Dias":
+                if not atrasado and hoje <= dt_ev <= (hoje + timedelta(days=15)):
+                    eventos_filtrados.append(ev)
+            elif horizonte == "Próximos 30 Dias":
+                if not atrasado and hoje <= dt_ev <= (hoje + timedelta(days=30)):
+                    eventos_filtrados.append(ev)
+            elif horizonte == "Todos os Registros":
                 eventos_filtrados.append(ev)
-        elif horizonte == "Próximos 7 Dias":
-            if not atrasado and hoje <= dt_ev <= (hoje + timedelta(days=7)):
-                eventos_filtrados.append(ev)
-        elif horizonte == "Próximos 15 Dias":
-            if not atrasado and hoje <= dt_ev <= (hoje + timedelta(days=15)):
-                eventos_filtrados.append(ev)
-        elif horizonte == "Próximos 30 Dias":
-            if not atrasado and hoje <= dt_ev <= (hoje + timedelta(days=30)):
-                eventos_filtrados.append(ev)
-        elif horizonte == "Todos os Registros":
-            eventos_filtrados.append(ev)
 
-    if eventos_filtrados:
-        df_futuro = pd.DataFrame(eventos_filtrados)
-        df_futuro = df_futuro.sort_values(by="Data_Obj", ascending=True).reset_index(drop=True)
+        if eventos_filtrados:
+            df_futuro = pd.DataFrame(eventos_filtrados)
+            df_futuro = df_futuro.sort_values(by="Data_Obj", ascending=True).reset_index(drop=True)
 
-        with st.expander(f"Ver registros ({len(df_futuro)} encontrados para '{horizonte}')", expanded=True):
             total_atrasados_lista = len(df_futuro[df_futuro["is_atrasado"] == True])
             c_m1, c_m2, c_m3 = st.columns(3)
             c_m1.metric("Total no Filtro", len(df_futuro))
@@ -731,17 +758,16 @@ if aba_selecionada == "Gerenciamento de Tarefas":
                                 salvar_dados_crm(st.session_state.df_crm)
                             st.success("Atualizado com sucesso!")
                             st.rerun()
-    else:
-        st.info(f"Nenhum registro encontrado para o filtro selecionado ('{horizonte}').")
-
-    st.divider()
+        else:
+            st.info(f"Nenhum registro encontrado para o filtro selecionado ('{horizonte}').")
 
     # ---------------------------------------------------------
-    # SEÇÃO: CRIAR NOVA TAREFA (MOVIDA PARA O FINAL)
+    # OPÇÃO 3: CRIAR NOVA TAREFA
     # ---------------------------------------------------------
-    lista_clientes = ["Nenhum / Tarefa Geral"] + df["Empresa"].dropna().tolist()
+    elif sub_selecionado == "Criar Nova Tarefa":
+        st.markdown("### Formulário de Nova Tarefa")
+        lista_clientes = ["Nenhum / Tarefa Geral"] + df["Empresa"].dropna().tolist()
 
-    with st.expander("Criar Nova Tarefa", expanded=False):
         with st.form(key="form_nova_tarefa_crm", clear_on_submit=True):
             col1, col2 = st.columns([2, 1])
 
@@ -800,7 +826,7 @@ elif aba_selecionada == "Funil de Vendas":
     with col_topo_busca:
         termo_busca = st.text_input(
             "Pesquisar cliente", 
-            placeholder="🔍 Buscar por empresa, contato...", 
+            placeholder="Buscar por empresa, contato...", 
             label_visibility="collapsed"
         )
 
@@ -903,7 +929,7 @@ elif aba_selecionada == "Funil de Vendas":
                 if historico_atual.strip():
                     for linha_hist in historico_atual.split("\n"):
                         if linha_hist.strip():
-                            st.markdown(f"- 🕒 `{linha_hist.strip()}`")
+                            st.markdown(f"- `{linha_hist.strip()}`")
                 else:
                     st.caption("Nenhum registro na linha do tempo ainda.")
                 
@@ -1414,7 +1440,7 @@ elif aba_selecionada == "Relatório Executivo":
     # ATIVIDADES INDIVIDUAIS (GABRIEL VS ARIEL) E METAS
     # ---------------------------------------------------------
     st.markdown("### Atividades Individuais & Metas de Vendedores")
-    st.caption("📅 Dados configurados para iniciar a contagem a partir de terça-feira (03/11/2026).")
+    st.caption("Dados configurados para iniciar a contagem a partir de terça-feira (03/11/2026).")
 
     vendedores_covem = ["Gabriel", "Ariel"]
     
