@@ -148,32 +148,6 @@ def aplicar_fundo_personalizado(image_path):
                 background-color: rgba(10, 14, 39, 0.95) !important;
             }}
 
-            .badge-atrasada {{
-                background-color: rgba(255, 0, 51, 0.2);
-                color: #FF0033;
-                border: 1px solid #FF0033;
-                padding: 8px 16px;
-                border-radius: 6px;
-                font-size: 13px;
-                font-weight: 600;
-                display: inline-block;
-                text-align: center;
-                width: 100%;
-            }}
-
-            .badge-hoje {{
-                background-color: rgba(255, 234, 0, 0.2);
-                color: #FFEA00;
-                border: 1px solid #FFEA00;
-                padding: 8px 16px;
-                border-radius: 6px;
-                font-size: 13px;
-                font-weight: 600;
-                display: inline-block;
-                text-align: center;
-                width: 100%;
-            }}
-
             .phone-highlight {{
                 color: #00E5FF;
                 font-weight: 600;
@@ -342,51 +316,27 @@ def salvar_dados_tarefas(df):
     df.to_excel(ARQUIVO_TAREFAS, index=False)
 
 # ---------------------------------------------------------
-# FUNÇÕES DE AUTOMAÇÃO (LISTA DIÁRIA EXATA DE 20 LEADS & PROCESSADOR)
+# FUNÇÕES DE AUTOMAÇÃO (DIVISÃO DE 20 PARA CADA DA BASE GERAL)
 # ---------------------------------------------------------
-def obter_lista_diaria_vendedor(df_crm, df_tarefas, vendedor_nome):
-    hoje = date.today()
-    
-    # Pega os follow-ups do CRM do vendedor específico
-    crm_pendentes = df_crm[
-        (df_crm["Vendedor"].str.contains(vendedor_nome, case=False, na=False)) & 
+def obter_lotes_diarios_followup(df_crm):
+    # Pega todos os clientes da base geral que possuem follow-up agendado ou pendente
+    df_pendentes = df_crm[
         (df_crm["Followup_Data"].notna()) & 
-        (df_crm["Followup_Data"] != "")
+        (df_crm["Followup_Data"] != "") & 
+        (df_crm["Followup_Data"].astype(str).str.strip() != "nan") & 
+        (df_crm["Followup_Data"].astype(str).str.strip() != "NaT")
     ].copy()
     
-    crm_pendentes["Data_Alvo"] = pd.to_datetime(crm_pendentes["Followup_Data"], errors="coerce").dt.date
-    # Prioriza atrasados e vencidos até hoje
-    crm_pendentes = crm_pendentes[crm_pendentes["Data_Alvo"] <= hoje]
+    df_pendentes["Data_Alvo"] = pd.to_datetime(df_pendentes["Followup_Data"], errors="coerce").dt.date
     
-    crm_pendentes["Origem_Item"] = "CRM (Follow-up)"
-    crm_pendentes["Titulo_Acao"] = crm_pendentes["Followup_Nota"].fillna("Contato comercial pendente")
-    crm_pendentes["Empresa_Ref"] = crm_pendentes["Empresa"]
+    # Ordena da data mais antiga (mais atrasada) para a mais recente
+    df_pendentes = df_pendentes.sort_values(by="Data_Alvo", ascending=True).reset_index(drop=True)
     
-    # Pega tarefas pendentes
-    tarefas_pendentes = df_tarefas[
-        (df_tarefas["Status"] != "Concluído") & 
-        (df_tarefas["Data_Vencimento"].notna())
-    ].copy()
-    tarefas_pendentes["Data_Alvo"] = pd.to_datetime(tarefas_pendentes["Data_Vencimento"], errors="coerce").dt.date
-    tarefas_pendentes = tarefas_pendentes[tarefas_pendentes["Data_Alvo"] <= hoje]
+    # Separa os primeiros 20 para o Gabriel e os próximos 20 para o Ariel da base geral
+    lista_gabriel = df_pendentes.iloc[0:20]
+    lista_ariel = df_pendentes.iloc[20:40]
     
-    tarefas_pendentes["Origem_Item"] = "Tarefa Operacional"
-    tarefas_pendentes["Titulo_Acao"] = tarefas_pendentes["Titulo"]
-    tarefas_pendentes["Empresa_Ref"] = tarefas_pendentes["Cliente"]
-    tarefas_pendentes["Vendedor"] = vendedor_nome
-    
-    unificado = pd.concat([
-        crm_pendentes[["Origem_Item", "Data_Alvo", "Titulo_Acao", "Empresa_Ref", "Vendedor"]],
-        tarefas_pendentes[["Origem_Item", "Data_Alvo", "Titulo_Acao", "Empresa_Ref", "Vendedor"]]
-    ], ignore_index=True)
-    
-    if not unificado.empty:
-        # Ordena rigorosamente dos mais antigos (atrasados no topo) para os mais recentes
-        unificado = unificado.sort_values(by="Data_Alvo", ascending=True)
-        # Garante exatamente a cota de 20 leads/tarefas diárias
-        return unificado.head(20)
-        
-    return pd.DataFrame()
+    return lista_gabriel, lista_ariel
 
 def processar_relatorio_vendedor(relatorio_texto, vendedor_nome, df_crm):
     linhas = relatorio_texto.split("\n")
@@ -574,28 +524,46 @@ if aba_selecionada == "Gerenciamento de Tarefas":
     st.subheader("Gerenciamento de Tarefas — BraClean")
 
     # ---------------------------------------------------------
-    # SEÇÃO: LISTAS DIÁRIAS OBRIGATÓRIAS DE 20 LEADS (GABRIEL E ARIEL)
+    # SEÇÃO: LISTAS DIÁRIAS (20 PARA GABRIEL E 20 PARA ARIEL DA BASE GERAL)
     # ---------------------------------------------------------
-    with st.expander("Listas Diárias de 20 Leads e Tarefas (Gabriel & Ariel)", expanded=True):
+    with st.expander("Listas Diárias de Follow-up (20 Leads para Gabriel e 20 para Ariel)", expanded=True):
+        st.caption("Divisão automática de 20 clientes da base geral para cada vendedor fazer o follow-up diário (priorizando os mais atrasados).")
         tab_g, tab_a = st.tabs(["Gabriel", "Ariel"])
         
+        hoje = date.today()
+        lista_g_df, lista_a_df = obter_lotes_diarios_followup(st.session_state.df_crm)
+        
         with tab_g:
-            st.caption("Meta diária estrita de até 20 leads/tarefas priorizados (Atrasados no topo):")
-            df_lista_gabriel = obter_lista_diaria_vendedor(st.session_state.df_crm, st.session_state.df_tarefas, "Gabriel")
-            if not df_lista_gabriel.empty:
-                st.metric("Total na Lista de Hoje (Gabriel)", len(df_lista_gabriel))
-                st.dataframe(df_lista_gabriel, use_container_width=True, hide_index=True)
+            st.markdown("### Lote de Follow-up: Gabriel (20 Clientes)")
+            if not lista_g_df.empty:
+                texto_copia_g = ""
+                for idx_l, row_l in lista_g_df.reset_index(drop=True).iterrows():
+                    dt_f_fmt = str(row_l['Followup_Data'])[:10]
+                    atrasado_txt = " [ATRASADO]" if dt_f_fmt < str(hoje) else ""
+                    linha_formatada = f"{idx_l+1}. {row_l['Empresa']} | Contato: {row_l['Contato']} | Tel: {row_l['Telefone']} | Data: {dt_f_fmt}{atrasado_txt} | Nota: {row_l['Followup_Nota']}\n"
+                    texto_copia_g += linha_formatada
+                    st.markdown(f"- **{row_l['Empresa']}** | Contato: {row_l['Contato']} | Tel: `{row_l['Telefone']}` | Data: {dt_f_fmt}{atrasado_txt} \n  *Nota:* {row_l['Followup_Nota']}")
+                
+                st.markdown("<br>", unsafe_allow_html=True)
+                st.text_area("Texto formatado para copiar (Gabriel):", value=texto_copia_g, height=150, key="txt_copia_gabriel")
             else:
-                st.info("Nenhum lead pendente ou atrasado para Gabriel hoje.")
+                st.info("Nenhum follow-up pendente na base para Gabriel.")
                 
         with tab_a:
-            st.caption("Meta diária estrita de até 20 leads/tarefas priorizados (Atrasados no topo):")
-            df_lista_ariel = obter_lista_diaria_vendedor(st.session_state.df_crm, st.session_state.df_tarefas, "Ariel")
-            if not df_lista_ariel.empty:
-                st.metric("Total na Lista de Hoje (Ariel)", len(df_lista_ariel))
-                st.dataframe(df_lista_ariel, use_container_width=True, hide_index=True)
+            st.markdown("### Lote de Follow-up: Ariel (20 Clientes)")
+            if not lista_a_df.empty:
+                texto_copia_a = ""
+                for idx_l, row_l in lista_a_df.reset_index(drop=True).iterrows():
+                    dt_f_fmt = str(row_l['Followup_Data'])[:10]
+                    atrasado_txt = " [ATRASADO]" if dt_f_fmt < str(hoje) else ""
+                    linha_formatada = f"{idx_l+1}. {row_l['Empresa']} | Contato: {row_l['Contato']} | Tel: {row_l['Telefone']} | Data: {dt_f_fmt}{atrasado_txt} | Nota: {row_l['Followup_Nota']}\n"
+                    texto_copia_a += linha_formatada
+                    st.markdown(f"- **{row_l['Empresa']}** | Contato: {row_l['Contato']} | Tel: `{row_l['Telefone']}` | Data: {dt_f_fmt}{atrasado_txt} \n  *Nota:* {row_l['Followup_Nota']}")
+                
+                st.markdown("<br>", unsafe_allow_html=True)
+                st.text_area("Texto formatado para copiar (Ariel):", value=texto_copia_a, height=150, key="txt_copia_ariel")
             else:
-                st.info("Nenhum lead pendente ou atrasado para Ariel hoje.")
+                st.info("Nenhum follow-up pendente na base para Ariel.")
 
     # ---------------------------------------------------------
     # SEÇÃO: LEITOR INTELIGENTE DE RELATÓRIO DO DIA
@@ -688,8 +656,6 @@ if aba_selecionada == "Gerenciamento de Tarefas":
             ],
             label_visibility="collapsed"
         )
-
-    hoje = date.today()
 
     eventos_brutos = []
 
