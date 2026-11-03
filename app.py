@@ -97,6 +97,9 @@ if 'menu_ativo' not in st.session_state:
 if 'funnel_selecionado' not in st.session_state:
     st.session_state.funnel_selecionado = "Funil de Vendas"
 
+if 'sub_menu_tarefas' not in st.session_state:
+    st.session_state.sub_menu_tarefas = "Tarefas Diárias"
+
 if 'editando_agenda_idx' not in st.session_state:
     st.session_state.editando_agenda_idx = None
 
@@ -511,13 +514,44 @@ st.markdown("""
 aba_selecionada = st.session_state.menu_ativo
 
 # =========================================================
-# ABA 1: GERENCIAMENTO DE TAREFAS (COM SEÇÕES MINIMIZÁVEIS)
+# ABA 1: GERENCIAMENTO DE TAREFAS (ORGANIZADO EM SUBMENUS)
 # =========================================================
 if aba_selecionada == "Gerenciamento de Tarefas":
     st.subheader("Gerenciamento de Tarefas")
 
-    # 1. SEÇÃO: TAREFAS DIÁRIAS (MINIMIZADA POR PADRÃO)
-    with st.expander("Tarefas Diárias", expanded=False):
+    # SUBMENU HORIZONTAL LIMPO (SEM EMOJIS)
+    sub_opcoes = ["Tarefas Diárias", "Agenda de Tarefas e Follow Up", "Criar Nova Tarefa"]
+    cols_sub = st.columns(3)
+
+    for idx_s, nome_sub in enumerate(sub_opcoes):
+        with cols_sub[idx_s]:
+            is_sub_active = (st.session_state.sub_menu_tarefas == nome_sub)
+            if is_sub_active:
+                st.markdown(
+                    f"""
+                    <style>
+                    div[data-testid="column"]:nth-of-type({idx_s+1}) div.stButton > button {{
+                        background-color: #00E5FF !important;
+                        color: #0A0E27 !important;
+                        border: 1px solid #00E5FF !important;
+                        font-weight: 700 !important;
+                        box-shadow: 0 0 10px rgba(0, 229, 255, 0.4);
+                    }}
+                    </style>
+                    """,
+                    unsafe_allow_html=True
+                )
+            if st.button(nome_sub, key=f"btn_sub_tarefa_{idx_s}", use_container_width=True):
+                st.session_state.sub_menu_tarefas = nome_sub
+                st.rerun()
+
+    st.markdown("<div style='margin-bottom: 25px;'></div>", unsafe_allow_html=True)
+    sub_selecionado = st.session_state.sub_menu_tarefas
+
+    # ---------------------------------------------------------
+    # OPÇÃO 1: TAREFAS DIÁRIAS & RELATÓRIO DO DIA
+    # ---------------------------------------------------------
+    if sub_selecionado == "Tarefas Diárias":
         st.markdown("### Tarefas Diárias")
         
         tab_g, tab_a = st.tabs(["Gabriel", "Ariel"])
@@ -579,8 +613,10 @@ if aba_selecionada == "Gerenciamento de Tarefas":
             else:
                 st.warning("Insira o texto do relatório antes de processar.")
 
-    # 2. SEÇÃO: AGENDA DE TAREFAS E FOLLOW UP (MINIMIZADA POR PADRÃO)
-    with st.expander("Agenda de Tarefas e Follow Up", expanded=False):
+    # ---------------------------------------------------------
+    # OPÇÃO 2: AGENDA DE TAREFAS E FOLLOW UP
+    # ---------------------------------------------------------
+    elif sub_selecionado == "Agenda de Tarefas e Follow Up":
         st.markdown("### Agenda de Tarefas e Follow Up")
 
         hoje = date.today()
@@ -595,8 +631,7 @@ if aba_selecionada == "Gerenciamento de Tarefas":
                     "Próximos 30 Dias", 
                     "Todos os Registros"
                 ],
-                label_visibility="collapsed",
-                key="sel_horizonte_agenda"
+                label_visibility="collapsed"
             )
 
         eventos_brutos = []
@@ -689,8 +724,7 @@ if aba_selecionada == "Gerenciamento de Tarefas":
                 "Selecione o compromisso para gerenciar (Editar/Excluir):",
                 options=range(len(df_futuro)),
                 format_func=lambda x: f"[{df_futuro.loc[x, 'Data_Formatada']}] {df_futuro.loc[x, 'Tipo']} - {df_futuro.loc[x, 'Título / Ação']} ({df_futuro.loc[x, 'Vinculado a']})",
-                label_visibility="collapsed",
-                key="sel_item_compromisso"
+                label_visibility="collapsed"
             )
 
             if item_selecionado_acoes is not None:
@@ -700,7 +734,7 @@ if aba_selecionada == "Gerenciamento de Tarefas":
 
                 col_acao1, col_acao2 = st.columns(2)
                 with col_acao1:
-                    if st.button("Excluir", use_container_width=True, key="btn_excluir_compromisso"):
+                    if st.button("Excluir", use_container_width=True):
                         if origem_sel == "tarefa":
                             st.session_state.df_tarefas = st.session_state.df_tarefas.drop(idx_orig_sel).reset_index(drop=True)
                             salvar_dados_tarefas(st.session_state.df_tarefas)
@@ -713,9 +747,9 @@ if aba_selecionada == "Gerenciamento de Tarefas":
 
                 with col_acao2:
                     with st.popover("Editar", use_container_width=True):
-                        novo_txt_acao = st.text_input("Título / Ação", value=sel_row["Título / Ação"], key="input_ed_titulo_comp")
-                        novo_vinc_acao = st.text_input("Vínculo / Empresa", value=sel_row["Vinculado a"], key="input_ed_vinc_comp")
-                        if st.button("Salvar Alterações", key="btn_salvar_alt_comp"):
+                        novo_txt_acao = st.text_input("Título / Ação", value=sel_row["Título / Ação"])
+                        novo_vinc_acao = st.text_input("Vínculo / Empresa", value=sel_row["Vinculado a"])
+                        if st.button("Salvar Alterações"):
                             if origem_sel == "tarefa":
                                 st.session_state.df_tarefas.loc[idx_orig_sel, "Titulo"] = novo_txt_acao
                                 salvar_dados_tarefas(st.session_state.df_tarefas)
@@ -727,8 +761,10 @@ if aba_selecionada == "Gerenciamento de Tarefas":
         else:
             st.info(f"Nenhum registro encontrado para o filtro selecionado ('{horizonte}').")
 
-    # 3. SEÇÃO: CRIAR NOVA TAREFA (MINIMIZADA POR PADRÃO)
-    with st.expander("Criar Nova Tarefa", expanded=False):
+    # ---------------------------------------------------------
+    # OPÇÃO 3: CRIAR NOVA TAREFA
+    # ---------------------------------------------------------
+    elif sub_selecionado == "Criar Nova Tarefa":
         st.markdown("### Criar Nova Tarefa")
         lista_clientes = ["Nenhum / Tarefa Geral"] + df["Empresa"].dropna().tolist()
 
