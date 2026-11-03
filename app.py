@@ -7,6 +7,8 @@ import os
 import urllib.parse
 import datetime
 import base64
+import json
+import google.generativeai as genai
 from datetime import datetime as dt, date, timedelta
 from pathlib import Path
 from streamlit_gsheets import GSheetsConnection
@@ -343,6 +345,150 @@ def salvar_dados_tarefas(df):
     df.to_excel(ARQUIVO_TAREFAS, index=False)
 
 # ---------------------------------------------------------
+# CONFIGURAÇÃO E FUNÇÕES DA GEMINI API
+# ---------------------------------------------------------
+def configurar_gemini_api():
+    try:
+        # Tenta buscar a chave de API nos segredos do Streamlit
+        if "GEMINI_API_KEY" in st.secrets:
+            genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+            return True
+        elif "gemini" in st.secrets and "api_key" in st.secrets["gemini"]:
+            genai.configure(api_key=st.secrets["gemini"]["api_key"])
+            return True
+        else:
+            # Tenta buscar nas variáveis de ambiente padrão do sistema
+            api_key_env = os.environ.get("GEMINI_API_KEY")
+            if api_key_env:
+                genai.configure(api_key=api_key_env)
+                return True
+    except Exception:
+        pass
+    return False
+
+def gerar_briefing_matinal_ia(df_crm, df_tarefas):
+    if not configurar_gemini_api():
+        return None
+    
+    hoje = date.today().strftime("%Y-%m-%d")
+    
+    # Filtra tarefas e follow-ups de hoje
+    tarefas_hoje = []
+    if not df_tarefas.empty and "Data_Vencimento" in df_tarefas.columns:
+        t_copia = df_tarefas.copy()
+        t_copia["Data_Vencimento"] = pd.to_datetime(t_copia["Data_Vencimento"], errors="coerce").dt.strftime("%Y-%m-%d")
+        t_hoje = t_copia[t_copia["Data_Vencimento"] == hoje]
+        for _, r in t_hoje.iterrows():
+            tarefas_hoje.append(f"- Tarefa: {r.get('Titulo')} (Prioridade: {r.get('Prioridade')})")
+
+    followups_hoje = []
+    if not df_crm.empty and "Followup_Data" in df_crm.columns:
+        c_copia = df_crm.copy()
+        c_copia["Followup_Data"] = c_copia["Followup_Data"].astype(str).str.strip().str[:10]
+        c_hoje = c_copia[c_copia["Followup_Data"] == hoje]
+        for _, r in c_hoje.iterrows():
+            followups_hoje.append(f"- Cliente: {r.get('Empresa')} | Contato: {r.get('Contato')} | Nota: {r.get('Followup_Nota')}")
+
+    if not tarefas_hoje and not followups_hoje:
+        return "Nenhum compromisso específico ou tarefa agendada estritamente para hoje. Excelente dia para prospecção ativa e expansão de carteira!"
+
+    prompt = f"""
+    Você é o Diretor Comercial e Assessor Executivo do GRUPO COVEM (conta BraClean).
+    Com base nas demandas agendadas para hoje ({hoje}), elabore um Briefing Matinal motivador, direto, executivo e estratégico para o vendedor.
+    
+    Tarefas de hoje:
+    {chr(10).join(tarefas_hoje) if tarefas_hoje else "Nenhuma tarefa cadastrada."}
+    
+    Follow-ups de hoje no CRM:
+    {chr(10).join(followups_hoje) if followups_hoje else "Nenhum follow-up no CRM."}
+    
+    Escreva um resumo em bullet points destacando as prioridades absolutas do dia. Seja objetivo e profissional.
+    """
+
+    try:
+        model = genai.GenerativeModel('gemini-2.5-flash')
+        response = model.generate_content(prompt)
+        return response.text
+    except Exception as e:
+        return f"Não foi possível gerar o briefing automático no momento (Erro de API: {e})."
+
+def processar_relatorio_fim_de_dia(texto_relatorio, df_crm):
+    if not configurar_gemini_api():
+        st.error("Chave da API do Gemini não configurada nos secrets do Streamlit. Adicione 'GEMINI_API_KEY' em .streamlit/secrets.toml.")
+        return False
+
+    lista_leads_ativos = df_crm[["Empresa", "Etapa", "Contato"]].to_dict(orient="records")
+
+    prompt = f"""
+    Você é o motor de IA de um CRM comercial de alta performance (GRUPO COVEM - BraClean).
+    Aqui está a lista de leads ativos cadastrados atualmente no sistema:
+    {json.dumps(lista_leads_ativos, ensure_ascii=False)}
+
+    O vendedor enviou o seguinte relatório de fim de dia em texto corrido/livre:
+    "{texto_relatorio}"
+
+    Instruções estritas de processamento:
+    Analise o texto e identifique quais empresas/leads foram mencionados, quais foram as atualizações, mudanças de etapa (opções válidas: Pré: Novo Lead, Pré: Conexão, Prospecção, Qualificação, Reunião Agendada, Proposta Enviada, Fechado, Pós: Standby, Pós: Perdido), se houve novo agendamento de follow-up (formato YYYY-MM-DD) e um breve resumo para a linha do tempo (Histórico).
+    
+    Retorne estritamente um array JSON válido contendo objetos com as seguintes chaves exatas:
+    - "lead_name": nome exato ou muito próximo da empresa no CRM
+    - "nova_etapa": se houver mudança de etapa, coloque o nome exato da nova etapa; caso contrário, coloque "Manter"
+    - "proximo_follow_up": data no formato YYYY-MM-DD se houver novo follow-up agendado, ou null
+    - "nota_historico": resumo executivo do que aconteceu para ser inserido na linha do tempo
+    """
+
+    try:
+        model = genai.GenerativeModel('gemini-2.5-flash')
+        response = model.generate_content(
+            prompt,
+            generation_config={"response_mime_type": "application/json"}
+        )
+        
+        updates_json = json.loads(response.text)
+        
+        # Executa a atualização no DataFrame do CRM
+        atualizacoes_realizadas = 0
+        for update in updates_json:
+            nome_alvo = str(update.get("lead_name", "")).strip().lower()
+            if not nome_alvo:
+                continue
+                
+            for idx, row in df_crm.iterrows():
+                if str(row["Empresa"]).strip().lower() == nome_alvo:
+                    # Atualiza etapa se houver modificação
+                    nova_etapa = update.get("nova_etapa", "Manter")
+                    if nova_etapa and nova_etapa != "Manter" and nova_etapa in PROB_MAP:
+                        df_crm.loc[idx, "Etapa"] = nova_etapa
+                        df_crm.loc[idx, "Prob"] = PROB_MAP[nova_etapa]
+                        if "Perdido" in nova_etapa:
+                            df_crm.loc[idx, "Perda"] = "Outros"
+
+                    # Atualiza data de follow-up se houver
+                    novo_fu = update.get("proximo_follow_up")
+                    if novo_fu:
+                        df_crm.loc[idx, "Followup_Data"] = str(novo_fu)[:10]
+
+                    # Adiciona nota ao Histórico (Linha do Tempo)
+                    nota_hist = update.get("nota_historico", "Atualização via IA no fim do dia.")
+                    timestamp_atual = dt.now().strftime("%d/%m/%Y %H:%M")
+                    novo_registro = f"[{timestamp_atual}] (IA Fim de Dia) {nota_hist}"
+                    
+                    hist_atual = str(row["Historico"]) if pd.notna(row["Historico"]) else ""
+                    if hist_atual.strip():
+                        df_crm.loc[idx, "Historico"] = novo_registro + "\n" + hist_atual
+                    else:
+                        df_crm.loc[idx, "Historico"] = novo_registro
+                        
+                    df_crm.loc[idx, "Followup_Nota"] = nota_hist
+                    atualizacoes_realizadas += 1
+                    break
+                    
+        return atualizacoes_realizadas
+    except Exception as e:
+        st.error(f"Erro ao processar o relatório com a Gemini API: {e}")
+        return False
+
+# ---------------------------------------------------------
 # ESTADO DA SESSÃO
 # ---------------------------------------------------------
 if 'df_crm' not in st.session_state:
@@ -627,7 +773,46 @@ def exibir_agenda_semana(df_tarefas, df_crm):
 # ABA 1: GERENCIADOR DE TAREFAS & CALENDÁRIO FUTURO
 # =========================================================
 if aba_selecionada == "Gerenciamento de Tarefas":
-    st.subheader("Gerenciamento de Tarefas — BraClean")
+    st.subheader("Gerenciamento de Tarefas & Agente IA — BraClean")
+    
+    # =====================================================
+    # SEÇÃO DO AGENTE DE IA (BRIEFING MATINAL & FIM DE DIA)
+    # =====================================================
+    with st.container():
+        st.markdown("""
+            <div style="background: linear-gradient(135deg, rgba(10, 14, 39, 0.95) 0%, rgba(5, 11, 24, 0.95) 100%); border: 1px solid #00E5FF; padding: 20px; border-radius: 10px; margin-bottom: 25px; box-shadow: 0 0 15px rgba(0, 229, 255, 0.15);">
+                <h4 style="color: #00E5FF; margin-top: 0; margin-bottom: 10px;">🤖 Assistente de IA Comercial (Gemini)</h4>
+                <p style="font-size: 13px; color: #94A3B8;">Gere o seu briefing matinal ou atualize o CRM automaticamente colando o relatório do dia abaixo.</p>
+        """, unsafe_allow_html=True)
+
+        col_ia_1, col_ia_2 = st.columns(2)
+
+        with col_ia_1:
+            if st.button("☀️ Gerar Briefing Matinal com IA", use_container_width=True):
+                with st.spinner("Gerando briefing de prioridades do dia..."):
+                    briefing_texto = gerar_briefing_matinal_ia(st.session_state.df_crm, st.session_state.df_tarefas)
+                    if briefing_texto:
+                        st.info(briefing_texto)
+
+        with col_ia_2:
+            with st.popover("🌙 Processar Fim de Dia com IA", use_container_width=True):
+                st.markdown("**Relatório de Fim de Dia:**")
+                st.caption("Cole abaixo as anotações corridas do seu dia de vendas (ex: 'Falei com a Usina Santa Clara, fecharam contrato, passar para Fechado...').")
+                texto_fim_dia = st.text_area("Relatório bruto:", placeholder="Digite ou cole aqui...", label_visibility="collapsed")
+                
+                if st.button("Processar e Atualizar CRM", use_container_width=True):
+                    if not texto_fim_dia.strip():
+                        st.warning("Insira o texto com o resumo do dia.")
+                    else:
+                        with st.spinner("A IA está processando o relatório e atualizando o CRM..."):
+                            qtd_atualizada = processar_relatorio_fim_de_dia(st.session_state.df_crm, texto_fim_dia)
+                            if qtd_atualizada is not False:
+                                salvar_dados_crm(st.session_state.df_crm)
+                                st.success(f"CRM atualizado com sucesso! ({qtd_atualizada} lead(s) processados).")
+                                st.rerun()
+
+        st.markdown("</div>", unsafe_allow_html=True)
+
     exibir_agenda_semana(st.session_state.df_tarefas, st.session_state.df_crm)
 
     lista_clientes = ["Nenhum / Tarefa Geral"] + df["Empresa"].dropna().tolist()
@@ -1731,9 +1916,9 @@ elif aba_selecionada == "+ Novo Cadastro":
                 
                 email_valido = nova_email if 'nova_email' in locals() and nova_email else "Não informado"
                 contato_valido = novo_contato if 'novo_contato' in locals() and novo_contato else "Não informado"
-                cargo_valido = novo_cargo if 'nova_cargo' in locals() and novo_cargo else "Não informado"
+                cargo_valido = novo_cargo if 'novo_cargo' in locals() and novo_cargo else "Não informado"
                 telefone_valido = novo_telefone if 'novo_telefone' in locals() and novo_telefone else "Não informado"
-                cidade_valida = nova_cidade if 'nova_cidade' in locals() and nova_cidade else "Não informado"
+                cidade_valida = nova_cidade if 'nova_cidade`' in locals() and nova_cidade else "Não informado"
 
                 nova_linha = {
                     "id": novo_id,
