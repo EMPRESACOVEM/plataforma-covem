@@ -105,9 +105,6 @@ if 'sub_menu_tarefas' not in st.session_state:
 if 'editando_agenda_idx' not in st.session_state:
     st.session_state.editando_agenda_idx = None
 
-if 'briefing_gerado_texto' not in st.session_state:
-    st.session_state.briefing_gerado_texto = None
-
 # Função para carregar a imagem de fundo local via Base64
 def aplicar_fundo_personalizado(image_path):
     css_fundo = ""
@@ -371,75 +368,38 @@ def gerar_briefing_matinal_ia(df_crm, df_tarefas):
     if not configurar_gemini_api():
         return None
     
-    hoje_dt = date.today()
-    hoje_str = hoje_dt.strftime("%Y-%m-%d")
+    hoje = date.today().strftime("%Y-%m-%d")
     
-    # 1. Filtra Tarefas Atrasadas e de Hoje (limitado a 10 para focar no essencial)
-    tarefas_pendentes = []
+    tarefas_hoje = []
     if not df_tarefas.empty and "Data_Vencimento" in df_tarefas.columns:
         t_copia = df_tarefas.copy()
-        t_copia["Data_Vencimento_Dt"] = pd.to_datetime(t_copia["Data_Vencimento"], errors="coerce").dt.date
-        t_filtradas = t_copia[(t_copia["Data_Vencimento_Dt"] <= hoje_dt) & (t_copia["Status"] != "Concluído")]
-        t_filtradas = t_filtradas.sort_values(by="Data_Vencimento_Dt", ascending=True).head(10)
-        
-        for _, r in t_filtradas.iterrows():
-            dt_v = r["Data_Vencimento_Dt"]
-            status_prazo = "ATRASADO" if dt_v < hoje_dt else "HOJE"
-            tarefas_pendentes.append({
-                "titulo": str(r.get("Titulo", "")),
-                "prioridade": str(r.get("Prioridade", "Normal")),
-                "status": status_prazo,
-                "data": dt_v.strftime("%d/%m/%Y") if pd.notna(dt_v) else ""
-            })
+        t_copia["Data_Vencimento"] = pd.to_datetime(t_copia["Data_Vencimento"], errors="coerce").dt.strftime("%Y-%m-%d")
+        t_hoje = t_copia[t_copia["Data_Vencimento"] == hoje]
+        for _, r in t_hoje.iterrows():
+            tarefas_hoje.append(f"- Tarefa: {r.get('Titulo')} (Prioridade: {r.get('Prioridade')})")
 
-    # 2. Filtra SOMENTE 20 LEADS ATRASADOS (ou do dia) do CRM, rigorosamente limitados a 20 no total
-    crm_pendentes = []
-    total_atrasados_crm = 0
-    
+    followups_hoje = []
     if not df_crm.empty and "Followup_Data" in df_crm.columns:
         c_copia = df_crm.copy()
-        c_copia["Followup_Data_Dt"] = pd.to_datetime(c_copia["Followup_Data"], errors="coerce").dt.date
-        
-        # Pega apenas os que estão com data menor ou igual a hoje
-        c_filtrados = c_copia[c_copia["Followup_Data_Dt"] <= hoje_dt].copy()
-        total_atrasados_crm = len(c_filtrados[c_filtrados["Followup_Data_Dt"] < hoje_dt])
-        
-        # ORDENA PELOS MAIS ATRASADOS E PEGA ESTRITAMENTE OS PRIMEIROS 20 LEADS
-        c_filtrados = c_filtrados.sort_values(by="Followup_Data_Dt", ascending=True).head(20)
-        
-        for _, r in c_filtrados.iterrows():
-            dt_f = r["Followup_Data_Dt"]
-            status_prazo = "ATRASADO" if dt_f < hoje_dt else "HOJE"
-            crm_pendentes.append({
-                "empresa": str(r.get("Empresa", "")),
-                "contato": str(r.get("Contato", "")),
-                "telefone": str(r.get("Telefone", "")),
-                "vendedor": str(r.get("Vendedor", "Gabriel")),
-                "nota": str(r.get("Followup_Nota", ""))[:50],
-                "status": status_prazo,
-                "data_vencimento": dt_f.strftime("%d/%m/%Y") if pd.notna(dt_f) else ""
-            })
+        c_copia["Followup_Data"] = c_copia["Followup_Data"].astype(str).str.strip().str[:10]
+        c_hoje = c_copia[c_copia["Followup_Data"] == hoje]
+        for _, r in c_hoje.iterrows():
+            followups_hoje.append(f"- Cliente: {r.get('Empresa')} | Contato: {r.get('Contato')} | Nota: {r.get('Followup_Nota')}")
+
+    if not tarefas_hoje and not followups_hoje:
+        return "Nenhum compromisso específico ou tarefa agendada para hoje. Excelente dia para prospecção ativa e expansão de carteira."
 
     prompt = f"""
-    Você é o Gerente Operacional de Vendas do GRUPO COVEM (Conta BraClean).
-    Sua missão é gerar a Lista Diária de Execução dos vendedores Gabriel e Ariel.
-
-    DIAGNOSTICO DO CRM HOJE ({hoje_str}):
-    - Total de Atrasados reais no sistema: {total_atrasados_crm}
-    - ATENÇÃO: Foram selecionados ESTRITAMENTE os 20 leads mais urgentes/atrasados da base para distribuição hoje.
-
-    LISTA DOS 20 LEADS ATRASADOS SELECIONADOS PARA DISTRIBUIÇÃO:
-    {json.dumps(crm_pendentes, ensure_ascii=False)}
-
-    Tarefas Gerais:
-    {json.dumps(tarefas_pendentes, ensure_ascii=False)}
-
-    DIRETRIZES DE MONTAGEM DO BRIEFING:
-    1. Informe que existem {total_atrasados_crm} atrasados no total, mas que o sistema isolou os 20 mais críticos para o foco de hoje.
-    2. Divida estes leads rigorosamente: Aloque 10 leads prioritários para o VENDEDOR GABRIEL e 10 leads prioritários para o VENDEDOR ARIEL. Exiba o nome da Empresa, Contato, Telefone e Observação de cada um.
-    3. Encerre reforçando a META DIÁRIA: Cada vendedor deve tratar os 10 alvos de CRM alocados e realizar mais 40 prospecções/novos cadastros para fechar a meta de 50 movimentações no dia.
-
-    Mantenha o tom estritamente profissional, prático e limpo (sem nenhum emoji).
+    Você é o Diretor Comercial e Assessor Executivo do GRUPO COVEM (conta BraClean).
+    Com base nas demandas agendadas para hoje ({hoje}), elabore um Briefing Matinal direto, executivo e estratégico para o vendedor.
+    
+    Tarefas de hoje:
+    {chr(10).join(tarefas_hoje) if tarefas_hoje else "Nenhuma tarefa cadastrada."}
+    
+    Follow-ups de hoje no CRM:
+    {chr(10).join(followups_hoje) if followups_hoje else "Nenhum follow-up no CRM."}
+    
+    Escreva um resumo em bullet points destacando as prioridades absolutas do dia. Seja objetivo e profissional. Não utilize emojis.
     """
 
     try:
@@ -447,56 +407,31 @@ def gerar_briefing_matinal_ia(df_crm, df_tarefas):
         response = model.generate_content(prompt)
         return response.text
     except Exception as e:
-        return f"Erro ao comunicar com a IA do Gemini: {e}"
-        
-def processar_relatorio_fim_de_dia(texto_relatorio, df_crm, briefing_matinal_previo=""):
+        return f"Não foi possível gerar o briefing automático no momento (Erro de API: {e})."
+
+def processar_relatorio_fim_de_dia(texto_relatorio, df_crm):
     if not configurar_gemini_api():
         st.error("Chave da API do Gemini não configurada nos secrets do Streamlit. Adicione 'GEMINI_API_KEY' em .streamlit/secrets.toml.")
-        return False, "Chave da API Gemini não encontrada."
+        return False
 
-    lista_leads_ativos = df_crm[["Empresa", "Etapa", "Contato", "Followup_Data"]].to_dict(orient="records")
+    lista_leads_ativos = df_crm[["Empresa", "Etapa", "Contato"]].to_dict(orient="records")
 
     prompt = f"""
-    Você é o Gerente Operacional e Auditor Comercial do GRUPO COVEM (BraClean).
-    
-    Abaixo está o Briefing Matinal com as metas/tarefas que foram enviadas para os vendedores no início do dia:
-    --- BRIEFING MATINAL ENVIADO ---
-    {briefing_matinal_previo if briefing_matinal_previo else "Não informado explicitamente, verifique a lista de leads no CRM."}
-    --------------------------------
-    
-    Abaixo estão os leads ativos cadastrados no CRM:
+    Você é o motor de IA de um CRM comercial de alta performance (GRUPO COVEM - BraClean).
+    Aqui está a lista de leads ativos cadastrados atualmente no sistema:
     {json.dumps(lista_leads_ativos, ensure_ascii=False)}
 
-    O vendedor enviou o seguinte relatório bruto de fechamento do dia:
+    O vendedor enviou o seguinte relatório de fim de dia em texto corrido/livre:
     "{texto_relatorio}"
 
-    SUA MISSÃO:
-    1. Analise o relatório do vendedor e identifique quais empresas/leads foram atualizados.
-    2. Compare as atividades relatadas com as tarefas enviadas no briefing matinal.
-    3. Para cada lead mencionado, identifique:
-       -Mudança de etapa (se houver)
-       -Novo agendamento de follow-up
-       -Resumo da interação para o histórico
-    4. Para qualquer tarefa ou follow-up do briefing que NÃO tenha sido realizado pelo vendedor, registre a flag de pendência.
-
-    RETORNO ESPERADO:
-    Retorne estritamente um JSON com a seguinte estrutura exata:
-    {{
-        "relatorio_auditoria": "Texto formatado contendo um resumo executivo da performance do vendedor hoje: quais tarefas do briefing foram cumpridas, quais faltaram e o status da meta diária.",
-        "updates": [
-            {{
-                "lead_name": "Nome exato da empresa no CRM",
-                "nova_etapa": "Manter ou nome exato da nova etapa",
-                "proximo_follow_up": "YYYY-MM-DD ou null",
-                "nota_historico": "Resumo do que foi feito",
-                "cumprido": true
-            }}
-        ],
-        "leads_pendentes_nao_feitos": [
-            "Nome da empresa 1 que estava no briefing mas o vendedor não atendeu hoje",
-            "Nome da empresa 2..."
-        ]
-    }}
+    Instruções estritas de processamento:
+    Analise o texto e identifique quais empresas/leads foram mencionados, quais foram as atualizações, mudanças de etapa (opções válidas: Pré: Novo Lead, Pré: Conexão, Prospecção, Qualificação, Reunião Agendada, Proposta Enviada, Fechado, Pós: Standby, Pós: Perdido), se houve novo agendamento de follow-up (formato YYYY-MM-DD) e um breve resumo para a linha do tempo (Histórico).
+    
+    Retorne estritamente um array JSON válido contendo objetos com as seguintes chaves exatas:
+    - "lead_name": nome exato ou muito próximo da empresa no CRM
+    - "nova_etapa": se houver mudança de etapa, coloque o nome exato da nova etapa; caso contrário, coloque "Manter"
+    - "proximo_follow_up": data no formato YYYY-MM-DD se houver novo follow-up agendado, ou null
+    - "nota_historico": resumo executivo do que aconteceu para ser inserido na linha do tempo
     """
 
     try:
@@ -506,17 +441,9 @@ def processar_relatorio_fim_de_dia(texto_relatorio, df_crm, briefing_matinal_pre
             generation_config={"response_mime_type": "application/json"}
         )
         
-        resultado = json.loads(response.text)
-        updates_json = resultado.get("updates", [])
-        relatorio_texto = resultado.get("relatorio_auditoria", "Relatório processado com sucesso.")
-        pendentes_lista = resultado.get("leads_pendentes_nao_feitos", [])
+        updates_json = json.loads(response.text)
         
         atualizacoes_realizadas = 0
-        hoje_dt = date.today()
-        proximo_dia_util = hoje_dt + timedelta(days=1 if hoje_dt.weekday() < 4 else 3)
-        str_proximo_dia = proximo_dia_util.strftime("%Y-%m-%d")
-
-        # 1. Processa os leads que o vendedor efetivamente atendeu/relatou
         for update in updates_json:
             nome_alvo = str(update.get("lead_name", "")).strip().lower()
             if not nome_alvo:
@@ -548,27 +475,11 @@ def processar_relatorio_fim_de_dia(texto_relatorio, df_crm, briefing_matinal_pre
                     df_crm.loc[idx, "Followup_Nota"] = nota_hist
                     atualizacoes_realizadas += 1
                     break
-
-        # 2. Reagenda automaticamente para o próximo dia útil as tarefas que O VENDEDOR NÃO FEZ
-        reagendados_count = 0
-        for nome_pendente in pendentes_lista:
-            nome_p_limpo = str(nome_pendente).strip().lower()
-            for idx, row in df_crm.iterrows():
-                if str(row["Empresa"]).strip().lower() == nome_p_limpo:
-                    df_crm.loc[idx, "Followup_Data"] = str_proximo_dia
-                    df_crm.loc[idx, "Followup_Nota"] = "Reagendado automaticamente pela IA (Não realizado no dia anterior)."
-                    timestamp_atual = dt.now().strftime("%d/%m/%Y %H:%M")
-                    novo_reg = f"[{timestamp_atual}] (IA Reagendamento) Tarefa não realizada no dia. Reagendada para {str_proximo_dia}."
-                    hist_atual = str(row["Historico"]) if pd.notna(row["Historico"]) else ""
-                    df_crm.loc[idx, "Historico"] = novo_reg + ("\n" + hist_atual if hist_atual.strip() else "")
-                    reagendados_count += 1
-                    break
-
-        mensagem_final = f"{relatorio_texto}\n\n**Ações executadas pelo sistema:**\n- {atualizacoes_realizadas} lead(s) atualizados com o relatório do vendedor.\n- {reagendados_count} tarefa(s) não realizadas foram automaticamente movidas para o próximo dia útil ({str_proximo_dia})."
-        
-        return atualizacoes_realizadas, mensagem_final
+                    
+        return atualizacoes_realizadas
     except Exception as e:
-        return False, f"Erro ao processar o relatório com a Gemini API: {e}"
+        st.error(f"Erro ao processar o relatório com a Gemini API: {e}")
+        return False
 
 # ---------------------------------------------------------
 # ESTADO DA SESSÃO
@@ -861,33 +772,27 @@ if aba_selecionada == "Gerenciamento de Tarefas":
 
     with col_ia_1:
         if st.button("Gerar Briefing Matinal com IA", use_container_width=True):
-            with st.spinner("Analisando pendências do CRM e distribuindo metas..."):
+            with st.spinner("Gerando briefing de prioridades do dia..."):
                 briefing_texto = gerar_briefing_matinal_ia(st.session_state.df_crm, st.session_state.df_tarefas)
                 if briefing_texto:
-                    st.session_state.briefing_gerado_texto = briefing_texto
-                    st.success("Briefing matinal gerado e alocado com sucesso!")
-
-    if st.session_state.briefing_gerado_texto:
-        st.info(st.session_state.briefing_gerado_texto)
+                    st.info(briefing_texto)
 
     with col_ia_2:
         with st.popover("Processar Fim de Dia com IA", use_container_width=True):
-            st.markdown("**Relatório de Fim de Dia & Auditoria:**")
-            st.caption("Cole abaixo as anotações do vendedor. A IA comparará com o briefing e reagendará automaticamente as pendências.")
-            texto_fim_dia = st.text_area("Relatório bruto do vendedor:", placeholder="Digite ou cole o resumo das ligações e mensagens do dia...", label_visibility="collapsed")
+            st.markdown("**Relatório de Fim de Dia:**")
+            st.caption("Cole abaixo as anotações corridas do seu dia de vendas.")
+            texto_fim_dia = st.text_area("Relatório bruto:", placeholder="Digite ou cole aqui...", label_visibility="collapsed")
             
-            if st.button("Processar, Auditar e Atualizar CRM", use_container_width=True):
+            if st.button("Processar e Atualizar CRM", use_container_width=True):
                 if not texto_fim_dia.strip():
                     st.warning("Insira o texto com o resumo do dia.")
                 else:
-                    with st.spinner("A IA está auditando o relatório, atualizando o CRM e reagendando faltas..."):
-                        briefing_ref = st.session_state.briefing_gerado_texto if st.session_state.briefing_gerado_texto else ""
-                        qtd_atualizada, relatorio_auditoria = processar_relatorio_fim_de_dia(texto_fim_dia, st.session_state.df_crm, briefing_ref)
+                    with st.spinner("A IA está processando o relatório e atualizando o CRM..."):
+                        qtd_atualizada = processar_relatorio_fim_de_dia(texto_fim_dia, st.session_state.df_crm)
                         if qtd_atualizada is not False:
                             salvar_dados_crm(st.session_state.df_crm)
-                            st.success("Auditoria concluída e CRM atualizado com sucesso!")
-                            st.markdown("### Relatório da IA de Auditoria:")
-                            st.markdown(relatorio_auditoria)
+                            st.success(f"CRM atualizado com sucesso! ({qtd_atualizada} lead(s) processados).")
+                            st.rerun()
 
     st.markdown("<div style='margin-bottom: 15px;'></div>", unsafe_allow_html=True)
 
