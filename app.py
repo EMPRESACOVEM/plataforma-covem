@@ -464,7 +464,7 @@ st.markdown("""
 aba_selecionada = st.session_state.menu_ativo
 
 # =========================================================
-# ABA 1: GERENCIADOR DE TAREFAS & AGENDA UNIFICADA
+# ABA 1: GERENCIADOR DE TAREFAS & AGENDA UNIFICADA COM ATRASADOS
 # =========================================================
 if aba_selecionada == "Gerenciamento de Tarefas":
     st.subheader("Gerenciamento de Tarefas — BraClean")
@@ -528,19 +528,19 @@ if aba_selecionada == "Gerenciamento de Tarefas":
     with col_h1:
         horizonte = st.selectbox(
             "Horizonte de Visualização:",
-            ["Próximos 7 Dias", "Próximos 15 Dias", "Próximos 30 Dias", "Todos os Registros Futuros"],
+            ["Incluir Atrasados + Próximos 7 Dias", "Incluir Atrasados + Próximos 15 Dias", "Incluir Atrasados + Próximos 30 Dias", "Todos os Registros (Incluindo Atrasados)"],
             label_visibility="collapsed"
         )
 
     hoje = date.today()
-    if horizonte == "Próximos 7 Dias":
+    if "7 Dias" in horizonte:
         limite_data = hoje + timedelta(days=7)
-    elif horizonte == "Próximos 15 Dias":
+    elif "15 Dias" in horizonte:
         limite_data = hoje + timedelta(days=15)
-    elif horizonte == "Próximos 30 Dias":
+    elif "30 Dias" in horizonte:
         limite_data = hoje + timedelta(days=30)
     else:
-        limite_data = hoje + timedelta(days=365)
+        limite_data = hoje + timedelta(days=3650) # Todos os futuros e antigos
 
     eventos_futuros = []
 
@@ -551,7 +551,9 @@ if aba_selecionada == "Gerenciamento de Tarefas":
             if pd.notna(t.get("Data_Vencimento")):
                 try:
                     dt_v = dt.strptime(str(t["Data_Vencimento"])[:10], "%Y-%m-%d").date()
-                    if hoje <= dt_v <= limite_data:
+                    # Inclui se estiver no período ou se estiver atrasado (menor que hoje)
+                    if dt_v <= limite_data:
+                        status_atraso_str = "Atrasada 🔴" if dt_v < hoje else f"Prioridade: {t.get('Prioridade', 'Normal')}"
                         eventos_futuros.append({
                             "origem": "tarefa",
                             "index_original": idx_t,
@@ -560,7 +562,7 @@ if aba_selecionada == "Gerenciamento de Tarefas":
                             "Tipo": "Tarefa",
                             "Título / Ação": t["Titulo"],
                             "Vinculado a": f"Cliente: {t.get('Cliente', 'BraClean')}",
-                            "Prioridade / Status": f"Prioridade: {t.get('Prioridade', 'Normal')}"
+                            "Prioridade / Status": status_atraso_str
                         })
                 except:
                     pass
@@ -571,7 +573,8 @@ if aba_selecionada == "Gerenciamento de Tarefas":
             if pd.notna(f_dat) and str(f_dat).strip() not in ["", "nan", "NaT"]:
                 try:
                     dt_f = dt.strptime(str(f_dat)[:10], "%Y-%m-%d").date()
-                    if hoje <= dt_f <= limite_data:
+                    if dt_f <= limite_data:
+                        status_atraso_str = "Atrasado 🔴" if dt_f < hoje else f"Etapa: {c['Etapa']}"
                         eventos_futuros.append({
                             "origem": "crm",
                             "index_original": idx_c,
@@ -580,7 +583,7 @@ if aba_selecionada == "Gerenciamento de Tarefas":
                             "Tipo": "Follow-up CRM",
                             "Título / Ação": c.get("Followup_Nota", "Contato Comercial"),
                             "Vinculado a": f"Empresa: {c['Empresa']} ({c.get('Contato', 'Não informado')})",
-                            "Prioridade / Status": f"Etapa: {c['Etapa']}"
+                            "Prioridade / Status": status_atraso_str
                         })
                 except:
                     pass
@@ -589,10 +592,11 @@ if aba_selecionada == "Gerenciamento de Tarefas":
         df_futuro = pd.DataFrame(eventos_futuros)
         df_futuro = df_futuro.sort_values(by="Data_Obj", ascending=True).reset_index(drop=True)
 
-        with st.expander(f"Ver compromissos no período ({len(df_futuro)} encontrados)", expanded=True):
+        with st.expander(f"Ver compromissos e atrasados no período ({len(df_futuro)} encontrados)", expanded=True):
+            total_atrasados = len(df_futuro[df_futuro["Data_Obj"] < hoje])
             c_m1, c_m2, c_m3 = st.columns(3)
-            c_m1.metric("Total de Ações no Período", len(df_futuro))
-            c_m2.metric("Tarefas Pendentes", len(df_futuro[df_futuro["Tipo"] == "Tarefa"]))
+            c_m1.metric("Total de Registros", len(df_futuro))
+            c_m2.metric("Itens Atrasados 🔴", total_atrasados)
             c_m3.metric("Follow-ups de CRM", len(df_futuro[df_futuro["Tipo"] == "Follow-up CRM"]))
 
             st.divider()
@@ -646,7 +650,7 @@ if aba_selecionada == "Gerenciamento de Tarefas":
                             st.success("Atualizado com sucesso!")
                             st.rerun()
     else:
-        st.info("Nenhuma tarefa ou follow-up agendado para este horizonte de tempo.")
+        st.info("Nenhuma tarefa ou follow-up encontrado para este filtro.")
 
 # =========================================================
 # ABA 2: FUNIL DE VENDAS
