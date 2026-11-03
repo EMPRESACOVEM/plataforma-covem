@@ -394,7 +394,7 @@ def gerar_briefing_matinal_ia(df_crm, df_tarefas):
     """
 
     try:
-        model = genai.GenerativeModel('gemini-2.5-flash')
+        model = genai.GenerativeModel('gemini-3.8-flash')
         response = model.generate_content(prompt)
         return response.text
     except Exception as e:
@@ -426,7 +426,7 @@ def processar_relatorio_fim_de_dia(texto_relatorio, df_crm):
     """
 
     try:
-        model = genai.GenerativeModel('gemini-2.5-flash')
+        model = genai.GenerativeModel('gemini-3.8-flash')
         response = model.generate_content(
             prompt,
             generation_config={"response_mime_type": "application/json"}
