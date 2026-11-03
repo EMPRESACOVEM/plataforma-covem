@@ -70,11 +70,11 @@ DEFAULT_COLORS = {
 }
 
 CORES_PERDAS = {
-    "Preço / Orçamento": "#FF0033",             # Vermelho Neon
-    "Concorrência": "#FF6600",                  # Laranja Neon
-    "Sem Resposta / Sumiu": "#FFEA00",          # Amarelo Neon
-    "Produto / Serviço não Atende": "#00E5FF",  # Azul Claro Neon
-    "Outros": "#9D00FF"                         # Roxo Neon
+    "Preço / Orçamento": "#FF0033",             # Red Neon
+    "Concorrência": "#FF6600",                  # Orange Neon
+    "Sem Resposta / Sumiu": "#FFEA00",          # Yellow Neon
+    "Produto / Serviço não Atende": "#00E5FF",  # Light Blue Neon
+    "Outros": "#9D00FF"                         # Purple Neon
 }
 
 # Cores das Barras de Classificação de Clientes
@@ -520,10 +520,10 @@ if aba_selecionada == "Gerenciamento de Tarefas":
     st.subheader("Gerenciamento de Tarefas — BraClean")
 
     # ---------------------------------------------------------
-    # SEÇÃO: LISTAS DIÁRIAS SIMPLIFICADAS (EMPRESA, RESPONSÁVEL, TEL)
+    # SEÇÃO: LISTAS DIÁRIAS SIMPLIFICADAS (EMPRESA EM BRANCO, RESPONSÁVEL, TEL)
     # ---------------------------------------------------------
     with st.expander("Listas Diárias de Follow-up (20 Leads para Gabriel e 20 para Ariel)", expanded=True):
-        st.caption("Visualização simplificada em lista vertical limpa para fácil leitura e disparo.")
+        st.caption("Visualização limpa com o nome da empresa em destaque branco.")
         tab_g, tab_a = st.tabs(["Gabriel", "Ariel"])
         
         hoje = date.today()
@@ -539,7 +539,7 @@ if aba_selecionada == "Gerenciamento de Tarefas":
                     
                     st.markdown(f"""
                         <div style="background-color: rgba(10, 14, 39, 0.6); border: 1px solid #1E293B; padding: 10px 14px; border-radius: 6px; margin-bottom: 8px; font-family: 'Inter', sans-serif;">
-                            <b style="color: #00E5FF; font-size: 14px;">{idx_l + 1}. {empresa_val}</b><br>
+                            <b style="color: #FFFFFF; font-size: 14px;">{idx_l + 1}. {empresa_val}</b><br>
                             <span style="color: #E2E8F0; font-size: 13px;">Responsável: {resp_val}</span><br>
                             <span style="color: #94A3B8; font-size: 13px;">Telefone: <code>{tel_val}</code></span>
                         </div>
@@ -557,7 +557,7 @@ if aba_selecionada == "Gerenciamento de Tarefas":
                     
                     st.markdown(f"""
                         <div style="background-color: rgba(10, 14, 39, 0.6); border: 1px solid #1E293B; padding: 10px 14px; border-radius: 6px; margin-bottom: 8px; font-family: 'Inter', sans-serif;">
-                            <b style="color: #00E5FF; font-size: 14px;">{idx_l + 1}. {empresa_val}</b><br>
+                            <b style="color: #FFFFFF; font-size: 14px;">{idx_l + 1}. {empresa_val}</b><br>
                             <span style="color: #E2E8F0; font-size: 13px;">Responsável: {resp_val}</span><br>
                             <span style="color: #94A3B8; font-size: 13px;">Telefone: <code>{tel_val}</code></span>
                         </div>
