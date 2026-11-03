@@ -517,20 +517,19 @@ aba_selecionada = st.session_state.menu_ativo
 # ABA 1: GERENCIADOR DE TAREFAS & AGENDA UNIFICADA COM FILTROS SEPARADOS
 # =========================================================
 if aba_selecionada == "Gerenciamento de Tarefas":
-    st.subheader("Gerenciamento de Tarefas — BraClean")
+    st.subheader("Gerenciamento de Tarefas")
 
     # ---------------------------------------------------------
     # SEÇÃO: LISTAS DIÁRIAS SIMPLIFICADAS (EMPRESA EM BRANCO, RESPONSÁVEL, TEL)
     # ---------------------------------------------------------
-    with st.expander("Listas Diárias de Follow-up (20 Leads para Gabriel e 20 para Ariel)", expanded=True):
-        st.caption("Visualização limpa com o nome da empresa em destaque branco.")
+    with st.expander("Lista Diária", expanded=True):
         tab_g, tab_a = st.tabs(["Gabriel", "Ariel"])
         
         hoje = date.today()
         lista_g_df, lista_a_df = obter_lotes_diarios_followup(st.session_state.df_crm)
         
         with tab_g:
-            st.markdown("### Lote de Follow-up: Gabriel (20 Clientes)")
+            st.markdown("### Tarefa Diária: Gabriel")
             if not lista_g_df.empty:
                 for idx_l, row_l in lista_g_df.reset_index(drop=True).iterrows():
                     empresa_val = str(row_l['Empresa']).upper()
@@ -548,7 +547,7 @@ if aba_selecionada == "Gerenciamento de Tarefas":
                 st.info("Nenhum follow-up pendente na base para Gabriel.")
                 
         with tab_a:
-            st.markdown("### Lote de Follow-up: Ariel (20 Clientes)")
+            st.markdown("### Tarefa Diária: Ariel")
             if not lista_a_df.empty:
                 for idx_l, row_l in lista_a_df.reset_index(drop=True).iterrows():
                     empresa_val = str(row_l['Empresa']).upper()
@@ -568,13 +567,12 @@ if aba_selecionada == "Gerenciamento de Tarefas":
     # ---------------------------------------------------------
     # SEÇÃO: LEITOR INTELIGENTE DE RELATÓRIO DO DIA
     # ---------------------------------------------------------
-    with st.expander("Leitor de Relatório do Dia (Input Rápido)", expanded=False):
-        st.caption("Cole o resumo do seu dia abaixo. Clientes existentes serão atualizados no CRM; novos clientes serão criados automaticamente.")
+    with st.expander("Relatório do Dia (Input Rápido)", expanded=False):
         col_rel1, col_rel2 = st.columns([1, 2])
         with col_rel1:
             vendedor_relatorio = st.selectbox("Vendedor Responsável", ["Gabriel", "Ariel"], key="sel_vend_rel")
         
-        texto_relatorio_input = st.text_area("Cole o relatório aqui (uma linha por cliente/ação):", placeholder="Ex: Usina Santa Clara: Orçamento aprovado e fechado.\nPosto Aliança: Pediu para retornar na sexta.", key="txt_rel_input")
+        texto_relatorio_input = st.text_area("Cole o relatório aqui:", placeholder="Ex: Usina Santa Clara: Orçamento aprovado e fechado.\nPosto Aliança: Pediu para retornar na sexta.", key="txt_rel_input")
         
         if st.button("Processar e Sincronizar Relatório", use_container_width=True):
             if texto_relatorio_input.strip():
