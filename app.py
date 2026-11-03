@@ -268,7 +268,6 @@ def carregar_dados_crm():
             df_loaded["Perda"] = df_loaded["Perda"].fillna("").astype(str)
             df_loaded["Perfil"] = df_loaded["Perfil"].fillna("Cliente C").astype(str)
             
-            # FILTRAGEM AUTOMÁTICA: Remove qualquer registro antigo que não seja da BraClean
             df_loaded["Cliente"] = df_loaded["Cliente"].astype(str).str.strip()
             df_loaded = df_loaded[df_loaded["Cliente"].str.lower() == "braclean"]
             if df_loaded.empty:
@@ -343,11 +342,12 @@ def salvar_dados_tarefas(df):
     df.to_excel(ARQUIVO_TAREFAS, index=False)
 
 # ---------------------------------------------------------
-# FUNÇÕES DE AUTOMAÇÃO (LISTA DIÁRIA & PROCESSADOR DE RELATÓRIO)
+# FUNÇÕES DE AUTOMAÇÃO (LISTA DIÁRIA EXATA DE 20 LEADS & PROCESSADOR)
 # ---------------------------------------------------------
 def obter_lista_diaria_vendedor(df_crm, df_tarefas, vendedor_nome):
     hoje = date.today()
     
+    # Pega os follow-ups do CRM do vendedor específico
     crm_pendentes = df_crm[
         (df_crm["Vendedor"].str.contains(vendedor_nome, case=False, na=False)) & 
         (df_crm["Followup_Data"].notna()) & 
@@ -355,12 +355,14 @@ def obter_lista_diaria_vendedor(df_crm, df_tarefas, vendedor_nome):
     ].copy()
     
     crm_pendentes["Data_Alvo"] = pd.to_datetime(crm_pendentes["Followup_Data"], errors="coerce").dt.date
+    # Prioriza atrasados e vencidos até hoje
     crm_pendentes = crm_pendentes[crm_pendentes["Data_Alvo"] <= hoje]
     
     crm_pendentes["Origem_Item"] = "CRM (Follow-up)"
     crm_pendentes["Titulo_Acao"] = crm_pendentes["Followup_Nota"].fillna("Contato comercial pendente")
     crm_pendentes["Empresa_Ref"] = crm_pendentes["Empresa"]
     
+    # Pega tarefas pendentes
     tarefas_pendentes = df_tarefas[
         (df_tarefas["Status"] != "Concluído") & 
         (df_tarefas["Data_Vencimento"].notna())
@@ -379,7 +381,9 @@ def obter_lista_diaria_vendedor(df_crm, df_tarefas, vendedor_nome):
     ], ignore_index=True)
     
     if not unificado.empty:
+        # Ordena rigorosamente dos mais antigos (atrasados no topo) para os mais recentes
         unificado = unificado.sort_values(by="Data_Alvo", ascending=True)
+        # Garante exatamente a cota de 20 leads/tarefas diárias
         return unificado.head(20)
         
     return pd.DataFrame()
@@ -570,23 +574,25 @@ if aba_selecionada == "Gerenciamento de Tarefas":
     st.subheader("Gerenciamento de Tarefas — BraClean")
 
     # ---------------------------------------------------------
-    # SEÇÃO: LISTAS DIÁRIAS DE 20 LEADS (GABRIEL E ARIEL)
+    # SEÇÃO: LISTAS DIÁRIAS OBRIGATÓRIAS DE 20 LEADS (GABRIEL E ARIEL)
     # ---------------------------------------------------------
-    with st.expander("Listas Diárias de 20 Leads (Gabriel & Ariel)", expanded=False):
+    with st.expander("Listas Diárias de 20 Leads e Tarefas (Gabriel & Ariel)", expanded=True):
         tab_g, tab_a = st.tabs(["Gabriel", "Ariel"])
         
         with tab_g:
-            st.caption("Lista diária priorizada (Até 20 leads/tarefas pendentes ou atrasadas):")
+            st.caption("Meta diária estrita de até 20 leads/tarefas priorizados (Atrasados no topo):")
             df_lista_gabriel = obter_lista_diaria_vendedor(st.session_state.df_crm, st.session_state.df_tarefas, "Gabriel")
             if not df_lista_gabriel.empty:
+                st.metric("Total na Lista de Hoje (Gabriel)", len(df_lista_gabriel))
                 st.dataframe(df_lista_gabriel, use_container_width=True, hide_index=True)
             else:
                 st.info("Nenhum lead pendente ou atrasado para Gabriel hoje.")
                 
         with tab_a:
-            st.caption("Lista diária priorizada (Até 20 leads/tarefas pendentes ou atrasadas):")
+            st.caption("Meta diária estrita de até 20 leads/tarefas priorizados (Atrasados no topo):")
             df_lista_ariel = obter_lista_diaria_vendedor(st.session_state.df_crm, st.session_state.df_tarefas, "Ariel")
             if not df_lista_ariel.empty:
+                st.metric("Total na Lista de Hoje (Ariel)", len(df_lista_ariel))
                 st.dataframe(df_lista_ariel, use_container_width=True, hide_index=True)
             else:
                 st.info("Nenhum lead pendente ou atrasado para Ariel hoje.")
