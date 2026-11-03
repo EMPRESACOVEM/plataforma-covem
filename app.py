@@ -463,172 +463,11 @@ st.markdown("""
 
 aba_selecionada = st.session_state.menu_ativo
 
-# ---------------------------------------------------------
-# FUNÇÃO DE RENDERIZAÇÃO DA AGENDA DA SEMANA
-# ---------------------------------------------------------
-def exibir_agenda_semana(df_tarefas, df_crm):
-    st.markdown('<div style="margin-top: 4px;"></div>', unsafe_allow_html=True)
-    
-    c_sub1, c_sub2 = st.columns(2)
-    
-    with c_sub1:
-        is_sub_active_1 = (st.session_state.sub_menu_tarefas == "Tarefas")
-        if is_sub_active_1:
-            st.markdown(
-                """
-                <style>
-                div[data-testid="column"]:nth-of-type(1) div.stButton > button {
-                    background-color: #0A0E27 !important;
-                    color: #00E5FF !important;
-                    border: 1px solid #00E5FF !important;
-                    font-weight: 600 !important;
-                }
-                </style>
-                """,
-                unsafe_allow_html=True
-            )
-        if st.button("Tarefas", key="sub_btn_tarefas", use_container_width=True):
-            st.session_state.sub_menu_tarefas = "Tarefas"
-            st.rerun()
-            
-    with c_sub2:
-        is_sub_active_2 = (st.session_state.sub_menu_tarefas == "Follow-up")
-        if is_sub_active_2:
-            st.markdown(
-                """
-                <style>
-                div[data-testid="column"]:nth-of-type(2) div.stButton > button {
-                    background-color: #0A0E27 !important;
-                    color: #00E5FF !important;
-                    border: 1px solid #00E5FF !important;
-                    font-weight: 600 !important;
-                }
-                </style>
-                """,
-                unsafe_allow_html=True
-            )
-        if st.button("Follow-up", key="sub_btn_followups", use_container_width=True):
-            st.session_state.sub_menu_tarefas = "Follow-up"
-            st.rerun()
-
-    st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
-
-    def obter_telefone_por_empresa(nome_empresa):
-        if not nome_empresa or nome_empresa == "Nenhum / Tarefa Geral":
-            return "Não vinculado"
-        match = df_crm[df_crm["Empresa"].str.lower() == str(nome_empresa).lower()]
-        if not match.empty:
-            tel = match.iloc[0].get("Telefone", "")
-            return tel if tel else "Não informado"
-        return "Não cadastrado no CRM"
-
-    if st.session_state.sub_menu_tarefas == "Tarefas":
-        if df_tarefas.empty or "Data_Vencimento" not in df_tarefas.columns:
-            st.info("Nenhuma tarefa cadastrada.")
-        else:
-            hoje = datetime.date.today()
-            df_temp = df_tarefas.copy()
-            df_temp["Data_Vencimento"] = pd.to_datetime(df_temp["Data_Vencimento"], errors="coerce").dt.date
-
-            pendentes = df_temp[df_temp["Status"] != "Concluído"]
-            atrasadas = pendentes[pendentes["Data_Vencimento"] < hoje]
-            hoje_tarefas = pendentes[pendentes["Data_Vencimento"] == hoje]
-
-            col_atraso, col_hoje = st.columns(2)
-
-            with col_atraso:
-                st.markdown(f'<div class="badge-atrasada">{len(atrasadas)} Tarefas Atrasadas</div>', unsafe_allow_html=True)
-                with st.expander("Ver Tarefas Atrasadas"):
-                    if not atrasadas.empty:
-                        for _, row in atrasadas.iterrows():
-                            emp_vinculada = row.get('Cliente', 'BraClean')
-                            tel_contato = obter_telefone_por_empresa(emp_vinculada)
-                            st.markdown(f"""
-                                - **{row['Titulo']}**<br>
-                                &nbsp;&nbsp;&nbsp;&nbsp;Empresa/Cliente: `{emp_vinculada}`<br>
-                                &nbsp;&nbsp;&nbsp;&nbsp;Telefone: <span class="phone-highlight">{tel_contato}</span><br>
-                                &nbsp;&nbsp;&nbsp;&nbsp;Vencimento: {row['Data_Vencimento'].strftime('%d/%m/%Y')}
-                                <hr style="margin: 4px 0; border-color: #334155;">
-                            """, unsafe_allow_html=True)
-                    else:
-                        st.write("Nenhuma tarefa atrasada.")
-
-            with col_hoje:
-                st.markdown(f'<div class="badge-hoje">{len(hoje_tarefas)} Tarefas para Hoje</div>', unsafe_allow_html=True)
-                with st.expander("Ver Tarefas para Hoje"):
-                    if not hoje_tarefas.empty:
-                        for _, row in hoje_tarefas.iterrows():
-                            emp_vinculada = row.get('Cliente', 'BraClean')
-                            tel_contato = obter_telefone_por_empresa(emp_vinculada)
-                            st.markdown(f"""
-                                - **{row['Titulo']}**<br>
-                                &nbsp;&nbsp;&nbsp;&nbsp;Empresa/Cliente: `{emp_vinculada}`<br>
-                                &nbsp;&nbsp;&nbsp;&nbsp;Telefone: <span class="phone-highlight">{tel_contato}</span>
-                                <hr style="margin: 4px 0; border-color: #334155;">
-                            """, unsafe_allow_html=True)
-                    else:
-                        st.write("Nenhuma tarefa para hoje.")
-
-    else:
-        if df_crm.empty:
-            st.info("Nenhum cliente no CRM.")
-        else:
-            crm_temp = df.copy()
-            status_list = []
-            for _, r in crm_temp.iterrows():
-                st_code, st_label, st_icon = calcular_status_followup(r.get("Followup_Data", ""))
-                status_list.append(st_code)
-            crm_temp["status_fu"] = status_list
-
-            c_atrasados = crm_temp[crm_temp["status_fu"] == "atrasado"]
-            c_hoje = crm_temp[crm_temp["status_fu"] == "hoje"]
-
-            col_c_atraso, col_c_hoje = st.columns(2)
-
-            with col_c_atraso:
-                st.markdown(f'<div class="badge-atrasada">{len(c_atrasados)} Follow-ups Atrasados</div>', unsafe_allow_html=True)
-                with st.expander("Ver Follow-ups Atrasados"):
-                    if not c_atrasados.empty:
-                        for _, row in c_atrasados.iterrows():
-                            raw_dt = str(row['Followup_Data']).strip()[:10]
-                            try:
-                                dt_f_br = dt.strptime(raw_dt, "%Y-%m-%d").strftime("%d/%m/%Y")
-                            except:
-                                dt_f_br = "Data Inválida"
-                            tel_crm = row.get('Telefone', 'Não informado')
-                            st.markdown(f"""
-                                - **{row['Empresa']}**<br>
-                                &nbsp;&nbsp;&nbsp;&nbsp;Contato: `{row['Contato']}`<br>
-                                &nbsp;&nbsp;&nbsp;&nbsp;Telefone: <span class="phone-highlight">{tel_crm}</span><br>
-                                &nbsp;&nbsp;&nbsp;&nbsp;Data: {dt_f_br}
-                                <hr style="margin: 4px 0; border-color: #334155;">
-                            """, unsafe_allow_html=True)
-                    else:
-                        st.write("Nenhum follow-up atrasado.")
-
-            with col_c_hoje:
-                st.markdown(f'<div class="badge-hoje">{len(c_hoje)} Follow-ups para Hoje</div>', unsafe_allow_html=True)
-                with st.expander("Ver Follow-ups para Hoje"):
-                    if not c_hoje.empty:
-                        for _, row in c_hoje.iterrows():
-                            tel_crm = row.get('Telefone', 'Não informado')
-                            st.markdown(f"""
-                                - **{row['Empresa']}**<br>
-                                &nbsp;&nbsp;&nbsp;&nbsp;Contato: `{row['Contato']}`<br>
-                                &nbsp;&nbsp;&nbsp;&nbsp;Telefone: <span class="phone-highlight">{tel_crm}</span>
-                                <hr style="margin: 4px 0; border-color: #334155;">
-                            """, unsafe_allow_html=True)
-                    else:
-                        st.write("Nenhum follow-up para hoje.")
-
-    st.divider()
-
 # =========================================================
-# ABA 1: GERENCIADOR DE TAREFAS & CALENDÁRIO FUTURO
+# ABA 1: GERENCIADOR DE TAREFAS & AGENDA UNIFICADA
 # =========================================================
 if aba_selecionada == "Gerenciamento de Tarefas":
     st.subheader("Gerenciamento de Tarefas — BraClean")
-    exibir_agenda_semana(st.session_state.df_tarefas, st.session_state.df_crm)
 
     lista_clientes = ["Nenhum / Tarefa Geral"] + df["Empresa"].dropna().tolist()
 
@@ -667,7 +506,7 @@ if aba_selecionada == "Gerenciamento de Tarefas":
                 nova_linha_tarefa = {
                     "Titulo": titulo_final,
                     "Descricao": descricao,
-                    "Cliente": "BraClean",
+                    "Cliente": cliente_vinculado if cliente_vinculado != "Nenhum / Tarefa Geral" else "BraClean",
                     "Data_Vencimento": str(data_vencimento),
                     "Prioridade": prioridade,
                     "Status": "Pendente",
@@ -717,9 +556,10 @@ if aba_selecionada == "Gerenciamento de Tarefas":
                             "origem": "tarefa",
                             "index_original": idx_t,
                             "Data_Formatada": dt_v.strftime("%d/%m/%Y"),
+                            "Data_Obj": dt_v,
                             "Tipo": "Tarefa",
                             "Título / Ação": t["Titulo"],
-                            "Vinculado a": f"Cliente: BraClean",
+                            "Vinculado a": f"Cliente: {t.get('Cliente', 'BraClean')}",
                             "Prioridade / Status": f"Prioridade: {t.get('Prioridade', 'Normal')}"
                         })
                 except:
@@ -736,6 +576,7 @@ if aba_selecionada == "Gerenciamento de Tarefas":
                             "origem": "crm",
                             "index_original": idx_c,
                             "Data_Formatada": dt_f.strftime("%d/%m/%Y"),
+                            "Data_Obj": dt_f,
                             "Tipo": "Follow-up CRM",
                             "Título / Ação": c.get("Followup_Nota", "Contato Comercial"),
                             "Vinculado a": f"Empresa: {c['Empresa']} ({c.get('Contato', 'Não informado')})",
@@ -746,7 +587,7 @@ if aba_selecionada == "Gerenciamento de Tarefas":
 
     if eventos_futuros:
         df_futuro = pd.DataFrame(eventos_futuros)
-        df_futuro = df_futuro.sort_values(by="Data_Formatada", ascending=True).reset_index(drop=True)
+        df_futuro = df_futuro.sort_values(by="Data_Obj", ascending=True).reset_index(drop=True)
 
         with st.expander(f"Ver compromissos no período ({len(df_futuro)} encontrados)", expanded=True):
             c_m1, c_m2, c_m3 = st.columns(3)
@@ -1428,14 +1269,13 @@ elif aba_selecionada == "Relatório Executivo":
     st.divider()
 
     # ---------------------------------------------------------
-    # ATIVIDADES INDIVIDUAIS (GABRIEL VS ARIEL) E METAS (ZERADO PARA INICIAR TERÇA-FEIRA 03/11/2026)
+    # ATIVIDADES INDIVIDUAIS (GABRIEL VS ARIEL) E METAS
     # ---------------------------------------------------------
     st.markdown("### Atividades Individuais & Metas de Vendedores")
     st.caption("📅 Dados configurados para iniciar a contagem a partir de terça-feira (03/11/2026).")
 
     vendedores_covem = ["Gabriel", "Ariel"]
     
-    # Filtra o dataframe executivo considerando apenas cadastros a partir de 03/11/2026 para zerar o histórico anterior nestes gráficos
     data_inicio_utilizacao = pd.to_datetime("2026-11-03").date()
     df_exec["Data_Cadastro_Parsed"] = pd.to_datetime(df_exec["Data_Cadastro"], errors="coerce").dt.date
     df_vendedores_filtrado = df_exec[df_exec["Data_Cadastro_Parsed"] >= data_inicio_utilizacao].copy()
@@ -1528,7 +1368,7 @@ elif aba_selecionada == "Relatório Executivo":
     st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
 
     # ---------------------------------------------------------
-    # GRÁFICO MACRO DE LINHAS PROGRESSIVO (DIÁRIO, SEMANAL, MENSAL) - INICIANDO TERÇA-FEIRA
+    # GRÁFICO MACRO DE LINHAS PROGRESSIVO
     # ---------------------------------------------------------
     st.markdown("### Visão Macro de Atividades dos Vendedores")
     st.markdown("Acompanhamento progressivo e automático da movimentação dos vendedores com início a partir de terça-feira (03/11/2026).")
@@ -1730,10 +1570,10 @@ elif aba_selecionada == "+ Novo Cadastro":
                 novo_id = int(df["id"].max() + 1) if not df.empty and pd.notna(df["id"].max()) else 1
                 
                 email_valido = nova_email if 'nova_email' in locals() and nova_email else "Não informado"
-                contato_valido = novo_contato if 'novo_contato' in locals() and novo_contato else "Não informado"
-                cargo_valido = novo_cargo if 'nova_cargo' in locals() and novo_cargo else "Não informado"
-                telefone_valido = novo_telefone if 'novo_telefone' in locals() and novo_telefone else "Não informado"
-                cidade_valida = nova_cidade if 'nova_cidade' in locals() and nova_cidade else "Não informado"
+                contato_valido = novo_contato if 'novo_contato' in locals() else "Não informado"
+                cargo_valido = novo_cargo if 'novo_cargo' in locals() else "Não informado"
+                telefone_valido = novo_telefone if 'novo_telefone' in locals() else "Não informado"
+                cidade_valida = nova_cidade if 'nova_cidade' in locals() else "Não informado"
 
                 nova_linha = {
                     "id": novo_id,
