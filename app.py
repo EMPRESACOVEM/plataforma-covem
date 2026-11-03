@@ -520,7 +520,7 @@ if aba_selecionada == "Gerenciamento de Tarefas":
     st.subheader("Gerenciamento de Tarefas")
 
     # SUBMENU HORIZONTAL LIMPO (SEM EMOJIS)
-    sub_opcoes = ["Tarefas Diárias", "Agenda & Follow Up", "Criar Nova Tarefa"]
+    sub_opcoes = ["Tarefas Diárias", "Agenda de Tarefas e Follow Up", "Criar Nova Tarefa"]
     cols_sub = st.columns(3)
 
     for idx_s, nome_sub in enumerate(sub_opcoes):
@@ -552,14 +552,14 @@ if aba_selecionada == "Gerenciamento de Tarefas":
     # OPÇÃO 1: TAREFAS DIÁRIAS & RELATÓRIO DO DIA
     # ---------------------------------------------------------
     if sub_selecionado == "Tarefas Diárias":
-        st.markdown("### Listas Diárias de Contato")
+        st.markdown("### Tarefas Diárias")
         
         tab_g, tab_a = st.tabs(["Gabriel", "Ariel"])
         hoje = date.today()
         lista_g_df, lista_a_df = obter_lotes_diarios_followup(st.session_state.df_crm)
         
         with tab_g:
-            st.markdown("#### Lote Diário: Gabriel")
+            st.markdown("#### Lista Diária: Gabriel")
             if not lista_g_df.empty:
                 for idx_l, row_l in lista_g_df.reset_index(drop=True).iterrows():
                     empresa_val = str(row_l['Empresa']).upper()
@@ -577,7 +577,7 @@ if aba_selecionada == "Gerenciamento de Tarefas":
                 st.info("Nenhum follow-up pendente na base para Gabriel.")
                 
         with tab_a:
-            st.markdown("#### Lote Diário: Ariel")
+            st.markdown("#### Lista Diária: Ariel")
             if not lista_a_df.empty:
                 for idx_l, row_l in lista_a_df.reset_index(drop=True).iterrows():
                     empresa_val = str(row_l['Empresa']).upper()
@@ -596,7 +596,7 @@ if aba_selecionada == "Gerenciamento de Tarefas":
 
         st.divider()
 
-        st.markdown("### Relatório do Dia (Input Rápido)")
+        st.markdown("### Relatório Diário")
         col_rel1, col_rel2 = st.columns([1, 2])
         with col_rel1:
             vendedor_relatorio = st.selectbox("Vendedor Responsável", ["Gabriel", "Ariel"], key="sel_vend_rel")
@@ -616,7 +616,7 @@ if aba_selecionada == "Gerenciamento de Tarefas":
     # ---------------------------------------------------------
     # OPÇÃO 2: AGENDA DE TAREFAS E FOLLOW UP
     # ---------------------------------------------------------
-    elif sub_selecionado == "Agenda & Follow Up":
+    elif sub_selecionado == "Agenda de Tarefas e Follow Up":
         st.markdown("### Agenda de Tarefas e Follow Up")
 
         hoje = date.today()
@@ -765,7 +765,7 @@ if aba_selecionada == "Gerenciamento de Tarefas":
     # OPÇÃO 3: CRIAR NOVA TAREFA
     # ---------------------------------------------------------
     elif sub_selecionado == "Criar Nova Tarefa":
-        st.markdown("### Formulário de Nova Tarefa")
+        st.markdown("### Criar Nova Tarefa")
         lista_clientes = ["Nenhum / Tarefa Geral"] + df["Empresa"].dropna().tolist()
 
         with st.form(key="form_nova_tarefa_crm", clear_on_submit=True):
