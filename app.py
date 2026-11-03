@@ -368,38 +368,64 @@ def gerar_briefing_matinal_ia(df_crm, df_tarefas):
     if not configurar_gemini_api():
         return None
     
-    hoje = date.today().strftime("%Y-%m-%d")
+    hoje_dt = date.today()
+    hoje_str = hoje_dt.strftime("%Y-%m-%d")
     
-    tarefas_hoje = []
+    # Filtra Tarefas Atrasadas e de Hoje
+    tarefas_pendentes = []
     if not df_tarefas.empty and "Data_Vencimento" in df_tarefas.columns:
         t_copia = df_tarefas.copy()
-        t_copia["Data_Vencimento"] = pd.to_datetime(t_copia["Data_Vencimento"], errors="coerce").dt.strftime("%Y-%m-%d")
-        t_hoje = t_copia[t_copia["Data_Vencimento"] == hoje]
-        for _, r in t_hoje.iterrows():
-            tarefas_hoje.append(f"- Tarefa: {r.get('Titulo')} (Prioridade: {r.get('Prioridade')})")
+        t_copia["Data_Vencimento_Dt"] = pd.to_datetime(t_copia["Data_Vencimento"], errors="coerce").dt.date
+        t_filtradas = t_copia[(t_copia["Data_Vencimento_Dt"] <= hoje_dt) & (t_copia["Status"] != "Concluído")]
+        
+        for _, r in t_filtradas.iterrows():
+            status_prazo = "ATRASADO" if r["Data_Vencimento_Dt"] < hoje_dt else "HOJE"
+            tarefas_pendentes.append({
+                "titulo": r.get("Titulo"),
+                "prioridade": r.get("Prioridade"),
+                "status": status_prazo
+            })
 
-    followups_hoje = []
+    # Filtra Follow-ups do CRM Atrasados e de Hoje
+    crm_pendentes = []
     if not df_crm.empty and "Followup_Data" in df_crm.columns:
         c_copia = df_crm.copy()
-        c_copia["Followup_Data"] = c_copia["Followup_Data"].astype(str).str.strip().str[:10]
-        c_hoje = c_copia[c_copia["Followup_Data"] == hoje]
-        for _, r in c_hoje.iterrows():
-            followups_hoje.append(f"- Cliente: {r.get('Empresa')} | Contato: {r.get('Contato')} | Nota: {r.get('Followup_Nota')}")
-
-    if not tarefas_hoje and not followups_hoje:
-        return "Nenhum compromisso específico ou tarefa agendada para hoje. Excelente dia para prospecção ativa e expansão de carteira."
+        c_copia["Followup_Data_Dt"] = pd.to_datetime(c_copia["Followup_Data"], errors="coerce").dt.date
+        c_filtrados = c_copia[c_copia["Followup_Data_Dt"] <= hoje_dt]
+        
+        for _, r in c_filtrados.iterrows():
+            status_prazo = "ATRASADO" if r["Followup_Data_Dt"] < hoje_dt else "HOJE"
+            crm_pendentes.append({
+                "empresa": r.get("Empresa"),
+                "contato": r.get("Contato"),
+                "vendedor": r.get("Vendedor", "Gabriel"),
+                "nota": r.get("Followup_Nota"),
+                "status": status_prazo
+            })
 
     prompt = f"""
-    Você é o Diretor Comercial e Assessor Executivo do GRUPO COVEM (conta BraClean).
-    Com base nas demandas agendadas para hoje ({hoje}), elabore um Briefing Matinal direto, executivo e estratégico para o vendedor.
+    Você é o Gerente Comercial Operacional do GRUPO COVEM (Conta BraClean).
+    Sua missão é direcionar o dia de vendas da equipe: Gabriel e Ariel.
     
-    Tarefas de hoje:
-    {chr(10).join(tarefas_hoje) if tarefas_hoje else "Nenhuma tarefa cadastrada."}
+    REGRAS DA OPERAÇÃO:
+    - Meta Diária Total por Vendedor: 50 leads movimentados ou cadastrados no dia.
+    - Meta de Reativação/Follow-up: Distribuir exatamente até 20 leads/tarefas prioritários da lista para o Gabriel e 20 para o Ariel.
     
-    Follow-ups de hoje no CRM:
-    {chr(10).join(followups_hoje) if followups_hoje else "Nenhum follow-up no CRM."}
+    PENDÊNCIAS ENCONTRADAS NO SISTEMA (Atrasados + Hoje - Data de referência: {hoje_str}):
     
-    Escreva um resumo em bullet points destacando as prioridades absolutas do dia. Seja objetivo e profissional. Não utilize emojis.
+    Tarefas Gerais:
+    {json.dumps(tarefas_pendentes, ensure_ascii=False)}
+    
+    Follow-ups no CRM:
+    {json.dumps(crm_pendentes, ensure_ascii=False)}
+    
+    INSTRUÇÕES DE RESPOSTA:
+    1. Faça um cabeçalho executivo e direto declarando o foco do dia.
+    2. Crie uma seção individual para o VENDEDOR GABRIEL listando os 20 leads/tarefas prioritários alocados para ele (dando prioridade aos com status 'ATRASADO').
+    3. Crie uma seção individual para o VENDEDOR ARIEL listando os 20 leads/tarefas prioritários alocados para ele (dando prioridade aos com status 'ATRASADO').
+    4. Encerre com um lembrete da Meta Diária (20 alvos de CRM alocados pela IA + 30 prospecções/novos cadastros para bater a meta de 50 no dia).
+    
+    Mantenha o tom extremamente profissional, direto e sem emojis.
     """
 
     try:
