@@ -343,6 +343,106 @@ def salvar_dados_tarefas(df):
     df.to_excel(ARQUIVO_TAREFAS, index=False)
 
 # ---------------------------------------------------------
+# FUNÇÕES DE AUTOMAÇÃO (LISTA DIÁRIA & PROCESSADOR DE RELATÓRIO)
+# ---------------------------------------------------------
+def obter_lista_diaria_vendedor(df_crm, df_tarefas, vendedor_nome):
+    hoje = date.today()
+    
+    crm_pendentes = df_crm[
+        (df_crm["Vendedor"].str.contains(vendedor_nome, case=False, na=False)) & 
+        (df_crm["Followup_Data"].notna()) & 
+        (df_crm["Followup_Data"] != "")
+    ].copy()
+    
+    crm_pendentes["Data_Alvo"] = pd.to_datetime(crm_pendentes["Followup_Data"], errors="coerce").dt.date
+    crm_pendentes = crm_pendentes[crm_pendentes["Data_Alvo"] <= hoje]
+    
+    crm_pendentes["Origem_Item"] = "CRM (Follow-up)"
+    crm_pendentes["Titulo_Acao"] = crm_pendentes["Followup_Nota"].fillna("Contato comercial pendente")
+    crm_pendentes["Empresa_Ref"] = crm_pendentes["Empresa"]
+    
+    tarefas_pendentes = df_tarefas[
+        (df_tarefas["Status"] != "Concluído") & 
+        (df_tarefas["Data_Vencimento"].notna())
+    ].copy()
+    tarefas_pendentes["Data_Alvo"] = pd.to_datetime(tarefas_pendentes["Data_Vencimento"], errors="coerce").dt.date
+    tarefas_pendentes = tarefas_pendentes[tarefas_pendentes["Data_Alvo"] <= hoje]
+    
+    tarefas_pendentes["Origem_Item"] = "Tarefa Operacional"
+    tarefas_pendentes["Titulo_Acao"] = tarefas_pendentes["Titulo"]
+    tarefas_pendentes["Empresa_Ref"] = tarefas_pendentes["Cliente"]
+    tarefas_pendentes["Vendedor"] = vendedor_nome
+    
+    unificado = pd.concat([
+        crm_pendentes[["Origem_Item", "Data_Alvo", "Titulo_Acao", "Empresa_Ref", "Vendedor"]],
+        tarefas_pendentes[["Origem_Item", "Data_Alvo", "Titulo_Acao", "Empresa_Ref", "Vendedor"]]
+    ], ignore_index=True)
+    
+    if not unificado.empty:
+        unificado = unificado.sort_values(by="Data_Alvo", ascending=True)
+        return unificado.head(20)
+        
+    return pd.DataFrame()
+
+def processar_relatorio_vendedor(relatorio_texto, vendedor_nome, df_crm):
+    linhas = relatorio_texto.split("\n")
+    atualizados = 0
+    criados = 0
+    timestamp_atual = dt.now().strftime("%d/%m/%Y %H:%M")
+    
+    df_atualizado = df_crm.copy()
+    
+    for linha in linhas:
+        linha = linha.strip()
+        if not linha:
+            continue
+            
+        empresa_encontrada_idx = None
+        for idx, row in df_atualizado.iterrows():
+            nome_empresa = str(row["Empresa"]).strip().lower()
+            if nome_empresa in linha.lower():
+                empresa_encontrada_idx = idx
+                break
+                
+        if empresa_encontrada_idx is not None:
+            idx_real = empresa_encontrada_idx
+            hist_atual = str(df_atualizado.loc[idx_real, "Historico"]) if pd.notna(df_atualizado.loc[idx_real, "Historico"]) else ""
+            
+            novo_historico = f"[{timestamp_atual} - Relatório {vendedor_nome}] {linha}"
+            df_atualizado.loc[idx_real, "Historico"] = novo_historico + ("\n" + hist_atual if hist_atual else "")
+            df_atualizado.loc[idx_real, "Followup_Nota"] = linha
+            atualizados += 1
+        else:
+            novo_id = int(df_atualizado["id"].max() + 1) if not df_atualizado.empty and pd.notna(df_atualizado["id"].max()) else 1
+            nome_provisorio = linha.split(":")[0] if ":" in linha else (linha[:35] + "..." if len(linha) > 35 else linha)
+            
+            nova_linha = {
+                "id": novo_id,
+                "Empresa": nome_provisorio.strip(),
+                "Cliente": "BraClean",
+                "Perfil": "Cliente C",
+                "Etapa": "Prospecção",
+                "Contato": "Não informado",
+                "Cargo": "Não informado",
+                "Telefone": "Não informado",
+                "Email": "Não informado",
+                "Cidade": "Não informado",
+                "Valor": 8500.0,
+                "Prob": 0.20,
+                "Vendedor": vendedor_nome,
+                "Perda": "",
+                "Data_Cadastro": str(date.today()),
+                "Followup_Data": str(date.today() + timedelta(days=1)),
+                "Followup_Nota": linha,
+                "Historico": f"[{timestamp_atual}] Criado automaticamente via relatório de {vendedor_nome}: {linha}"
+            }
+            
+            df_atualizado = pd.concat([df_atualizado, pd.DataFrame([nova_linha])], ignore_index=True)
+            criados += 1
+            
+    return df_atualizado, atualizados, criados
+
+# ---------------------------------------------------------
 # ESTADO DA SESSÃO
 # ---------------------------------------------------------
 if 'df_crm' not in st.session_state:
@@ -357,7 +457,7 @@ if 'cliente_editando_id' not in st.session_state:
 df = st.session_state.df_crm
 
 # ---------------------------------------------------------
-# FUNÇÃO DE LÓGICA DE CORES DO FOLLOW-UP
+# FUNÇÃO DE LÓGICA DE CORES DO FOLLOW-UP (SEM EMOJI)
 # ---------------------------------------------------------
 def calcular_status_followup(data_str):
     if not data_str or pd.isna(data_str) or str(data_str).strip() in ["", "nan", "NaT", "None"]:
@@ -469,6 +569,51 @@ aba_selecionada = st.session_state.menu_ativo
 if aba_selecionada == "Gerenciamento de Tarefas":
     st.subheader("Gerenciamento de Tarefas — BraClean")
 
+    # ---------------------------------------------------------
+    # SEÇÃO: LISTAS DIÁRIAS DE 20 LEADS (GABRIEL E ARIEL)
+    # ---------------------------------------------------------
+    with st.expander("Listas Diárias de 20 Leads (Gabriel & Ariel)", expanded=False):
+        tab_g, tab_a = st.tabs(["Gabriel", "Ariel"])
+        
+        with tab_g:
+            st.caption("Lista diária priorizada (Até 20 leads/tarefas pendentes ou atrasadas):")
+            df_lista_gabriel = obter_lista_diaria_vendedor(st.session_state.df_crm, st.session_state.df_tarefas, "Gabriel")
+            if not df_lista_gabriel.empty:
+                st.dataframe(df_lista_gabriel, use_container_width=True, hide_index=True)
+            else:
+                st.info("Nenhum lead pendente ou atrasado para Gabriel hoje.")
+                
+        with tab_a:
+            st.caption("Lista diária priorizada (Até 20 leads/tarefas pendentes ou atrasadas):")
+            df_lista_ariel = obter_lista_diaria_vendedor(st.session_state.df_crm, st.session_state.df_tarefas, "Ariel")
+            if not df_lista_ariel.empty:
+                st.dataframe(df_lista_ariel, use_container_width=True, hide_index=True)
+            else:
+                st.info("Nenhum lead pendente ou atrasado para Ariel hoje.")
+
+    # ---------------------------------------------------------
+    # SEÇÃO: LEITOR INTELIGENTE DE RELATÓRIO DO DIA
+    # ---------------------------------------------------------
+    with st.expander("Leitor de Relatório do Dia (Input Rápido)", expanded=False):
+        st.caption("Cole o resumo do seu dia abaixo. Clientes existentes serão atualizados no CRM; novos clientes serão criados automaticamente.")
+        col_rel1, col_rel2 = st.columns([1, 2])
+        with col_rel1:
+            vendedor_relatorio = st.selectbox("Vendedor Responsável", ["Gabriel", "Ariel"], key="sel_vend_rel")
+        
+        texto_relatorio_input = st.text_area("Cole o relatório aqui (uma linha por cliente/ação):", placeholder="Ex: Usina Santa Clara: Orçamento aprovado e fechado.\nPosto Aliança: Pediu para retornar na sexta.", key="txt_rel_input")
+        
+        if st.button("Processar e Sincronizar Relatório", use_container_width=True):
+            if texto_relatorio_input.strip():
+                df_atualizado, qt_atu, qt_cri = processar_relatorio_vendedor(texto_relatorio_input, vendedor_relatorio, st.session_state.df_crm)
+                st.session_state.df_crm = df_atualizado
+                salvar_dados_crm(df_atualizado)
+                st.success(f"Relatório processado com sucesso! Clientes atualizados: {qt_atu} | Novos clientes criados: {qt_cri}")
+                st.rerun()
+            else:
+                st.warning("Insira o texto do relatório antes de processar.")
+
+    st.divider()
+
     lista_clientes = ["Nenhum / Tarefa Geral"] + df["Empresa"].dropna().tolist()
 
     with st.expander("Criar Nova Tarefa", expanded=False):
@@ -549,7 +694,7 @@ if aba_selecionada == "Gerenciamento de Tarefas":
             if pd.notna(t.get("Data_Vencimento")):
                 try:
                     dt_v = dt.strptime(str(t["Data_Vencimento"])[:10], "%Y-%m-%d").date()
-                    status_atraso_str = "Atrasada 🔴" if dt_v < hoje else f"Prioridade: {t.get('Prioridade', 'Normal')}"
+                    status_atraso_str = "Atrasada" if dt_v < hoje else f"Prioridade: {t.get('Prioridade', 'Normal')}"
                     eventos_brutos.append({
                         "origem": "tarefa",
                         "index_original": idx_t,
@@ -570,7 +715,7 @@ if aba_selecionada == "Gerenciamento de Tarefas":
             if pd.notna(f_dat) and str(f_dat).strip() not in ["", "nan", "NaT"]:
                 try:
                     dt_f = dt.strptime(str(f_dat)[:10], "%Y-%m-%d").date()
-                    status_atraso_str = "Atrasado 🔴" if dt_f < hoje else f"Etapa: {c['Etapa']}"
+                    status_atraso_str = "Atrasado" if dt_f < hoje else f"Etapa: {c['Etapa']}"
                     eventos_brutos.append({
                         "origem": "crm",
                         "index_original": idx_c,
@@ -585,7 +730,6 @@ if aba_selecionada == "Gerenciamento de Tarefas":
                 except:
                     pass
 
-    # Filtragem exata conforme solicitado por Gabriel
     eventos_filtrados = []
     for ev in eventos_brutos:
         dt_ev = ev["Data_Obj"]
@@ -604,7 +748,6 @@ if aba_selecionada == "Gerenciamento de Tarefas":
             if not atrasado and hoje <= dt_ev <= (hoje + timedelta(days=30)):
                 eventos_filtrados.append(ev)
         elif horizonte == "Todos os Registros":
-            # Inclui tanto atrasados quanto futuros de qualquer data
             eventos_filtrados.append(ev)
 
     if eventos_filtrados:
@@ -615,7 +758,7 @@ if aba_selecionada == "Gerenciamento de Tarefas":
             total_atrasados_lista = len(df_futuro[df_futuro["is_atrasado"] == True])
             c_m1, c_m2, c_m3 = st.columns(3)
             c_m1.metric("Total no Filtro", len(df_futuro))
-            c_m2.metric("Itens Atrasados 🔴", total_atrasados_lista)
+            c_m2.metric("Itens Atrasados", total_atrasados_lista)
             c_m3.metric("Follow-ups de CRM", len(df_futuro[df_futuro["Tipo"] == "Follow-up CRM"]))
 
             st.divider()
