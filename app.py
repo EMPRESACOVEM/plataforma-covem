@@ -4,7 +4,6 @@ import plotly.express as px
 import plotly.graph_objects as go
 import io
 import os
-import time
 import urllib.parse
 import datetime
 import base64
@@ -26,35 +25,21 @@ ARQUIVO_TAREFAS = BASE_DIR / "banco_tarefas_braclean.xlsx"
 ARQUIVO_FUNDO = BASE_DIR / "fundo plataforma.jpg"
 ARQUIVO_LOGO = BASE_DIR / "logoCOVEM.png"
 
-# Nome Oficial / Exclusivo
 COVEM_NAME = "GRUPO COVEM"
 
-# Apenas a BraClean como carteira ativa
-CARTEIRAS_COVEM = ["BraClean"]
-
-# Opções Oficiais de Classificação do Lead
 OPCOES_PERFIL = [
     "Cliente A",
     "Cliente B",
     "Cliente C"
 ]
 
-MAPA_PERFIL_CURTO = {
-    "Cliente A": "Cliente A",
-    "Cliente B": "Cliente B",
-    "Cliente C": "Cliente C"
-}
-
-# Ticket médio estimado padrão por perfil para estatísticas de funil
 TICKET_MEDIO_PERFIL = {
     "Cliente A": 120000.0,
     "Cliente B": 45000.0,
     "Cliente C": 8500.0
 }
 
-# ---------------------------------------------------------
-# PALETA DE CORES NEON PERSONALIZADA POR ETAPA
-# ---------------------------------------------------------
+# Paleta de cores neon personalizada
 DEFAULT_COLORS = {
     "Pré: Novo Lead": "#00E5FF",
     "Pré: Conexão": "#0047AB",
@@ -67,23 +52,6 @@ DEFAULT_COLORS = {
     "Pós: Perdido": "#FF0033"
 }
 
-CORES_PERDAS = {
-    "Preço / Orçamento": "#FF0033",
-    "Concorrência": "#FF6600",
-    "Sem Resposta / Sumiu": "#FFEA00",
-    "Produto / Serviço não Atende": "#00E5FF",
-    "Outros": "#9D00FF"
-}
-
-CORES_PERFIL_BARRAS = {
-    "Cliente A": "#00E5FF",
-    "Cliente B": "#FF6600",
-    "Cliente C": "#9D00FF"
-}
-
-FUNDO_GRAFICO_FUTURISTA = "#0A0E27"
-GRID_GRAFICO_FUTURISTA = "rgba(0, 229, 255, 0.12)"
-
 if 'funnel_colors' not in st.session_state:
     st.session_state.funnel_colors = DEFAULT_COLORS.copy()
 
@@ -95,9 +63,6 @@ if 'funnel_selecionado' not in st.session_state:
 
 if 'sub_menu_tarefas' not in st.session_state:
     st.session_state.sub_menu_tarefas = "Tarefas"
-
-if 'editando_agenda_idx' not in st.session_state:
-    st.session_state.editando_agenda_idx = None
 
 if 'briefing_gerado_texto' not in st.session_state:
     st.session_state.briefing_gerado_texto = None
@@ -200,8 +165,6 @@ ESTRUTURA_FUNIS = {
     "Pós Funil": ["Pós: Standby", "Pós: Perdido"]
 }
 
-MOTIVOS_PERDA_PADRAO = list(CORES_PERDAS.keys())
-
 @st.cache_resource
 def get_gsheets_connection():
     return st.connection("gsheets", type=GSheetsConnection)
@@ -247,11 +210,9 @@ def carregar_dados_crm():
                 "6. Perdido": "Pós: Perdido",
                 "Pós: Lixeira": "Pós: Perdido"
             })
-            
-            df_loaded["Vendedor"] = df_loaded["Vendedor"].apply(lambda x: "Gabriel" if str(x).strip() in ["", "nan", "Não informado"] else x)
             return df_loaded
     except Exception as e:
-        st.warning(f"Aviso ao ler do Google Sheets: {e}. Carregando dados padrão iniciais.")
+        st.warning(f"Aviso ao ler do Google Sheets: {e}.")
 
     df_inicial = pd.DataFrame([
         {
@@ -264,10 +225,6 @@ def carregar_dados_crm():
             "Historico": "[01/09/2026 10:00] Primeiro contato realizado."
         }
     ])
-    try:
-        conn.update(worksheet="Página1", data=df_inicial)
-    except:
-        pass
     return df_inicial
 
 def salvar_dados_crm(df):
@@ -313,138 +270,115 @@ def configurar_gemini_api():
                 genai.configure(api_key=api_key_env)
                 return True
     except Exception as e:
-        st.error(f"Erro interno ao configurar Gemini: {e}")
+        st.error(f"Erro ao configurar Gemini API: {e}")
     return False
 
-# Função auxiliar com proteção automática contra o erro 429 (Rate Limit)
-def chamar_gemini_com_retry(prompt, generation_config=None, max_tentativas=3):
-    if not configurar_gemini_api():
-        raise Exception("Chave da API do Gemini não configurada.")
-    
-    model = genai.GenerativeModel('gemini-3.8-flash')
-    
-    for tentativa in range(max_tentativas):
-        try:
-            if generation_config:
-                response = model.generate_content(prompt, generation_config=generation_config)
-            else:
-                response = model.generate_content(prompt)
-            return response
-        except Exception as e:
-            erro_str = str(e)
-            if "429" in erro_str or "quota" in erro_str.lower():
-                if tentativa < max_tentativas - 1:
-                    time.sleep(15 * (tentativa + 1)) # Aguarda 15s, depois 30s...
-                    continue
-            raise e
-    raise Exception("Limite de tentativas excedido devido à cota gratuita do Gemini.")
-
-def gerar_briefing_matinal_ia(df_crm, df_tarefas):
+# ---------------------------------------------------------
+# GERAÇÃO DO BRIEFING DIÁRIO (20 PARA GABRIEL / 20 PARA ARIEL)
+# ---------------------------------------------------------
+def gerar_briefing_diario_40_leads(df_crm, df_tarefas):
     hoje_dt = date.today()
     hoje_str = hoje_dt.strftime("%Y-%m-%d")
     
-    tarefas_pendentes = []
-    if not df_tarefas.empty and "Data_Vencimento" in df_tarefas.columns:
-        t_copia = df_tarefas.copy()
-        t_copia["Data_Vencimento_Dt"] = pd.to_datetime(t_copia["Data_Vencimento"], errors="coerce").dt.date
-        t_filtradas = t_copia[(t_copia["Data_Vencimento_Dt"] <= hoje_dt) & (t_copia["Status"] != "Concluído")]
-        t_filtradas = t_filtradas.sort_values(by="Data_Vencimento_Dt", ascending=True).head(10)
-        
-        for _, r in t_filtradas.iterrows():
-            dt_v = r["Data_Vencimento_Dt"]
-            status_prazo = "ATRASADO" if dt_v < hoje_dt else "HOJE"
-            tarefas_pendentes.append({
-                "titulo": str(r.get("Titulo", "")),
-                "prioridade": str(r.get("Prioridade", "Normal")),
-                "status": status_prazo,
-                "data": dt_v.strftime("%d/%m/%Y") if pd.notna(dt_v) else ""
-            })
-
-    crm_pendentes = []
-    total_atrasados_crm = 0
-    
+    crm_atrasados = []
     if not df_crm.empty and "Followup_Data" in df_crm.columns:
         c_copia = df_crm.copy()
         c_copia["Followup_Data_Dt"] = pd.to_datetime(c_copia["Followup_Data"], errors="coerce").dt.date
-        
-        c_filtrados = c_copia[c_copia["Followup_Data_Dt"] <= hoje_dt].copy()
-        total_atrasados_crm = len(c_filtrados[c_filtrados["Followup_Data_Dt"] < hoje_dt])
-        
-        c_filtrados = c_filtrados.sort_values(by="Followup_Data_Dt", ascending=True).head(20)
+        c_filtrados = c_copia[c_copia["Followup_Data_Dt"] <= hoje_dt].sort_values(by="Followup_Data_Dt", ascending=True)
         
         for _, r in c_filtrados.iterrows():
-            dt_f = r["Followup_Data_Dt"]
-            status_prazo = "ATRASADO" if dt_f < hoje_dt else "HOJE"
-            crm_pendentes.append({
+            crm_atrasados.append({
                 "empresa": str(r.get("Empresa", "")),
                 "contato": str(r.get("Contato", "")),
-                "telefone": str(r.get("Telefone", "")),
-                "vendedor": str(r.get("Vendedor", "Gabriel")),
-                "nota": str(r.get("Followup_Nota", ""))[:50],
-                "status": status_prazo,
-                "data_vencimento": dt_f.strftime("%d/%m/%Y") if pd.notna(dt_f) else ""
+                "telefone": str(r.get("Telefone", "Não informado")),
+                "nota": str(r.get("Followup_Nota", "Sem observação"))
             })
+
+    total_atrasados = len(crm_atrasados)
+    leads_40 = crm_atrasados[:40]
+    
+    bloco_gabriel = leads_40[:20]
+    bloco_ariel = leads_40[20:40]
+    
+    if not configurar_gemini_api():
+        # Fallback estruturado caso não haja chave configurada
+        texto = f"BRIEFING DIÁRIO — {hoje_dt.strftime('%d/%m/%Y')}\nTotal atrasados: {total_atrasados}\n\n=== GABRIEL (20 LEADS) ===\n"
+        for i, l in enumerate(bloco_gabriel, 1):
+            texto += f"{i}. {l['empresa']} | Tel: {l['telefone']} | Obs: {l['nota']}\n"
+        texto += "\n=== ARIEL (20 LEADS) ===\n"
+        for i, l in enumerate(bloco_ariel, 1):
+            texto += f"{i}. {l['empresa']} | Tel: {l['telefone']} | Obs: {l['nota']}\n"
+        return texto
 
     prompt = f"""
     Você é o Gerente Operacional de Vendas do GRUPO COVEM (Conta BraClean).
-    Sua missão é gerar a Lista Diária de Execução dos vendedores Gabriel e Ariel.
+    Sua missão é gerar a Lista Diária de Execução dos vendedores Gabriel e Ariel para hoje ({hoje_str}).
 
-    DIAGNOSTICO DO CRM HOJE ({hoje_str}):
-    - Total de Atrasados reais no sistema: {total_atrasados_crm}
-    - ATENÇÃO: Foram selecionados ESTRITAMENTE os 20 leads mais urgentes/atrasados da base para distribuição hoje.
+    DIAGNOSTICO DO CRM:
+    - Total de leads atrasados/pendentes no sistema: {total_atrasados}
+    - Selecionei os 40 leads mais críticos para distribuição de hoje.
 
-    LISTA DOS 20 LEADS ATRASADOS SELECIONADOS PARA DISTRIBUIÇÃO:
-    {json.dumps(crm_pendentes, ensure_ascii=False)}
+    BLOCO 1 (20 LEADS PARA O VENDEDOR GABRIEL):
+    {json.dumps(bloco_gabriel, ensure_ascii=False)}
 
-    Tarefas Gerais:
-    {json.dumps(tarefas_pendentes, ensure_ascii=False)}
+    BLOCO 2 (20 LEADS PARA O VENDEDOR ARIEL):
+    {json.dumps(bloco_ariel, ensure_ascii=False)}
 
-    DIRETRIZES DE MONTAGEM DO BRIEFING:
-    1. Informe que existem {total_atrasados_crm} atrasados no total, mas que o sistema isolou os 20 mais críticos para o foco de hoje.
-    2. Divida estes leads rigorosamente: Aloque 10 leads prioritários para o VENDEDOR GABRIEL e 10 leads prioritários para o VENDEDOR ARIEL. Exiba o nome da Empresa, Contato, Telefone e Observação de cada um.
-    3. Encerre reforçando a META DIÁRIA: Cada vendedor deve tratar os 10 alvos de CRM alocados e realizar mais 40 prospecções/novos cadastros para fechar a meta de 50 movimentações no dia.
-
-    Mantenha o tom estritamente profissional, prático e limpo (sem nenhum emoji).
+    DIRETRIZES:
+    1. Organize o briefing dividindo claramente em Bloco do Gabriel (20 leads) e Bloco do Ariel (20 leads) com Empresa, Contato, Telefone e Observação.
+    2. Encerre reforçando a meta diária de movimentações.
+    3. Tom estritamente profissional e limpo (sem emojis).
     """
 
     try:
-        response = chamar_gemini_com_retry(prompt)
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        response = model.generate_content(prompt)
         if response and hasattr(response, 'text'):
             return response.text
-        return "Erro: A resposta da IA veio vazia."
+        return "Erro: Resposta vazia da IA."
     except Exception as e:
-        return f"Erro ao comunicar com a IA do Gemini (Cota esgotada momentaneamente. Aguarde 20 segundos e tente de novo): {e}"
+        return f"Erro ao gerar briefing com IA (Verifique sua chave de API): {e}"
 
-def processar_relatorio_fim_de_dia(texto_relatorio, df_crm):
+# ---------------------------------------------------------
+# PROCESSAMENTO DE FIM DE DIA E ROLAGEM DE PENDÊNCIAS
+# ---------------------------------------------------------
+def processar_fim_de_dia_inteligente(texto_relatorio, df_crm, df_tarefas):
+    if not configurar_gemini_api():
+        st.error("Chave da API do Gemini necessária para processar o relatório inteligente.")
+        return False
+
     lista_leads_ativos = df_crm[["Empresa", "Etapa", "Contato"]].to_dict(orient="records")
+    amanha_str = (date.today() + timedelta(days=1)).strftime("%Y-%m-%d")
 
     prompt = f"""
-    Você é o motor de IA de um CRM comercial de alta performance (GRUPO COVEM - BraClean).
-    Aqui está a lista de leads ativos cadastrados atualmente no sistema:
+    Você é o motor de inteligência de um CRM de alta performance (GRUPO COVEM - BraClean).
+    Aqui estão os leads ativos cadastrados:
     {json.dumps(lista_leads_ativos, ensure_ascii=False)}
 
-    O vendedor enviou o seguinte relatório de fim de dia em texto corrido/livre:
+    O vendedor enviou o seguinte relatório de fim de dia em texto corrido:
     "{texto_relatorio}"
 
-    Instruções estritas de processamento:
-    Analise o texto e identifique quais empresas/leads foram mencionados, quais foram as atualizações, mudanças de etapa (opções válidas: Pré: Novo Lead, Pré: Conexão, Prospecção, Qualificação, Reunião Agendada, Proposta Enviada, Fechado, Pós: Standby, Pós: Perdido), se houve novo agendamento de follow-up (formato YYYY-MM-DD) e um breve resumo para a linha do tempo (Histórico).
+    INSTRUÇÕES RÍGIDAS DE ATUALIZAÇÃO E ROLAGEM:
+    1. Identifique quais empresas/leads foram mencionados e quais tiveram atualizações, mudanças de etapa (opções válidas: Pré: Novo Lead, Pré: Conexão, Prospecção, Qualificação, Reunião Agendada, Proposta Enviada, Fechado, Pós: Standby, Pós: Perdido), se houve novo agendamento de follow-up (YYYY-MM-DD).
+    2. REGRA DE ROLAGEM AUTOMÁTICA: Se o relatório indicar que um lead/tarefa planejado para hoje NÃO FOI ATENDIDO ou ficou pendente, altere obrigatoriamente a data de follow-up dele para o próximo dia útil ({amanha_str}) e registre no histórico que foi rolado para amanhã por falta de atendimento hoje.
     
-    Retorne estritamente um array JSON válido contendo objetos com as seguintes chaves exatas:
-    - "lead_name": nome exato ou muito próximo da empresa no CRM
-    - "nova_etapa": se houver mudança de etapa, coloque o nome exato da nova etapa; caso contrário, coloque "Manter"
-    - "proximo_follow_up": data no formato YYYY-MM-DD se houver novo follow-up agendado, ou null
-    - "nota_historico": resumo executivo do que aconteceu para ser inserido na linha do tempo
+    Retorne estritamente um array JSON válido contendo objetos com as chaves:
+    - "lead_name": nome exato da empresa no CRM
+    - "nova_etapa": nome da nova etapa ou "Manter"
+    - "proximo_follow_up": data YYYY-MM-DD (se não atendido, coloque "{amanha_str}")
+    - "nota_historico": resumo executivo para o histórico do lead
     """
 
     try:
-        response = chamar_gemini_com_retry(
-            prompt, 
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        response = model.generate_content(
+            prompt,
             generation_config={"response_mime_type": "application/json"}
         )
         
         updates_json = json.loads(response.text)
+        atualizacoes = 0
         
-        atualizacoes_realizadas = 0
         for update in updates_json:
             nome_alvo = str(update.get("lead_name", "")).strip().lower()
             if not nome_alvo:
@@ -456,26 +390,24 @@ def processar_relatorio_fim_de_dia(texto_relatorio, df_crm):
                     if nova_etapa and nova_etapa != "Manter" and nova_etapa in PROB_MAP:
                         df_crm.loc[idx, "Etapa"] = nova_etapa
                         df_crm.loc[idx, "Prob"] = PROB_MAP[nova_etapa]
-                        if "Perdido" in nova_etapa:
-                            df_crm.loc[idx, "Perda"] = "Outros"
 
                     novo_fu = update.get("proximo_follow_up")
                     if novo_fu:
                         df_crm.loc[idx, "Followup_Data"] = str(novo_fu)[:10]
 
-                    nota_hist = update.get("nota_historico", "Atualização via IA no fim do dia.")
-                    timestamp_atual = dt.now().strftime("%d/%m/%Y %H:%M")
-                    novo_registro = f"[{timestamp_atual}] (IA Fim de Dia) {nota_hist}"
+                    nota_hist = update.get("nota_historico", "Atualização diária.")
+                    timestamp = dt.now().strftime("%d/%m/%Y %H:%M")
+                    novo_reg = f"[{timestamp}] (Fim de Dia) {nota_hist}"
                     
                     hist_atual = str(row["Historico"]) if pd.notna(row["Historico"]) else ""
-                    df_crm.loc[idx, "Historico"] = novo_registro + ("\n" + hist_atual if hist_atual.strip() else "")
+                    df_crm.loc[idx, "Historico"] = novo_reg + ("\n" + hist_atual if hist_atual.strip() else "")
                     df_crm.loc[idx, "Followup_Nota"] = nota_hist
-                    atualizacoes_realizadas += 1
+                    atualizacoes += 1
                     break
                     
-        return atualizacoes_realizadas
+        return atualizacoes
     except Exception as e:
-        st.error(f"Erro ao processar o relatório com a Gemini API: {e}")
+        st.error(f"Erro ao processar relatório de fim de dia: {e}")
         return False
 
 # ---------------------------------------------------------
@@ -487,29 +419,26 @@ if 'df_crm' not in st.session_state:
 if 'df_tarefas' not in st.session_state:
     st.session_state.df_tarefas = carregar_dados_tarefas()
 
-if 'cliente_editando_id' not in st.session_state:
-    st.session_state.cliente_editando_id = None
-
 df = st.session_state.df_crm
 
 # ---------------------------------------------------------
-# FUNÇÃO DE LÓGICA DE CORES DO FOLLOW-UP
+# STATUS DE FOLLOW-UP
 # ---------------------------------------------------------
 def calcular_status_followup(data_str):
     if not data_str or pd.isna(data_str) or str(data_str).strip() in ["", "nan", "NaT", "None"]:
-        return "sem_data", "Sem Follow-up", '<span style="height: 10px; width: 10px; background-color: #94A3B8; border-radius: 50%; display: inline-block;" title="Sem Data"></span>'
+        return "sem_data", "Sem Follow-up", '<span style="height: 10px; width: 10px; background-color: #94A3B8; border-radius: 50%; display: inline-block;"></span>'
     try:
         limpa_data = str(data_str).strip()[:10]
         dt_follow = dt.strptime(limpa_data, "%Y-%m-%d").date()
         hoje = date.today()
         if dt_follow < hoje:
-            return "atrasado", "Atrasado", '<span style="height: 10px; width: 10px; background-color: #FF0033; border-radius: 50%; display: inline-block;" title="Atrasado"></span>'
+            return "atrasado", "Atrasado", '<span style="height: 10px; width: 10px; background-color: #FF0033; border-radius: 50%; display: inline-block;"></span>'
         elif dt_follow == hoje:
-            return "hoje", "Atenção (Hoje)", '<span style="height: 10px; width: 10px; background-color: #FFEA00; border-radius: 50%; display: inline-block;" title="Hoje"></span>'
+            return "hoje", "Hoje", '<span style="height: 10px; width: 10px; background-color: #FFEA00; border-radius: 50%; display: inline-block;"></span>'
         else:
-            return "em_dia", "Em Dia", '<span style="height: 10px; width: 10px; background-color: #00FF66; border-radius: 50%; display: inline-block;" title="Em Dia"></span>'
+            return "em_dia", "Em Dia", '<span style="height: 10px; width: 10px; background-color: #00FF66; border-radius: 50%; display: inline-block;"></span>'
     except:
-        return "sem_data", "Sem Follow-up", '<span style="height: 10px; width: 10px; background-color: #94A3B8; border-radius: 50%; display: inline-block;" title="Sem Data"></span>'
+        return "sem_data", "Sem Follow-up", '<span style="height: 10px; width: 10px; background-color: #94A3B8; border-radius: 50%; display: inline-block;"></span>'
 
 # ---------------------------------------------------------
 # BARRA LATERAL
@@ -518,15 +447,6 @@ if ARQUIVO_LOGO.exists():
     st.sidebar.image(str(ARQUIVO_LOGO), use_container_width=True)
 
 st.sidebar.markdown("### BraClean")
-st.sidebar.divider()
-
-with st.sidebar.expander("Personalizar Cores das Etapas", expanded=False):
-    st.caption("Altere as cores das etapas:")
-    for etapa_nome in PROB_MAP.keys():
-        cor_atual = st.session_state.funnel_colors.get(etapa_nome, "#00E5FF")
-        nova_cor = st.color_picker(f"Cor: {etapa_nome.replace('Pré: ', '').replace('Pós: ', '')}", cor_atual, key=f"picker_{etapa_nome}")
-        st.session_state.funnel_colors[etapa_nome] = nova_cor
-
 st.sidebar.divider()
 
 buffer = io.BytesIO()
@@ -543,7 +463,7 @@ st.sidebar.download_button(
 )
 
 # ---------------------------------------------------------
-# LOGO CENTRALIZADA
+# LOGO CENTRALIZADA E MENU PRINCIPAL
 # ---------------------------------------------------------
 col_l1, col_l2, col_l3 = st.columns([1, 2, 1])
 with col_l2:
@@ -552,9 +472,6 @@ with col_l2:
 
 st.divider()
 
-# ---------------------------------------------------------
-# MENU HORIZONTAL PRINCIPAL
-# ---------------------------------------------------------
 abas_disponiveis = [
     "Gerenciamento de Tarefas",
     "Funil de Vendas", 
@@ -564,7 +481,6 @@ abas_disponiveis = [
 ]
 
 cols_menu = st.columns(len(abas_disponiveis))
-
 for i, nome_aba in enumerate(abas_disponiveis):
     with cols_menu[i]:
         is_active = (st.session_state.menu_ativo == nome_aba)
@@ -590,159 +506,56 @@ for i, nome_aba in enumerate(abas_disponiveis):
 st.markdown("<div style='margin-top: 30px; margin-bottom: 30px;'><hr style='border: none; border-top: 1px solid #1E293B;'></div>", unsafe_allow_html=True)
 aba_selecionada = st.session_state.menu_ativo
 
-# ---------------------------------------------------------
-# FUNÇÃO DE AGENDA DA SEMANA
-# ---------------------------------------------------------
-def exibir_agenda_semana(df_tarefas, df_crm):
-    st.markdown('<div style="margin-top: 4px;"></div>', unsafe_allow_html=True)
-    c_sub1, c_sub2 = st.columns(2)
-    
-    with c_sub1:
-        if st.button("Tarefas", key="sub_btn_tarefas", use_container_width=True):
-            st.session_state.sub_menu_tarefas = "Tarefas"
-            st.rerun()
-    with c_sub2:
-        if st.button("Follow-up", key="sub_btn_followups", use_container_width=True):
-            st.session_state.sub_menu_tarefas = "Follow-up"
-            st.rerun()
-
-    def obter_telefone_por_empresa(nome_empresa):
-        if not nome_empresa or nome_empresa == "Nenhum / Tarefa Geral":
-            return "Não vinculado"
-        match = df_crm[df_crm["Empresa"].str.lower() == str(nome_empresa).lower()]
-        if not match.empty:
-            tel = match.iloc[0].get("Telefone", "")
-            return tel if tel else "Não informado"
-        return "Não cadastrado no CRM"
-
-    if st.session_state.sub_menu_tarefas == "Tarefas":
-        if df_tarefas.empty or "Data_Vencimento" not in df_tarefas.columns:
-            st.info("Nenhuma tarefa cadastrada.")
-        else:
-            hoje = datetime.date.today()
-            df_temp = df_tarefas.copy()
-            df_temp["Data_Vencimento"] = pd.to_datetime(df_temp["Data_Vencimento"], errors="coerce").dt.date
-
-            pendentes = df_temp[df_temp["Status"] != "Concluído"]
-            atrasadas = pendentes[pendentes["Data_Vencimento"] < hoje]
-            hoje_tarefas = pendentes[pendentes["Data_Vencimento"] == hoje]
-
-            col_atraso, col_hoje = st.columns(2)
-            with col_atraso:
-                st.markdown(f'<div class="badge-atrasada">{len(atrasadas)} Tarefas Atrasadas</div>', unsafe_allow_html=True)
-                with st.expander("Ver Tarefas Atrasadas"):
-                    if not atrasadas.empty:
-                        for _, row in atrasadas.iterrows():
-                            emp_vinculada = row.get('Cliente', 'BraClean')
-                            tel_contato = obter_telefone_por_empresa(emp_vinculada)
-                            st.markdown(f"- **{row['Titulo']}**<br>&nbsp;&nbsp;&nbsp;&nbsp;Empresa: `{emp_vinculada}`<br>&nbsp;&nbsp;&nbsp;&nbsp;Tel: <span class='phone-highlight'>{tel_contato}</span>", unsafe_allow_html=True)
-                    else:
-                        st.write("Nenhuma tarefa atrasada.")
-            with col_hoje:
-                st.markdown(f'<div class="badge-hoje">{len(hoje_tarefas)} Tarefas para Hoje</div>', unsafe_allow_html=True)
-                with st.expander("Ver Tarefas para Hoje"):
-                    if not hoje_tarefas.empty:
-                        for _, row in hoje_tarefas.iterrows():
-                            emp_vinculada = row.get('Cliente', 'BraClean')
-                            tel_contato = obter_telefone_por_empresa(emp_vinculada)
-                            st.markdown(f"- **{row['Titulo']}**<br>&nbsp;&nbsp;&nbsp;&nbsp;Empresa: `{emp_vinculada}`<br>&nbsp;&nbsp;&nbsp;&nbsp;Tel: <span class='phone-highlight'>{tel_contato}</span>", unsafe_allow_html=True)
-                    else:
-                        st.write("Nenhuma tarefa para hoje.")
-    else:
-        if df_crm.empty:
-            st.info("Nenhum cliente no CRM.")
-        else:
-            crm_temp = df.copy()
-            status_list = [calcular_status_followup(r.get("Followup_Data", ""))[0] for _, r in crm_temp.iterrows()]
-            crm_temp["status_fu"] = status_list
-            c_atrasados = crm_temp[crm_temp["status_fu"] == "atrasado"]
-            c_hoje = crm_temp[crm_temp["status_fu"] == "hoje"]
-
-            col_c_atraso, col_c_hoje = st.columns(2)
-            with col_c_atraso:
-                st.markdown(f'<div class="badge-atrasada">{len(c_atrasados)} Follow-ups Atrasados</div>', unsafe_allow_html=True)
-                with st.expander("Ver Follow-ups Atrasados"):
-                    if not c_atrasados.empty:
-                        for _, row in c_atrasados.iterrows():
-                            tel_crm = row.get('Telefone', 'Não informado')
-                            st.markdown(f"- **{row['Empresa']}** (Contato: {row['Contato']})<br>&nbsp;&nbsp;&nbsp;&nbsp;Tel: <span class='phone-highlight'>{tel_crm}</span>", unsafe_allow_html=True)
-                    else:
-                        st.write("Nenhum follow-up atrasado.")
-            with col_c_hoje:
-                st.markdown(f'<div class="badge-hoje">{len(c_hoje)} Follow-ups para Hoje</div>', unsafe_allow_html=True)
-                with st.expander("Ver Follow-ups para Hoje"):
-                    if not c_hoje.empty:
-                        for _, row in c_hoje.iterrows():
-                            tel_crm = row.get('Telefone', 'Não informado')
-                            st.markdown(f"- **{row['Empresa']}** (Contato: {row['Contato']})<br>&nbsp;&nbsp;&nbsp;&nbsp;Tel: <span class='phone-highlight'>{tel_crm}</span>", unsafe_allow_html=True)
-                    else:
-                        st.write("Nenhum follow-up para hoje.")
-    st.divider()
-
 # =========================================================
-# ABA 1: GERENCIAMENTO DE TAREFAS
+# ABA 1: GERENCIAMENTO DE TAREFAS (COM LEITOR DIÁRIO E FIM DE DIA)
 # =========================================================
 if aba_selecionada == "Gerenciamento de Tarefas":
-    st.subheader("Gerenciamento de Tarefas - BraClean")
+    st.subheader("Gerenciamento de Tarefas & Alvos Diários — BraClean")
     
     col_ia_1, col_ia_2 = st.columns(2)
 
     with col_ia_1:
-        if st.button("Gerar Briefing Matinal com IA", use_container_width=True):
-            with st.spinner("Analisando os 20 leads mais atrasados e montando briefing..."):
-                st.session_state.briefing_gerado_texto = gerar_briefing_matinal_ia(st.session_state.df_crm, st.session_state.df_tarefas)
+        if st.button("Gerar Briefing Matinal (20 Gabriel / 20 Ariel)", use_container_width=True):
+            with st.spinner("Analisando base e separando 40 leads críticos..."):
+                st.session_state.briefing_gerado_texto = gerar_briefing_diario_40_leads(st.session_state.df_crm, st.session_state.df_tarefas)
 
     if st.session_state.briefing_gerado_texto:
-        st.markdown("### Briefing Matinal Gerado:")
-        st.info(st.session_state.briefing_gerado_texto)
+        st.markdown("### Alvos de Hoje (Gabriel & Ariel):")
+        st.text_area("Cópia do Briefing Diário:", value=st.session_state.briefing_gerado_texto, height=300)
         if st.button("Limpar Briefing"):
             st.session_state.briefing_gerado_texto = None
             st.rerun()
 
     with col_ia_2:
-        with st.popover("Processar Fim de Dia com IA", use_container_width=True):
-            st.markdown("**Relatório de Fim de Dia:**")
-            st.caption("Cole abaixo as anotações corridas do seu dia de vendas.")
-            texto_fim_dia = st.text_area("Relatório bruto:", placeholder="Digite ou cole aqui...", label_visibility="collapsed")
+        with st.popover("Processar Fim de Dia com IA (Rolagem de Pendências)", use_container_width=True):
+            st.markdown("**Relatório de Fim de Dia em Texto:**")
+            st.caption("Descreva o que foi feito. O que não foi feito será automaticamente rolado para amanhã.")
+            texto_fim_dia = st.text_area("Relatório bruto:", placeholder="Ex: Gabriel atendeu a Usina Santa Clara (agendou para quinta). Ariel não conseguiu falar com o Cliente X...", label_visibility="collapsed")
             
-            if st.button("Processar e Atualizar CRM", use_container_width=True):
+            if st.button("Processar Fim de Dia & Rolar Pendências", use_container_width=True):
                 if not texto_fim_dia.strip():
-                    st.warning("Insira o texto com o resumo do dia.")
+                    st.warning("Insira o resumo do dia.")
                 else:
-                    with st.spinner("A IA está processando o relatório e atualizando o CRM..."):
-                        qtd_atualizada = processar_relatorio_fim_de_dia(texto_fim_dia, st.session_state.df_crm)
-                        if qtd_atualizada is not False:
+                    with st.spinner("Atualizando CRM e jogando pendências para amanhã..."):
+                        atualizados = processar_fim_de_dia_inteligente(texto_fim_dia, st.session_state.df_crm, st.session_state.df_tarefas)
+                        if atualizados is not False:
                             salvar_dados_crm(st.session_state.df_crm)
-                            st.success(f"CRM atualizado com sucesso! ({qtd_atualizada} lead(s) processados).")
+                            st.success(f"Fim de dia processado! {atualizados} registros atualizados e pendências roladas para o próximo dia útil.")
                             st.rerun()
 
-    st.markdown("<div style='margin-bottom: 15px;'></div>", unsafe_allow_html=True)
-    exibir_agenda_semana(st.session_state.df_tarefas, st.session_state.df_crm)
+    st.markdown("<div style='margin-bottom: 20px;'></div>", st.empty() if False else None)
 
-    lista_clientes = ["Nenhum / Tarefa Geral"] + df["Empresa"].dropna().tolist()
+    # Exibição rápida de Pendências de Hoje
+    crm_temp = df.copy()
+    crm_temp["status_fu"] = [calcular_status_followup(r.get("Followup_Data", ""))[0] for _, r in crm_temp.iterrows()]
+    atrasados_totais = crm_temp[crm_temp["status_fu"] == "atrasado"]
+    hoje_totais = crm_temp[crm_temp["status_fu"] == "hoje"]
 
-    with st.expander("Criar Nova Tarefa", expanded=False):
-        with st.form(key="form_nova_tarefa_crm", clear_on_submit=True):
-            col1, col2 = st.columns([2, 1])
-            with col1:
-                acao_selecionada = st.radio("Ação", options=["Ligar", "Enviar mensagem", "Enviar e-mail", "Enviar proposta"], horizontal=True, label_visibility="collapsed")
-                complemento_titulo = st.text_input("Detalhes adicionais (Opcional)")
-                descricao = st.text_area("Descrição / Observações")
-            with col2:
-                cliente_vinculado = st.selectbox("Vincular ao Cliente", options=lista_clientes)
-                data_vencimento = st.date_input("Data de Vencimento", min_value=datetime.date.today())
-                prioridade = st.selectbox("Prioridade", options=["Baixa", "Média", "Alta", "Urgente"])
-
-            if st.form_submit_button("Salvar Tarefa", use_container_width=True):
-                titulo_final = f"{acao_selecionada}" + (f" - {complemento_titulo}" if complemento_titulo else "")
-                nova_linha_tarefa = {
-                    "Titulo": titulo_final, "Descricao": descricao, "Cliente": "BraClean",
-                    "Data_Vencimento": str(data_vencimento), "Prioridade": prioridade, "Status": "Pendente", "Data_Criacao": str(date.today())
-                }
-                st.session_state.df_tarefas = pd.concat([st.session_state.df_tarefas, pd.DataFrame([nova_linha_tarefa])], ignore_index=True)
-                salvar_dados_tarefas(st.session_state.df_tarefas)
-                st.success("Tarefa criada com sucesso!")
-                st.rerun()
+    col_atraso, col_hoje = st.columns(2)
+    with col_atraso:
+        st.markdown(f'<div class="badge-atrasada">{len(atrasados_totais)} Follow-ups Atrasados na Base</div>', unsafe_allow_html=True)
+    with col_hoje:
+        st.markdown(f'<div class="badge-hoje">{len(hoje_totais)} Follow-ups para Hoje</div>', unsafe_allow_html=True)
 
     st.divider()
     st.subheader("Agenda de Tarefas e Follow Up")
@@ -752,29 +565,21 @@ if aba_selecionada == "Gerenciamento de Tarefas":
     limite_data = hoje + timedelta(days=7 if horizonte == "Próximos 7 Dias" else (15 if horizonte == "Próximos 15 Dias" else (30 if horizonte == "Próximos 30 Dias" else 365)))
     
     eventos_futuros = []
-    for idx_t, t in st.session_state.df_tarefas.iterrows():
-        if pd.notna(t.get("Data_Vencimento")):
-            try:
-                dt_v = dt.strptime(str(t["Data_Vencimento"])[:10], "%Y-%m-%d").date()
-                if hoje <= dt_v <= limite_data:
-                    eventos_futuros.append({"origem": "tarefa", "index_original": idx_t, "Data_Formatada": dt_v.strftime("%d/%m/%Y"), "Tipo": "Tarefa", "Título / Ação": t["Titulo"], "Vinculado a": "BraClean", "Prioridade / Status": t.get('Prioridade', 'Normal')})
-            except: pass
-
     for idx_c, c in df.iterrows():
         f_dat = c.get("Followup_Data", "")
         if pd.notna(f_dat) and str(f_dat).strip() not in ["", "nan", "NaT"]:
             try:
                 dt_f = dt.strptime(str(f_dat)[:10], "%Y-%m-%d").date()
                 if hoje <= dt_f <= limite_data:
-                    eventos_futuros.append({"origem": "crm", "index_original": idx_c, "Data_Formatada": dt_f.strftime("%d/%m/%Y"), "Tipo": "Follow-up CRM", "Título / Ação": c.get("Followup_Nota", "Contato"), "Vinculado a": c['Empresa'], "Prioridade / Status": c['Etapa']})
+                    eventos_futuros.append({"Data_Formatada": dt_f.strftime("%d/%m/%Y"), "Tipo": "Follow-up CRM", "Título / Ação": c.get("Followup_Nota", "Contato"), "Vinculado a": c['Empresa'], "Etapa": c['Etapa']})
             except: pass
 
     if eventos_futuros:
         df_futuro = pd.DataFrame(eventos_futuros).sort_values(by="Data_Formatada", ascending=True).reset_index(drop=True)
         with st.expander(f"Ver compromissos no período ({len(df_futuro)} encontrados)", expanded=True):
-            st.dataframe(df_futuro[["Data_Formatada", "Tipo", "Título / Ação", "Vinculado a", "Prioridade / Status"]], use_container_width=True, hide_index=True)
+            st.dataframe(df_futuro, use_container_width=True, hide_index=True)
     else:
-        st.info("Nenhuma tarefa ou follow-up agendado para este período.")
+        st.info("Nenhum follow-up agendado para este período.")
 
 # =========================================================
 # ABA 2: FUNIL DE VENDAS
@@ -799,9 +604,6 @@ elif aba_selecionada == "Funil de Vendas":
             for _, row in sub_df.iterrows():
                 with st.expander(f"{row['Empresa']}"):
                     st.write(f"Contato: {row['Contato']} | Tel: {row.get('Telefone')}")
-                    if st.button("EDITAR", key=f"edit_{row['id']}"):
-                        st.session_state.cliente_editando_id = row['id']
-                        st.rerun()
 
 # =========================================================
 # ABA 3: DASHBOARD
