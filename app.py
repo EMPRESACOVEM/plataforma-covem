@@ -103,7 +103,7 @@ if 'sub_menu_tarefas' not in st.session_state:
 if 'editando_agenda_idx' not in st.session_state:
     st.session_state.editando_agenda_idx = None
 
-# Função para carregar a imagem de fundo local via Base64
+# Função para carregar a imagem de fundo local via Base64 e injetar estilos customizados dos Cards
 def aplicar_fundo_personalizado(image_path):
     css_fundo = ""
     if image_path.exists():
@@ -179,6 +179,47 @@ def aplicar_fundo_personalizado(image_path):
             div[data-testid="stMetricLabel"] {{
                 font-family: 'Inter', sans-serif !important;
                 font-size: 12px !important;
+            }}
+
+            /* ---------------------------------------------------------
+               ESTILIZAÇÃO DOS CARDS DO MENU PRINCIPAL (PRATA METÁLICO)
+               --------------------------------------------------------- */
+            .main-menu-card div.stButton > button {{
+                background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%) !important;
+                color: #E2E8F0 !important;
+                border: 1px solid #64748B !important;
+                border-top: 3px solid #CBD5E1 !important;
+                border-radius: 8px !important;
+                font-weight: 700 !important;
+                font-size: 14px !important;
+                padding-top: 14px !important;
+                padding-bottom: 14px !important;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
+                transition: all 0.3s ease !important;
+            }}
+
+            .main-menu-card div.stButton > button:hover {{
+                border-color: #F1F5F9 !important;
+                color: #FFFFFF !important;
+                box-shadow: 0 0 15px rgba(203, 213, 225, 0.3) !important;
+                transform: translateY(-2px);
+            }}
+
+            /* ---------------------------------------------------------
+               ESTILIZAÇÃO DOS SUBMENUS E DEMAIS BOTÕES (AZUL COVEM)
+               --------------------------------------------------------- */
+            .sub-menu-card div.stButton > button {{
+                background-color: rgba(10, 14, 39, 0.8) !important;
+                color: #00E5FF !important;
+                border: 1px solid #00E5FF !important;
+                border-radius: 6px !important;
+                font-weight: 600 !important;
+                box-shadow: 0 0 8px rgba(0, 229, 255, 0.15) !important;
+            }}
+
+            .sub-menu-card div.stButton > button:hover {{
+                background-color: rgba(0, 229, 255, 0.1) !important;
+                box-shadow: 0 0 12px rgba(0, 229, 255, 0.3) !important;
             }}
         </style>
     """, unsafe_allow_html=True)
@@ -469,7 +510,7 @@ with col_l2:
 st.divider()
 
 # ---------------------------------------------------------
-# MENU HORIZONTAL PRINCIPAL EM CARDS
+# MENU HORIZONTAL PRINCIPAL EM CARDS (PRATA METÁLICO)
 # ---------------------------------------------------------
 abas_disponiveis = [
     "Gerenciamento de Tarefas",
@@ -485,16 +526,20 @@ for i, nome_aba in enumerate(abas_disponiveis):
     with cols_menu[i]:
         is_active = (st.session_state.menu_ativo == nome_aba)
         
+        # Envolve o botão na classe estilizada de prata metálico
+        st.markdown('<div class="main-menu-card">', unsafe_allow_html=True)
+        
         if is_active:
             st.markdown(
                 f"""
                 <style>
                 div[data-testid="column"]:nth-of-type({i+1}) div.stButton > button {{
-                    background-color: #0A0E27 !important;
-                    color: #00E5FF !important;
-                    border: 1px solid #00E5FF !important;
-                    font-weight: 600 !important;
-                    box-shadow: 0 0 10px rgba(0, 229, 255, 0.3);
+                    background: linear-gradient(135deg, rgba(51, 65, 85, 0.95) 0%, rgba(30, 41, 59, 0.95) 100%) !important;
+                    color: #FFFFFF !important;
+                    border: 2px solid #F1F5F9 !important;
+                    border-top: 4px solid #FFFFFF !important;
+                    font-weight: 800 !important;
+                    box-shadow: 0 0 18px rgba(241, 245, 249, 0.4) !important;
                 }}
                 </style>
                 """,
@@ -504,6 +549,8 @@ for i, nome_aba in enumerate(abas_disponiveis):
         if st.button(nome_aba, key=f"menu_card_{i}", use_container_width=True):
             st.session_state.menu_ativo = nome_aba
             st.rerun()
+            
+        st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown("""
     <div style='margin-top: 30px; margin-bottom: 30px;'>
@@ -519,13 +566,15 @@ aba_selecionada = st.session_state.menu_ativo
 if aba_selecionada == "Gerenciamento de Tarefas":
     st.subheader("Gerenciamento de Tarefas")
 
-    # SUBMENU HORIZONTAL LIMPO (SEM EMOJIS)
+    # SUBMENU HORIZONTAL (AZUL NEON COVEM)
     sub_opcoes = ["Tarefas Diárias", "Agenda de Tarefas e Follow Up", "Criar Nova Tarefa"]
     cols_sub = st.columns(3)
 
     for idx_s, nome_sub in enumerate(sub_opcoes):
         with cols_sub[idx_s]:
             is_sub_active = (st.session_state.sub_menu_tarefas == nome_sub)
+            
+            st.markdown('<div class="sub-menu-card">', unsafe_allow_html=True)
             if is_sub_active:
                 st.markdown(
                     f"""
@@ -544,6 +593,7 @@ if aba_selecionada == "Gerenciamento de Tarefas":
             if st.button(nome_sub, key=f"btn_sub_tarefa_{idx_s}", use_container_width=True):
                 st.session_state.sub_menu_tarefas = nome_sub
                 st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown("<div style='margin-bottom: 25px;'></div>", unsafe_allow_html=True)
     sub_selecionado = st.session_state.sub_menu_tarefas
@@ -836,6 +886,8 @@ elif aba_selecionada == "Funil de Vendas":
     for idx_f, nome_f in enumerate(funis_list):
         with cols_funis[idx_f]:
             is_funil_active = (st.session_state.funnel_selecionado == nome_f)
+            
+            st.markdown('<div class="sub-menu-card">', unsafe_allow_html=True)
             if is_funil_active:
                 st.markdown(
                     f"""
@@ -854,6 +906,7 @@ elif aba_selecionada == "Funil de Vendas":
             if st.button(nome_f, key=f"btn_funil_{idx_f}", use_container_width=True):
                 st.session_state.funnel_selecionado = nome_f
                 st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown("<div style='margin-bottom: 20px;'></div>", unsafe_allow_html=True)
 
