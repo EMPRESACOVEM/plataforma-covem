@@ -586,59 +586,9 @@ if aba_selecionada == "Gerenciamento de Tarefas":
 
     st.divider()
 
-    lista_clientes = ["Nenhum / Tarefa Geral"] + df["Empresa"].dropna().tolist()
-
-    with st.expander("Criar Nova Tarefa", expanded=False):
-        with st.form(key="form_nova_tarefa_crm", clear_on_submit=True):
-            col1, col2 = st.columns([2, 1])
-
-            with col1:
-                st.markdown("**Selecione a Ação Rápida:**")
-                acao_selecionada = st.radio(
-                    "Ação",
-                    options=["Ligar", "Enviar mensagem", "Enviar e-mail", "Enviar proposta"],
-                    horizontal=True,
-                    label_visibility="collapsed"
-                )
-                
-                complemento_titulo = st.text_input("Detalhes adicionais (Opcional)", placeholder="Ex: Falar com o gerente sobre o orçamento")
-                descricao = st.text_area("Descrição / Observações")
-
-            with col2:
-                cliente_vinculado = st.selectbox(
-                    "Vincular ao Cliente / Oportunidade", options=lista_clientes
-                )
-                data_vencimento = st.date_input(
-                    "Data de Vencimento", min_value=datetime.date.today()
-                )
-                prioridade = st.selectbox(
-                    "Prioridade", options=["Baixa", "Média", "Alta", "Urgente"]
-                )
-
-            submit_tarefa = st.form_submit_button("Salvar Tarefa", use_container_width=True)
-
-            if submit_tarefa:
-                titulo_final = f"{acao_selecionada}" + (f" - {complemento_titulo}" if complemento_titulo else "")
-                
-                nova_linha_tarefa = {
-                    "Titulo": titulo_final,
-                    "Descricao": descricao,
-                    "Cliente": cliente_vinculado if cliente_vinculado != "Nenhum / Tarefa Geral" else "BraClean",
-                    "Data_Vencimento": str(data_vencimento),
-                    "Prioridade": prioridade,
-                    "Status": "Pendente",
-                    "Data_Criacao": str(datetime.date.today()),
-                }
-                st.session_state.df_tarefas = pd.concat(
-                    [st.session_state.df_tarefas, pd.DataFrame([nova_linha_tarefa])],
-                    ignore_index=True
-                )
-                salvar_dados_tarefas(st.session_state.df_tarefas)
-                st.success("Tarefa criada com sucesso!")
-                st.rerun()
-
-    st.divider()
-
+    # ---------------------------------------------------------
+    # SEÇÃO: AGENDA DE TAREFAS E FOLLOW UP (E REGISTROS)
+    # ---------------------------------------------------------
     st.subheader("Agenda de Tarefas e Follow Up")
 
     col_h1, col_h2 = st.columns([2, 2])
@@ -783,6 +733,62 @@ if aba_selecionada == "Gerenciamento de Tarefas":
                             st.rerun()
     else:
         st.info(f"Nenhum registro encontrado para o filtro selecionado ('{horizonte}').")
+
+    st.divider()
+
+    # ---------------------------------------------------------
+    # SEÇÃO: CRIAR NOVA TAREFA (MOVIDA PARA O FINAL)
+    # ---------------------------------------------------------
+    lista_clientes = ["Nenhum / Tarefa Geral"] + df["Empresa"].dropna().tolist()
+
+    with st.expander("Criar Nova Tarefa", expanded=False):
+        with st.form(key="form_nova_tarefa_crm", clear_on_submit=True):
+            col1, col2 = st.columns([2, 1])
+
+            with col1:
+                st.markdown("**Selecione a Ação Rápida:**")
+                acao_selecionada = st.radio(
+                    "Ação",
+                    options=["Ligar", "Enviar mensagem", "Enviar e-mail", "Enviar proposta"],
+                    horizontal=True,
+                    label_visibility="collapsed"
+                )
+                
+                complemento_titulo = st.text_input("Detalhes adicionais (Opcional)", placeholder="Ex: Falar com o gerente sobre o orçamento")
+                descricao = st.text_area("Descrição / Observações")
+
+            with col2:
+                cliente_vinculado = st.selectbox(
+                    "Vincular ao Cliente / Oportunidade", options=lista_clientes
+                )
+                data_vencimento = st.date_input(
+                    "Data de Vencimento", min_value=datetime.date.today()
+                )
+                prioridade = st.selectbox(
+                    "Prioridade", options=["Baixa", "Média", "Alta", "Urgente"]
+                )
+
+            submit_tarefa = st.form_submit_button("Salvar Tarefa", use_container_width=True)
+
+            if submit_tarefa:
+                titulo_final = f"{acao_selecionada}" + (f" - {complemento_titulo}" if complemento_titulo else "")
+                
+                nova_linha_tarefa = {
+                    "Titulo": titulo_final,
+                    "Descricao": descricao,
+                    "Cliente": cliente_vinculado if cliente_vinculado != "Nenhum / Tarefa Geral" else "BraClean",
+                    "Data_Vencimento": str(data_vencimento),
+                    "Prioridade": prioridade,
+                    "Status": "Pendente",
+                    "Data_Criacao": str(datetime.date.today()),
+                }
+                st.session_state.df_tarefas = pd.concat(
+                    [st.session_state.df_tarefas, pd.DataFrame([nova_linha_tarefa])],
+                    ignore_index=True
+                )
+                salvar_dados_tarefas(st.session_state.df_tarefas)
+                st.success("Tarefa criada com sucesso!")
+                st.rerun()
 
 # =========================================================
 # ABA 2: FUNIL DE VENDAS
