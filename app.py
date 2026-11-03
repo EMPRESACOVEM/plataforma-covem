@@ -392,7 +392,7 @@ def gerar_briefing_matinal_ia(df_crm, df_tarefas):
                 "data": dt_v.strftime("%d/%m/%Y") if pd.notna(dt_v) else ""
             })
 
-    # 2. Filtra Follow-ups do CRM Atrasados e de Hoje (sintetizado para não estourar o limite de tokens da API)
+    # 2. Filtra Follow-ups do CRM Atrasados e de Hoje (amostra controlada para não estourar tokens)
     crm_pendentes = []
     total_atrasados_crm = 0
     total_hoje_crm = 0
@@ -405,8 +405,8 @@ def gerar_briefing_matinal_ia(df_crm, df_tarefas):
         total_atrasados_crm = len(c_filtrados[c_filtrados["Followup_Data_Dt"] < hoje_dt])
         total_hoje_crm = len(c_filtrados[c_filtrados["Followup_Data_Dt"] == hoje_dt])
         
-        # Ordena os mais atrasados primeiro e limita a amostra em 80 itens
-        c_filtrados = c_filtrados.sort_values(by="Followup_Data_Dt", ascending=True).head(80)
+        # Ordena os mais atrasados primeiro e limita a amostra em 50 itens críticos para a IA
+        c_filtrados = c_filtrados.sort_values(by="Followup_Data_Dt", ascending=True).head(50)
         
         for _, r in c_filtrados.iterrows():
             dt_f = r["Followup_Data_Dt"]
@@ -416,7 +416,7 @@ def gerar_briefing_matinal_ia(df_crm, df_tarefas):
                 "contato": str(r.get("Contato", "")),
                 "telefone": str(r.get("Telefone", "")),
                 "vendedor": str(r.get("Vendedor", "Gabriel")),
-                "nota": str(r.get("Followup_Nota", "")),
+                "nota": str(r.get("Followup_Nota", ""))[:60],
                 "status": status_prazo,
                 "data_vencimento": dt_f.strftime("%d/%m/%Y") if pd.notna(dt_f) else ""
             })
@@ -426,7 +426,7 @@ def gerar_briefing_matinal_ia(df_crm, df_tarefas):
     Sua missão é gerar a Lista Diária de Execução dos vendedores Gabriel e Ariel.
 
     RESUMO DO DIAGNÓSTICO DO CRM HOJE ({hoje_str}):
-    - Total de Follow-ups Atrasados detectados no sistema: {total_atrasados_crm}
+    - Total de Follow-ups Atrasados pendentes no sistema: {total_atrasados_crm}
     - Total de Follow-ups agendados para HOJE: {total_hoje_crm}
     - Tarefas cadastradas pendentes: {len(tarefas_pendentes)}
 
@@ -439,7 +439,7 @@ def gerar_briefing_matinal_ia(df_crm, df_tarefas):
     {json.dumps(crm_pendentes, ensure_ascii=False)}
 
     DIRETRIZES DE MONTAGEM DO BRIEFING:
-    1. Cabeçalho curto declarando a saúde da carteira e volume de atrasos.
+    1. Cabeçalho curto declarando o volume de atrasos e a saúde da carteira.
     2. Crie uma lista numerada para o VENDEDOR GABRIEL contendo até 20 leads/tarefas prioritários (priorizando o que está ATRASADO). Exiba o nome da Empresa, Contato, Telefone e Observação.
     3. Crie uma lista numerada para o VENDEDOR ARIEL contendo até 20 leads/tarefas prioritários (priorizando o que está ATRASADO). Exiba o nome da Empresa, Contato, Telefone e Observação.
     4. Encerre reforçando a META DIÁRIA: Cada vendedor precisa tratar os 20 alvos acima e fazer mais 30 prospecções/novas abordagens para bater a meta de 50 movimentações/dia no CRM.
