@@ -374,13 +374,13 @@ def gerar_briefing_matinal_ia(df_crm, df_tarefas):
     hoje_dt = date.today()
     hoje_str = hoje_dt.strftime("%Y-%m-%d")
     
-    # 1. Filtra Tarefas Atrasadas e de Hoje (limitado aos 30 mais relevantes)
+    # 1. Filtra Tarefas Atrasadas e de Hoje (limitado a 10 para focar no essencial)
     tarefas_pendentes = []
     if not df_tarefas.empty and "Data_Vencimento" in df_tarefas.columns:
         t_copia = df_tarefas.copy()
         t_copia["Data_Vencimento_Dt"] = pd.to_datetime(t_copia["Data_Vencimento"], errors="coerce").dt.date
         t_filtradas = t_copia[(t_copia["Data_Vencimento_Dt"] <= hoje_dt) & (t_copia["Status"] != "Concluído")]
-        t_filtradas = t_filtradas.sort_values(by="Data_Vencimento_Dt", ascending=True).head(30)
+        t_filtradas = t_filtradas.sort_values(by="Data_Vencimento_Dt", ascending=True).head(10)
         
         for _, r in t_filtradas.iterrows():
             dt_v = r["Data_Vencimento_Dt"]
@@ -392,21 +392,20 @@ def gerar_briefing_matinal_ia(df_crm, df_tarefas):
                 "data": dt_v.strftime("%d/%m/%Y") if pd.notna(dt_v) else ""
             })
 
-    # 2. Filtra Follow-ups do CRM Atrasados e de Hoje (amostra controlada para não estourar tokens)
+    # 2. Filtra SOMENTE 20 LEADS ATRASADOS (ou do dia) do CRM, rigorosamente limitados a 20 no total
     crm_pendentes = []
     total_atrasados_crm = 0
-    total_hoje_crm = 0
     
     if not df_crm.empty and "Followup_Data" in df_crm.columns:
         c_copia = df_crm.copy()
         c_copia["Followup_Data_Dt"] = pd.to_datetime(c_copia["Followup_Data"], errors="coerce").dt.date
+        
+        # Pega apenas os que estão com data menor ou igual a hoje
         c_filtrados = c_copia[c_copia["Followup_Data_Dt"] <= hoje_dt].copy()
-        
         total_atrasados_crm = len(c_filtrados[c_filtrados["Followup_Data_Dt"] < hoje_dt])
-        total_hoje_crm = len(c_filtrados[c_filtrados["Followup_Data_Dt"] == hoje_dt])
         
-        # Ordena os mais atrasados primeiro e limita a amostra em 50 itens críticos para a IA
-        c_filtrados = c_filtrados.sort_values(by="Followup_Data_Dt", ascending=True).head(50)
+        # ORDENA PELOS MAIS ATRASADOS E PEGA ESTRITAMENTE OS PRIMEIROS 20 LEADS
+        c_filtrados = c_filtrados.sort_values(by="Followup_Data_Dt", ascending=True).head(20)
         
         for _, r in c_filtrados.iterrows():
             dt_f = r["Followup_Data_Dt"]
@@ -416,7 +415,7 @@ def gerar_briefing_matinal_ia(df_crm, df_tarefas):
                 "contato": str(r.get("Contato", "")),
                 "telefone": str(r.get("Telefone", "")),
                 "vendedor": str(r.get("Vendedor", "Gabriel")),
-                "nota": str(r.get("Followup_Nota", ""))[:60],
+                "nota": str(r.get("Followup_Nota", ""))[:50],
                 "status": status_prazo,
                 "data_vencimento": dt_f.strftime("%d/%m/%Y") if pd.notna(dt_f) else ""
             })
@@ -425,24 +424,20 @@ def gerar_briefing_matinal_ia(df_crm, df_tarefas):
     Você é o Gerente Operacional de Vendas do GRUPO COVEM (Conta BraClean).
     Sua missão é gerar a Lista Diária de Execução dos vendedores Gabriel e Ariel.
 
-    RESUMO DO DIAGNÓSTICO DO CRM HOJE ({hoje_str}):
-    - Total de Follow-ups Atrasados pendentes no sistema: {total_atrasados_crm}
-    - Total de Follow-ups agendados para HOJE: {total_hoje_crm}
-    - Tarefas cadastradas pendentes: {len(tarefas_pendentes)}
+    DIAGNOSTICO DO CRM HOJE ({hoje_str}):
+    - Total de Atrasados reais no sistema: {total_atrasados_crm}
+    - ATENÇÃO: Foram selecionados ESTRITAMENTE os 20 leads mais urgentes/atrasados da base para distribuição hoje.
 
-    AMOSTRA DOS DADOS PRIORITÁRIOS (Atrasados mais antigos primeiro):
-
-    Tarefas Pendentes:
-    {json.dumps(tarefas_pendentes, ensure_ascii=False)}
-
-    Follow-ups de CRM:
+    LISTA DOS 20 LEADS ATRASADOS SELECIONADOS PARA DISTRIBUIÇÃO:
     {json.dumps(crm_pendentes, ensure_ascii=False)}
 
+    Tarefas Gerais:
+    {json.dumps(tarefas_pendentes, ensure_ascii=False)}
+
     DIRETRIZES DE MONTAGEM DO BRIEFING:
-    1. Cabeçalho curto declarando o volume de atrasos e a saúde da carteira.
-    2. Crie uma lista numerada para o VENDEDOR GABRIEL contendo até 20 leads/tarefas prioritários (priorizando o que está ATRASADO). Exiba o nome da Empresa, Contato, Telefone e Observação.
-    3. Crie uma lista numerada para o VENDEDOR ARIEL contendo até 20 leads/tarefas prioritários (priorizando o que está ATRASADO). Exiba o nome da Empresa, Contato, Telefone e Observação.
-    4. Encerre reforçando a META DIÁRIA: Cada vendedor precisa tratar os 20 alvos acima e fazer mais 30 prospecções/novas abordagens para bater a meta de 50 movimentações/dia no CRM.
+    1. Informe que existem {total_atrasados_crm} atrasados no total, mas que o sistema isolou os 20 mais críticos para o foco de hoje.
+    2. Divida estes leads rigorosamente: Aloque 10 leads prioritários para o VENDEDOR GABRIEL e 10 leads prioritários para o VENDEDOR ARIEL. Exiba o nome da Empresa, Contato, Telefone e Observação de cada um.
+    3. Encerre reforçando a META DIÁRIA: Cada vendedor deve tratar os 10 alvos de CRM alocados e realizar mais 40 prospecções/novos cadastros para fechar a meta de 50 movimentações no dia.
 
     Mantenha o tom estritamente profissional, prático e limpo (sem nenhum emoji).
     """
@@ -453,7 +448,7 @@ def gerar_briefing_matinal_ia(df_crm, df_tarefas):
         return response.text
     except Exception as e:
         return f"Erro ao comunicar com a IA do Gemini: {e}"
-
+        
 def processar_relatorio_fim_de_dia(texto_relatorio, df_crm, briefing_matinal_previo=""):
     if not configurar_gemini_api():
         st.error("Chave da API do Gemini não configurada nos secrets do Streamlit. Adicione 'GEMINI_API_KEY' em .streamlit/secrets.toml.")
