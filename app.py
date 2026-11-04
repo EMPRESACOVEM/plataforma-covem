@@ -680,7 +680,7 @@ if aba_selecionada == "Gerenciamento de Tarefas":
 
             col_btn1, col_btn2 = st.columns([2, 2])
             with col_btn1:
-                if st.button("Excluir Itens Selecionados em Massa", use_container_width=True, type="primary"):
+                if st.button("Excluir Itens Selecionados", use_container_width=True, type="primary"):
                     indices_selecionados = df_editavel[df_editavel["Selecionar"] == True].index.tolist()
                     
                     if indices_selecionados:
