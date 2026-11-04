@@ -551,8 +551,7 @@ if aba_selecionada == "Gerenciamento de Tarefas":
 
         st.divider()
 
-        st.markdown("### Relatório do Dia (Atualização de Clientes Existentes)")
-        st.caption("Nota: O relatório agora serve estritamente para atualizar anotações em empresas já cadastradas, sem criar novos registros no CRM.")
+        st.markdown("### Relatório Diário")
         
         col_rel1, col_rel2 = st.columns([1, 2])
         with col_rel1:
