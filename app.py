@@ -13,7 +13,7 @@ from streamlit_gsheets import GSheetsConnection
 
 # Configuração da página
 st.set_page_config(
-    page_title="COVEM",
+    page_title="GRUPO COVEM",
     layout="wide"
 )
 
@@ -77,19 +77,17 @@ CORES_PERDAS = {
     "Outros": "#9D00FF"                         # Purple Neon
 }
 
-# Cores das Barras de Classificação de Clientes
 CORES_PERFIL_BARRAS = {
     "Cliente A": "#00E5FF",  # Azul Claro Neon
     "Cliente B": "#FF6600",  # Laranja Neon
     "Cliente C": "#9D00FF"   # Roxo Neon
 }
 
-# Cor de fundo dos gráficos estilo Infográfico Futurista
 FUNDO_GRAFICO_FUTURISTA = "#0A0E27"
 GRID_GRAFICO_FUTURISTA = "rgba(0, 229, 255, 0.12)"
 
-# Força a atualização das cores e estrutura na sessão
-st.session_state.funnel_colors = DEFAULT_COLORS.copy()
+if 'funnel_colors' not in st.session_state:
+    st.session_state.funnel_colors = DEFAULT_COLORS.copy()
 
 if 'menu_ativo' not in st.session_state:
     st.session_state.menu_ativo = "Gerenciamento de Tarefas"
@@ -103,7 +101,6 @@ if 'sub_menu_tarefas' not in st.session_state:
 if 'editando_agenda_idx' not in st.session_state:
     st.session_state.editando_agenda_idx = None
 
-# Função para carregar a imagem de fundo local via Base64
 def aplicar_fundo_personalizado(image_path):
     css_fundo = ""
     if image_path.exists():
@@ -186,18 +183,13 @@ def aplicar_fundo_personalizado(image_path):
 aplicar_fundo_personalizado(ARQUIVO_FUNDO)
 
 PROB_MAP = {
-    # Pré Funil
     "Pré: Novo Lead": 0.05,
     "Pré: Conexão": 0.10,
-
-    # Funil de Vendas Principal
     "Prospecção": 0.20,
     "Qualificação": 0.40,
     "Reunião Agendada": 0.60,
     "Proposta Enviada": 0.80,
     "Fechado": 1.00,
-
-    # Pós Funil
     "Pós: Standby": 0.00,
     "Pós: Perdido": 0.00
 }
@@ -210,9 +202,6 @@ ESTRUTURA_FUNIS = {
 
 MOTIVOS_PERDA_PADRAO = list(CORES_PERDAS.keys())
 
-# ---------------------------------------------------------
-# CONEXÃO COM O GOOGLE SHEETS
-# ---------------------------------------------------------
 @st.cache_resource
 def get_gsheets_connection():
     return st.connection("gsheets", type=GSheetsConnection)
@@ -316,9 +305,10 @@ def salvar_dados_tarefas(df):
     df.to_excel(ARQUIVO_TAREFAS, index=False)
 
 # ---------------------------------------------------------
-# FUNÇÕES DE AUTOMAÇÃO (DIVISÃO DE 20 PARA CADA DA BASE GERAL)
+# FUNÇÕES DE AUTOMAÇÃO ATUALIZADAS (APENAS ATUALIZAR O CRM, SEM CRIAR NOVOS CLIENTES)
 # ---------------------------------------------------------
 def obter_lotes_diarios_followup(df_crm):
+    hoje = date.today()
     df_pendentes = df_crm[
         (df_crm["Followup_Data"].notna()) & 
         (df_crm["Followup_Data"] != "") & 
@@ -327,17 +317,23 @@ def obter_lotes_diarios_followup(df_crm):
     ].copy()
     
     df_pendentes["Data_Alvo"] = pd.to_datetime(df_pendentes["Followup_Data"], errors="coerce").dt.date
+    # Filtra atrasados ou para hoje
+    df_pendentes = df_pendentes[df_pendentes["Data_Alvo"] <= hoje]
     df_pendentes = df_pendentes.sort_values(by="Data_Alvo", ascending=True).reset_index(drop=True)
     
-    lista_gabriel = df_pendentes.iloc[0:20]
-    lista_ariel = df_pendentes.iloc[20:40]
+    # Divisão balanceada para Gabriel e Ariel (fatiando a lista)
+    meio = len(df_pendentes) // 2 if len(df_pendentes) > 0 else 0
+    if len(df_pendentes) > 0 and len(df_pendentes) % 2 != 0:
+        meio = (len(df_pendentes) // 2) + 1
+        
+    lista_gabriel = df_pendentes.iloc[0:meio] if not df_pendentes.empty else df_pendentes.iloc[0:0]
+    lista_ariel = df_pendentes.iloc[meio:] if not df_pendentes.empty else df_pendentes.iloc[0:0]
     
     return lista_gabriel, lista_ariel
 
 def processar_relatorio_vendedor(relatorio_texto, vendedor_nome, df_crm):
     linhas = relatorio_texto.split("\n")
     atualizados = 0
-    criados = 0
     timestamp_atual = dt.now().strftime("%d/%m/%Y %H:%M")
     
     df_atualizado = df_crm.copy()
@@ -354,6 +350,7 @@ def processar_relatorio_vendedor(relatorio_texto, vendedor_nome, df_crm):
                 empresa_encontrada_idx = idx
                 break
                 
+        # Atualiza APENAS se encontrar a empresa cadastrada (não cria novos clientes)
         if empresa_encontrada_idx is not None:
             idx_real = empresa_encontrada_idx
             hist_atual = str(df_atualizado.loc[idx_real, "Historico"]) if pd.notna(df_atualizado.loc[idx_real, "Historico"]) else ""
@@ -362,39 +359,9 @@ def processar_relatorio_vendedor(relatorio_texto, vendedor_nome, df_crm):
             df_atualizado.loc[idx_real, "Historico"] = novo_historico + ("\n" + hist_atual if hist_atual else "")
             df_atualizado.loc[idx_real, "Followup_Nota"] = linha
             atualizados += 1
-        else:
-            novo_id = int(df_atualizado["id"].max() + 1) if not df_atualizado.empty and pd.notna(df_atualizado["id"].max()) else 1
-            nome_provisorio = linha.split(":")[0] if ":" in linha else (linha[:35] + "..." if len(linha) > 35 else linha)
             
-            nova_linha = {
-                "id": novo_id,
-                "Empresa": nome_provisorio.strip(),
-                "Cliente": "BraClean",
-                "Perfil": "Cliente C",
-                "Etapa": "Prospecção",
-                "Contato": "Não informado",
-                "Cargo": "Não informado",
-                "Telefone": "Não informado",
-                "Email": "Não informado",
-                "Cidade": "Não informado",
-                "Valor": 8500.0,
-                "Prob": 0.20,
-                "Vendedor": vendedor_nome,
-                "Perda": "",
-                "Data_Cadastro": str(date.today()),
-                "Followup_Data": str(date.today() + timedelta(days=1)),
-                "Followup_Nota": linha,
-                "Historico": f"[{timestamp_atual}] Criado automaticamente via relatório de {vendedor_nome}: {linha}"
-            }
-            
-            df_atualizado = pd.concat([df_atualizado, pd.DataFrame([nova_linha])], ignore_index=True)
-            criados += 1
-            
-    return df_atualizado, atualizados, criados
+    return df_atualizado, atualizados
 
-# ---------------------------------------------------------
-# ESTADO DA SESSÃO
-# ---------------------------------------------------------
 if 'df_crm' not in st.session_state:
     st.session_state.df_crm = carregar_dados_crm()
 
@@ -406,9 +373,6 @@ if 'cliente_editando_id' not in st.session_state:
 
 df = st.session_state.df_crm
 
-# ---------------------------------------------------------
-# FUNÇÃO DE LÓGICA DE CORES DO FOLLOW-UP (SEM EMOJI)
-# ---------------------------------------------------------
 def calcular_status_followup(data_str):
     if not data_str or pd.isna(data_str) or str(data_str).strip() in ["", "nan", "NaT", "None"]:
         return "sem_data", "Sem Follow-up", '<span style="height: 10px; width: 10px; background-color: #94A3B8; border-radius: 50%; display: inline-block;" title="Sem Data"></span>'
@@ -425,9 +389,6 @@ def calcular_status_followup(data_str):
     except:
         return "sem_data", "Sem Follow-up", '<span style="height: 10px; width: 10px; background-color: #94A3B8; border-radius: 50%; display: inline-block;" title="Sem Data"></span>'
 
-# ---------------------------------------------------------
-# BARRA LATERAL (LOGO PEQUENA COVEM E CONFIGURAÇÕES)
-# ---------------------------------------------------------
 if ARQUIVO_LOGO.exists():
     st.sidebar.image(str(ARQUIVO_LOGO), use_container_width=True)
 
@@ -456,9 +417,6 @@ st.sidebar.download_button(
     use_container_width=True
 )
 
-# ---------------------------------------------------------
-# 1. LOGO CENTRALIZADA DA COVEM (logoCOVEM.png)
-# ---------------------------------------------------------
 col_l1, col_l2, col_l3 = st.columns([1, 2, 1])
 with col_l2:
     if ARQUIVO_LOGO.exists():
@@ -468,9 +426,6 @@ with col_l2:
 
 st.divider()
 
-# ---------------------------------------------------------
-# MENU HORIZONTAL PRINCIPAL EM CARDS
-# ---------------------------------------------------------
 abas_disponiveis = [
     "Gerenciamento de Tarefas",
     "Funil de Vendas", 
@@ -514,12 +469,11 @@ st.markdown("""
 aba_selecionada = st.session_state.menu_ativo
 
 # =========================================================
-# ABA 1: GERENCIAMENTO DE TAREFAS (ORGANIZADO EM SUBMENUS)
+# ABA 1: GERENCIAMENTO DE TAREFAS
 # =========================================================
 if aba_selecionada == "Gerenciamento de Tarefas":
     st.subheader("Gerenciamento de Tarefas")
 
-    # SUBMENU HORIZONTAL LIMPO (SEM EMOJIS)
     sub_opcoes = ["Tarefas Diárias", "Agenda de Tarefas e Follow Up", "Criar Nova Tarefa"]
     cols_sub = st.columns(3)
 
@@ -548,76 +502,77 @@ if aba_selecionada == "Gerenciamento de Tarefas":
     st.markdown("<div style='margin-bottom: 25px;'></div>", unsafe_allow_html=True)
     sub_selecionado = st.session_state.sub_menu_tarefas
 
-    # ---------------------------------------------------------
-    # OPÇÃO 1: TAREFAS DIÁRIAS & RELATÓRIO DO DIA
-    # ---------------------------------------------------------
+    # 1. TAREFAS DIÁRIAS COM NUMERAÇÃO E SEPARAÇÃO GABRIEL / ARIEL (BASEADO EM ATRASADOS/HOJE)
     if sub_selecionado == "Tarefas Diárias":
-        st.markdown("### Tarefas Diárias")
+        st.markdown("### Tarefas Diárias (Follow-ups Atrasados e de Hoje)")
         
         tab_g, tab_a = st.tabs(["Gabriel", "Ariel"])
-        hoje = date.today()
         lista_g_df, lista_a_df = obter_lotes_diarios_followup(st.session_state.df_crm)
         
         with tab_g:
-            st.markdown("#### Lista Diária: Gabriel")
+            st.markdown("#### Lista Diária Numerada: Gabriel")
             if not lista_g_df.empty:
                 for idx_l, row_l in lista_g_df.reset_index(drop=True).iterrows():
                     empresa_val = str(row_l['Empresa']).upper()
                     resp_val = row_l['Contato']
                     tel_val = row_l['Telefone']
+                    nota_val = row_l['Followup_Nota']
+                    data_val = str(row_l['Followup_Data'])[:10]
                     
                     st.markdown(f"""
-                        <div style="background-color: rgba(10, 14, 39, 0.6); border: 1px solid #1E293B; padding: 10px 14px; border-radius: 6px; margin-bottom: 8px; font-family: 'Inter', sans-serif;">
-                            <b style="color: #FFFFFF; font-size: 14px;">{idx_l + 1}. {empresa_val}</b><br>
-                            <span style="color: #E2E8F0; font-size: 13px;">Responsável: {resp_val}</span><br>
+                        <div style="background-color: rgba(10, 14, 39, 0.6); border: 1px solid #1E293B; padding: 12px 14px; border-radius: 6px; margin-bottom: 8px; font-family: 'Inter', sans-serif;">
+                            <b style="color: #00E5FF; font-size: 14px;">#{idx_l + 1} — {empresa_val}</b> <span style="font-size: 11px; color: #FFEA00;">(Data Venc: {data_val})</span><br>
+                            <span style="color: #E2E8F0; font-size: 13px;"><b>Contato:</b> {resp_val} | <b>Nota:</b> {nota_val}</span><br>
                             <span style="color: #94A3B8; font-size: 13px;">Telefone: <code>{tel_val}</code></span>
                         </div>
                     """, unsafe_allow_html=True)
             else:
-                st.info("Nenhum follow-up pendente na base para Gabriel.")
+                st.info("Nenhum follow-up pendente/atrasado para Gabriel hoje.")
                 
         with tab_a:
-            st.markdown("#### Lista Diária: Ariel")
+            st.markdown("#### Lista Diária Numerada: Ariel")
             if not lista_a_df.empty:
                 for idx_l, row_l in lista_a_df.reset_index(drop=True).iterrows():
                     empresa_val = str(row_l['Empresa']).upper()
                     resp_val = row_l['Contato']
                     tel_val = row_l['Telefone']
+                    nota_val = row_l['Followup_Nota']
+                    data_val = str(row_l['Followup_Data'])[:10]
                     
                     st.markdown(f"""
-                        <div style="background-color: rgba(10, 14, 39, 0.6); border: 1px solid #1E293B; padding: 10px 14px; border-radius: 6px; margin-bottom: 8px; font-family: 'Inter', sans-serif;">
-                            <b style="color: #FFFFFF; font-size: 14px;">{idx_l + 1}. {empresa_val}</b><br>
-                            <span style="color: #E2E8F0; font-size: 13px;">Responsável: {resp_val}</span><br>
+                        <div style="background-color: rgba(10, 14, 39, 0.6); border: 1px solid #1E293B; padding: 12px 14px; border-radius: 6px; margin-bottom: 8px; font-family: 'Inter', sans-serif;">
+                            <b style="color: #00E5FF; font-size: 14px;">#{idx_l + 1} — {empresa_val}</b> <span style="font-size: 11px; color: #FFEA00;">(Data Venc: {data_val})</span><br>
+                            <span style="color: #E2E8F0; font-size: 13px;"><b>Contato:</b> {resp_val} | <b>Nota:</b> {nota_val}</span><br>
                             <span style="color: #94A3B8; font-size: 13px;">Telefone: <code>{tel_val}</code></span>
                         </div>
                     """, unsafe_allow_html=True)
             else:
-                st.info("Nenhum follow-up pendente na base para Ariel.")
+                st.info("Nenhum follow-up pendente/atrasado para Ariel hoje.")
 
         st.divider()
 
-        st.markdown("### Relatório Diário")
+        st.markdown("### Relatório do Dia (Atualização de Clientes Existentes)")
+        st.caption("Nota: O relatório agora serve estritamente para atualizar anotações em empresas já cadastradas, sem criar novos registros no CRM.")
+        
         col_rel1, col_rel2 = st.columns([1, 2])
         with col_rel1:
             vendedor_relatorio = st.selectbox("Vendedor Responsável", ["Gabriel", "Ariel"], key="sel_vend_rel")
         
         texto_relatorio_input = st.text_area("Cole o relatório aqui:", placeholder="Ex: Usina Santa Clara: Orçamento aprovado e fechado.\nPosto Aliança: Pediu para retornar na sexta.", key="txt_rel_input")
         
-        if st.button("Processar e Sincronizar Relatório", use_container_width=True):
+        if st.button("Atualizar Relatório no CRM", use_container_width=True):
             if texto_relatorio_input.strip():
-                df_atualizado, qt_atu, qt_cri = processar_relatorio_vendedor(texto_relatorio_input, vendedor_relatorio, st.session_state.df_crm)
+                df_atualizado, qt_atu = processar_relatorio_vendedor(texto_relatorio_input, vendedor_relatorio, st.session_state.df_crm)
                 st.session_state.df_crm = df_atualizado
                 salvar_dados_crm(df_atualizado)
-                st.success(f"Relatório processado com sucesso! Clientes atualizados: {qt_atu} | Novos clientes criados: {qt_cri}")
+                st.success(f"Relatório processado com sucesso! Clientes encontrados e atualizados: {qt_atu}.")
                 st.rerun()
             else:
                 st.warning("Insira o texto do relatório antes de processar.")
 
-    # ---------------------------------------------------------
-    # OPÇÃO 2: AGENDA DE TAREFAS E FOLLOW UP
-    # ---------------------------------------------------------
+    # 2. AGENDA DE TAREFAS E FOLLOW UP COM EXCLUSÃO MÚLTIPLA
     elif sub_selecionado == "Agenda de Tarefas e Follow Up":
-        st.markdown("### Agenda de Tarefas e Follow Up")
+        st.markdown("### Agenda de Tarefas e Follow Up (Exclusão em Lote)")
 
         hoje = date.today()
         col_h1, col_h2 = st.columns([2, 2])
@@ -710,60 +665,56 @@ if aba_selecionada == "Gerenciamento de Tarefas":
 
             st.divider()
 
-            df_exibicao_tabela = df_futuro[["Data_Formatada", "Tipo", "Título / Ação", "Vinculado a", "Prioridade / Status"]]
+            # Adicionando coluna de seleção múltipla para exclusão em lote
+            df_futuro["Selecionar"] = False
             
-            st.dataframe(
-                df_exibicao_tabela,
+            # Exibe com data_editor para permitir marcação múltipla
+            df_editavel = st.data_editor(
+                df_futuro[["Selecionar", "Data_Formatada", "Tipo", "Título / Ação", "Vinculado a", "Prioridade / Status"]],
                 use_container_width=True,
-                hide_index=True
+                hide_index=True,
+                key="editor_agenda_exclusao"
             )
 
             st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
-            
-            item_selecionado_acoes = st.selectbox(
-                "Selecione o compromisso para gerenciar (Editar/Excluir):",
-                options=range(len(df_futuro)),
-                format_func=lambda x: f"[{df_futuro.loc[x, 'Data_Formatada']}] {df_futuro.loc[x, 'Tipo']} - {df_futuro.loc[x, 'Título / Ação']} ({df_futuro.loc[x, 'Vinculado a']})",
-                label_visibility="collapsed"
-            )
 
-            if item_selecionado_acoes is not None:
-                sel_row = df_futuro.loc[item_selecionado_acoes]
-                origem_sel = sel_row["origem"]
-                idx_orig_sel = sel_row["index_original"]
-
-                col_acao1, col_acao2 = st.columns(2)
-                with col_acao1:
-                    if st.button("Excluir", use_container_width=True):
-                        if origem_sel == "tarefa":
-                            st.session_state.df_tarefas = st.session_state.df_tarefas.drop(idx_orig_sel).reset_index(drop=True)
-                            salvar_dados_tarefas(st.session_state.df_tarefas)
-                        else:
-                            st.session_state.df_crm.loc[idx_orig_sel, "Followup_Data"] = ""
-                            st.session_state.df_crm.loc[idx_orig_sel, "Followup_Nota"] = ""
-                            salvar_dados_crm(st.session_state.df_crm)
-                        st.success("Item removido com sucesso!")
-                        st.rerun()
-
-                with col_acao2:
-                    with st.popover("Editar", use_container_width=True):
-                        novo_txt_acao = st.text_input("Título / Ação", value=sel_row["Título / Ação"])
-                        novo_vinc_acao = st.text_input("Vínculo / Empresa", value=sel_row["Vinculado a"])
-                        if st.button("Salvar Alterações"):
-                            if origem_sel == "tarefa":
-                                st.session_state.df_tarefas.loc[idx_orig_sel, "Titulo"] = novo_txt_acao
-                                salvar_dados_tarefas(st.session_state.df_tarefas)
+            col_btn1, col_btn2 = st.columns([2, 2])
+            with col_btn1:
+                if st.button("Excluir Itens Selecionados em Massa", use_container_width=True, type="primary"):
+                    indices_selecionados = df_editavel[df_editavel["Selecionar"] == True].index.tolist()
+                    
+                    if indices_selecionados:
+                        tarefas_para_remover = []
+                        crm_para_limpar = []
+                        
+                        for idx_sel in indices_selecionados:
+                            origem = df_futuro.loc[idx_sel, "origem"]
+                            orig_idx = df_futuro.loc[idx_sel, "index_original"]
+                            
+                            if origem == "tarefa":
+                                tarefas_para_remover.append(orig_idx)
                             else:
-                                st.session_state.df_crm.loc[idx_orig_sel, "Followup_Nota"] = novo_txt_acao
-                                salvar_dados_crm(st.session_state.df_crm)
-                            st.success("Atualizado com sucesso!")
-                            st.rerun()
+                                crm_para_limpar.append(orig_idx)
+                        
+                        # Remove tarefas
+                        if tarefas_para_remover:
+                            st.session_state.df_tarefas = st.session_state.df_tarefas.drop(tarefas_para_remover).reset_index(drop=True)
+                            salvar_dados_tarefas(st.session_state.df_tarefas)
+                            
+                        # Limpa follow-ups do CRM
+                        if crm_para_limpar:
+                            st.session_state.df_crm.loc[crm_para_limpar, "Followup_Data"] = ""
+                            st.session_state.df_crm.loc[crm_para_limpar, "Followup_Nota"] = ""
+                            salvar_dados_crm(st.session_state.df_crm)
+                            
+                        st.success(f"{len(indices_selecionados)} item(ns) excluído(s) com sucesso!")
+                        st.rerun()
+                    else:
+                        st.warning("Nenhum item foi selecionado na tabela para exclusão.")
+
         else:
             st.info(f"Nenhum registro encontrado para o filtro selecionado ('{horizonte}').")
 
-    # ---------------------------------------------------------
-    # OPÇÃO 3: CRIAR NOVA TAREFA
-    # ---------------------------------------------------------
     elif sub_selecionado == "Criar Nova Tarefa":
         st.markdown("### Criar Nova Tarefa")
         lista_clientes = ["Nenhum / Tarefa Geral"] + df["Empresa"].dropna().tolist()
@@ -1246,9 +1197,6 @@ elif aba_selecionada == "Relatório Executivo":
         df_exec["Perfil"] = "Cliente C"
     df_exec["Perfil"] = df_exec["Perfil"].fillna("Cliente C")
 
-    # ---------------------------------------------------------
-    # GRÁFICO 1: PRÉ-FUNIL
-    # ---------------------------------------------------------
     st.markdown("### Pré-Funil")
 
     etapas_bloco_1 = ["Pré: Novo Lead", "Pré: Conexão", "Pós: Standby"]
@@ -1278,9 +1226,6 @@ elif aba_selecionada == "Relatório Executivo":
     else:
         st.info("Nenhum registro encontrado no bloco de Pré-Funil e Standby.")
 
-    # ---------------------------------------------------------
-    # ESTATÍSTICA 1: TAXA DE CONVERSÃO PRÉ-FUNIL -> PROSPECÇÃO
-    # ---------------------------------------------------------
     total_novo_lead = len(df_exec[df_exec["Etapa"] == "Pré: Novo Lead"])
     total_prospeccao = len(df_exec[df_exec["Etapa"] == "Prospecção"])
     
@@ -1298,9 +1243,6 @@ elif aba_selecionada == "Relatório Executivo":
     st.markdown("</div>", unsafe_allow_html=True)
     st.divider()
 
-    # ---------------------------------------------------------
-    # GRÁFICO 2: FUNIL DE VENDAS PRINCIPAL 
-    # ---------------------------------------------------------
     st.markdown("### Funil de Vendas")
 
     etapas_bloco_2 = ["Prospecção", "Qualificação", "Reunião Agendada", "Proposta Enviada", "Fechado", "Pós: Perdido"]
@@ -1330,9 +1272,6 @@ elif aba_selecionada == "Relatório Executivo":
     else:
         st.info("Nenhum registro encontrado no bloco de Funil de Vendas e Perdidos.")
 
-    # ---------------------------------------------------------
-    # ESTATÍSTICA 2: TAXA DE CONVERSÃO PROSPECÇÃO -> VENDA (FECHADO)
-    # ---------------------------------------------------------
     total_fechado = len(df_exec[df_exec["Etapa"] == "Fechado"])
     taxa_conversao_pros_venda = (total_fechado / total_prospeccao * 100) if total_prospeccao > 0 else 0.0
     
@@ -1348,9 +1287,6 @@ elif aba_selecionada == "Relatório Executivo":
     st.markdown("</div>", unsafe_allow_html=True)
     st.divider()
 
-    # ---------------------------------------------------------
-    # GRÁFICO DE GARGALOS ORDENADO PELA SEQUÊNCIA DO FUNIL
-    # ---------------------------------------------------------
     ordem_gargalos = [
         "Pré: Novo Lead", 
         "Pré: Conexão", 
@@ -1392,9 +1328,6 @@ elif aba_selecionada == "Relatório Executivo":
 
     st.divider()
 
-    # ---------------------------------------------------------
-    # GRÁFICO DE BARRAS VERTICAIS: CLASSIFICAÇÃO DE CLIENTES (A, B, C)
-    # ---------------------------------------------------------
     st.markdown("### Classificação de Clientes (Ticket Médio)")
 
     contagem_perfis_dict = {"Cliente A": 0, "Cliente B": 0, "Cliente C": 0}
@@ -1436,9 +1369,6 @@ elif aba_selecionada == "Relatório Executivo":
 
     st.divider()
 
-    # ---------------------------------------------------------
-    # ATIVIDADES INDIVIDUAIS (GABRIEL VS ARIEL) E METAS
-    # ---------------------------------------------------------
     st.markdown("### Atividades Individuais & Metas de Vendedores")
     st.caption("Dados configurados para iniciar a contagem a partir de terça-feira (03/11/2026).")
 
@@ -1535,9 +1465,6 @@ elif aba_selecionada == "Relatório Executivo":
 
     st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
 
-    # ---------------------------------------------------------
-    # GRÁFICO MACRO DE LINHAS PROGRESSIVO
-    # ---------------------------------------------------------
     st.markdown("### Visão Macro de Atividades dos Vendedores")
     st.markdown("Acompanhamento progressivo e automático da movimentação dos vendedores com início a partir de terça-feira (03/11/2026).")
 
@@ -1591,9 +1518,6 @@ elif aba_selecionada == "Relatório Executivo":
 
     st.divider()
 
-    # ---------------------------------------------------------
-    # META BRACLEAN (TICKET MÉDIO E R$ 100K MENSAL ATÉ DEZEMBRO)
-    # ---------------------------------------------------------
     st.markdown("### Meta BraClean (Ticket Médio e R$ 100k Mensais até Dezembro)")
     
     faturamento_braclean = float(df_exec[df_exec["Etapa"] == "Fechado"]["Valor"].sum())
