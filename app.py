@@ -280,19 +280,61 @@ except Exception as exc:
     st.error(f"Falha ao validar seu vínculo com a BraClean: {exc}")
     st.stop()
 
-# Dados de referência para nomes e etapas. As políticas RLS continuam sendo aplicadas.
-try:
-    _profiles = sb.table("profiles").select("id,full_name").execute().data or []
-    PROFILE_NAMES = {x["id"]: (x.get("full_name") or "Usuário") for x in _profiles}
-except Exception:
+
+# Dados de referência para nomes e etapas.
+# Cache por sessão para evitar consultas repetidas.
+
+if "_profiles_cache" not in st.session_state:
+    try:
+        st.session_state["_profiles_cache"] = (
+            sb.table("profiles")
+            .select("id,full_name")
+            .execute()
+            .data or []
+        )
+    except Exception:
+        st.session_state["_profiles_cache"] = None
+
+_profiles = st.session_state["_profiles_cache"]
+
+if _profiles is not None:
+    PROFILE_NAMES = {
+        x["id"]: (x.get("full_name") or "Usuário")
+        for x in _profiles
+    }
+else:
     PROFILE_NAMES = {USER_ID: "Usuário"}
+
 PROFILE_NAMES.setdefault(USER_ID, "Você")
-try:
-    _members = sb.table("company_members").select("user_id,is_salesperson,is_active,role").eq("company_id", COMPANY_ID).eq("is_active", True).execute().data or []
-    ACTIVE_SELLERS = [m["user_id"] for m in _members if m.get("is_salesperson")]
-except Exception:
+
+if "_members_cache" not in st.session_state:
+    try:
+        st.session_state["_members_cache"] = (
+            sb.table("company_members")
+            .select("user_id,is_salesperson,is_active,role")
+            .eq("company_id", COMPANY_ID)
+            .eq("is_active", True)
+            .execute()
+            .data or []
+        )
+    except Exception:
+        st.session_state["_members_cache"] = None
+
+_members = st.session_state["_members_cache"]
+
+if _members is not None:
+    ACTIVE_SELLERS = [
+        m["user_id"] for m in _members
+        if m.get("is_salesperson")
+    ]
+else:
     ACTIVE_SELLERS = [USER_ID] if IS_SALESPERSON else []
-SELLER_OPTIONS = {PROFILE_NAMES.get(uid, "Vendedor"): uid for uid in ACTIVE_SELLERS}
+
+SELLER_OPTIONS = {
+    PROFILE_NAMES.get(uid, "Vendedor"): uid
+    for uid in ACTIVE_SELLERS
+}
+
 
 
 def _buscar_todas(tabela, colunas="*"):
@@ -313,24 +355,52 @@ def _data_iso(valor):
 
 
 try:
-    _activities_all = sb.table("activities").select("id,lead_id,user_id,activity_type,description,created_at,source_author_label").eq("company_id", COMPANY_ID).order("created_at", desc=False).execute().data or []
-except Exception:
-    _activities_all = []
+
+# Carrega atividades uma vez por sessão e organiza por lead.
+if "_activities_by_lead" not in st.session_state:
+    try:
+        atividades = (
+            sb.table("activities")
+            .select("id,lead_id,user_id,activity_type,description,created_at,source_author_label")
+            .eq("company_id", COMPANY_ID)
+            .order("created_at", desc=False)
+            .execute()
+            .data or []
+        )
+    except Exception:
+        atividades = []
+
+    mapa = {}
+    for ev in atividades:
+        lead_id = str(ev.get("lead_id") or "")
+        if lead_id:
+            mapa.setdefault(lead_id, []).append(ev)
+
+    st.session_state["_activities_by_lead"] = mapa
+
+_activities_by_lead = st.session_state["_activities_by_lead"]
 
 
 def _historico_do_lead(lead_id):
-    eventos = [ev for ev in _activities_all if str(ev.get("lead_id")) == str(lead_id)]
+    eventos = _activities_by_lead.get(str(lead_id), [])
     linhas = []
+
     for ev in eventos:
         quando = ev.get("created_at") or ""
         try:
-            quando = dt.fromisoformat(quando.replace("Z", "+00:00")).astimezone().strftime("%d/%m/%Y %H:%M")
+            quando = dt.fromisoformat(
+                quando.replace("Z", "+00:00")
+            ).astimezone().strftime("%d/%m/%Y %H:%M")
         except Exception:
             quando = str(quando)[:16]
-        autor = ev.get("source_author_label") or PROFILE_NAMES.get(ev.get("user_id"), "")
+
+        autor = ev.get("source_author_label") or PROFILE_NAMES.get(
+            ev.get("user_id"), ""
+        )
         descricao = ev.get("description") or ""
         prefixo = f"[{quando}{' - ' + autor if autor else ''}]"
         linhas.append(f"{prefixo} {descricao}".strip())
+
     return "\n".join(linhas)
 
 
@@ -401,7 +471,8 @@ def _inserir_novas_atividades(df_novo, df_antigo):
                 antigos.add((str(lead_id), linha))
             except Exception as exc:
                 st.error(f"Não foi possível registrar uma nova atividade: {exc}")
-
+   
+    st.session_state.pop("_activities_by_lead", None)
 
 def salvar_dados_crm(df):
     try:
@@ -579,19 +650,29 @@ with st.sidebar.expander("Personalizar Cores das Etapas", expanded=False):
 
 st.sidebar.divider()
 
-buffer = io.BytesIO()
-with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-    df.to_excel(writer, index=False, sheet_name='CRM_BRACLEAN')
-buffer.seek(0)
+@st.cache_data(show_spinner=False)
+def gerar_excel_crm(dados):
+    buffer = io.BytesIO()
+
+    with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
+        dados.to_excel(
+            writer,
+            index=False,
+            sheet_name="CRM_BRACLEAN"
+        )
+
+    return buffer.getvalue()
+
+
+excel_crm = gerar_excel_crm(df)
 
 st.sidebar.download_button(
     label="Baixar Planilha Excel",
-    data=buffer,
+    data=excel_crm,
     file_name="crm_braclean.xlsx",
     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     use_container_width=True
 )
-
 col_l1, col_l2, col_l3 = st.columns([1, 2, 1])
 with col_l2:
     if ARQUIVO_LOGO.exists():
