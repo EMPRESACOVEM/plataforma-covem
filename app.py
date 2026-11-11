@@ -9,7 +9,7 @@ import datetime
 import base64
 from datetime import datetime as dt, date, timedelta
 from pathlib import Path
-from streamlit_gsheets import GSheetsConnection
+from supabase import create_client
 
 # Configuração da página
 st.set_page_config(
@@ -202,173 +202,339 @@ ESTRUTURA_FUNIS = {
 
 MOTIVOS_PERDA_PADRAO = list(CORES_PERDAS.keys())
 
-@st.cache_resource
-def get_gsheets_connection():
-    return st.connection("gsheets", type=GSheetsConnection)
+# =========================================================
+# SUPABASE — AUTENTICAÇÃO E CAMADA DE DADOS
+# =========================================================
+SUPABASE_URL = st.secrets.get("SUPABASE_URL", "").strip()
+SUPABASE_KEY = st.secrets.get("SUPABASE_ANON_KEY", "").strip()
+COMPANY_ID = "def03167-d252-42db-bf0b-4f1a6b702b96"
+PIPELINE_ID = "a61d5a46-027b-4849-af30-57e61404e100"
 
-conn = get_gsheets_connection()
+STAGE_IDS = {
+    "Pré: Novo Lead": "f3933989-34fa-4960-8fa7-cf78f7dc1118",
+    "Pré: Conexão": "5b40159f-bc08-45d3-a660-3a291050740f",
+    "Prospecção": "5db1f869-5ee1-4ad4-aa2a-9ba5e26a017b",
+    "Qualificação": "ae91c83f-f8ba-460d-8069-84e614b1fb54",
+    "Reunião Agendada": "16e3159f-3ab1-4883-81f9-d1b8890f8f0c",
+    "Proposta Enviada": "c0293ac2-2779-4fd0-9e66-7e05984f9b63",
+    "Fechado": "77006e34-54c9-449b-bcb1-2e0559d3d2f4",
+    "Pós: Standby": "aabbacec-0905-43b8-b262-141225cebd07",
+    "Pós: Perdido": "42aab3c8-a243-4b83-9046-5279aebb51be",
+}
+
+@st.cache_resource
+def criar_cliente_supabase(url, key):
+    return create_client(url, key)
+
+
+def mostrar_login():
+    st.title("GRUPO COVEM")
+    st.subheader("Acesso seguro à plataforma")
+    if not SUPABASE_URL or not SUPABASE_KEY:
+        st.error("Configure SUPABASE_URL e SUPABASE_ANON_KEY nos Secrets do Streamlit.")
+        st.stop()
+    with st.form("login_supabase"):
+        email = st.text_input("E-mail")
+        senha = st.text_input("Senha", type="password")
+        entrar = st.form_submit_button("Entrar", use_container_width=True)
+    if entrar:
+        try:
+            auth_client = criar_cliente_supabase(SUPABASE_URL, SUPABASE_KEY)
+            resposta = auth_client.auth.sign_in_with_password({"email": email.strip(), "password": senha})
+            st.session_state.sb_access_token = resposta.session.access_token
+            st.session_state.sb_refresh_token = resposta.session.refresh_token
+            st.rerun()
+        except Exception as exc:
+            st.error(f"Não foi possível entrar. Confira e-mail e senha. Detalhe: {exc}")
+    st.stop()
+
+
+if not st.session_state.get("sb_access_token") or not st.session_state.get("sb_refresh_token"):
+    mostrar_login()
+
+try:
+    sb = criar_cliente_supabase(SUPABASE_URL, SUPABASE_KEY)
+    sb.auth.set_session(st.session_state.sb_access_token, st.session_state.sb_refresh_token)
+    usuario_auth = sb.auth.get_user().user
+    USER_ID = usuario_auth.id
+except Exception:
+    for chave in ("sb_access_token", "sb_refresh_token"):
+        st.session_state.pop(chave, None)
+    st.warning("Sua sessão expirou. Entre novamente.")
+    mostrar_login()
+
+try:
+    vinculos = sb.table("company_members").select("role,is_salesperson,is_active").eq("company_id", COMPANY_ID).eq("user_id", USER_ID).eq("is_active", True).execute().data
+    if not vinculos:
+        st.error("Seu usuário não possui vínculo ativo com a BraClean. Solicite acesso ao administrador.")
+        if st.button("Sair"):
+            sb.auth.sign_out()
+            st.session_state.clear()
+            st.rerun()
+        st.stop()
+    MEMBRO = vinculos[0]
+    USER_ROLE = MEMBRO.get("role", "seller")
+    IS_MANAGER = USER_ROLE in ("manager", "gestor")
+    IS_SALESPERSON = bool(MEMBRO.get("is_salesperson"))
+except Exception as exc:
+    st.error(f"Falha ao validar seu vínculo com a BraClean: {exc}")
+    st.stop()
+
+# Dados de referência para nomes e etapas. As políticas RLS continuam sendo aplicadas.
+try:
+    _profiles = sb.table("profiles").select("id,full_name").execute().data or []
+    PROFILE_NAMES = {x["id"]: (x.get("full_name") or "Usuário") for x in _profiles}
+except Exception:
+    PROFILE_NAMES = {USER_ID: "Usuário"}
+PROFILE_NAMES.setdefault(USER_ID, "Você")
+try:
+    _members = sb.table("company_members").select("user_id,is_salesperson,is_active,role").eq("company_id", COMPANY_ID).eq("is_active", True).execute().data or []
+    ACTIVE_SELLERS = [m["user_id"] for m in _members if m.get("is_salesperson")]
+except Exception:
+    ACTIVE_SELLERS = [USER_ID] if IS_SALESPERSON else []
+SELLER_OPTIONS = {PROFILE_NAMES.get(uid, "Vendedor"): uid for uid in ACTIVE_SELLERS}
+
+
+def _buscar_todas(tabela, colunas="*"):
+    saida, inicio, lote = [], 0, 1000
+    while True:
+        pagina = sb.table(tabela).select(colunas).range(inicio, inicio + lote - 1).execute().data or []
+        saida.extend(pagina)
+        if len(pagina) < lote:
+            break
+        inicio += lote
+    return saida
+
+
+def _data_iso(valor):
+    if valor is None or pd.isna(valor) or str(valor).strip() in ("", "nan", "NaT", "None"):
+        return None
+    return str(valor)[:10]
+
+
+try:
+    _activities_all = sb.table("activities").select("id,lead_id,user_id,activity_type,description,created_at,source_author_label").eq("company_id", COMPANY_ID).order("created_at", desc=False).execute().data or []
+except Exception:
+    _activities_all = []
+
+
+def _historico_do_lead(lead_id):
+    eventos = [ev for ev in _activities_all if str(ev.get("lead_id")) == str(lead_id)]
+    linhas = []
+    for ev in eventos:
+        quando = ev.get("created_at") or ""
+        try:
+            quando = dt.fromisoformat(quando.replace("Z", "+00:00")).astimezone().strftime("%d/%m/%Y %H:%M")
+        except Exception:
+            quando = str(quando)[:16]
+        autor = ev.get("source_author_label") or PROFILE_NAMES.get(ev.get("user_id"), "")
+        descricao = ev.get("description") or ""
+        prefixo = f"[{quando}{' - ' + autor if autor else ''}]"
+        linhas.append(f"{prefixo} {descricao}".strip())
+    return "\n".join(linhas)
+
 
 def carregar_dados_crm():
-    try:
-        if "connections" in st.secrets and "gsheets" in st.secrets["connections"]:
-            if "private_key" in st.secrets["connections"]["gsheets"]:
-                pk = st.secrets["connections"]["gsheets"]["private_key"]
-                if "\\n" in pk:
-                    st.secrets["connections"]["gsheets"]["private_key"] = pk.replace("\\n", "\n")
+    etapas = {x["id"]: x["name"] for x in (_buscar_todas("pipeline_stages", "id,name,company_id") if True else []) if x.get("company_id") == COMPANY_ID}
+    leads = sb.table("leads").select("*").eq("company_id", COMPANY_ID).order("created_at", desc=False).execute().data or []
+    linhas = []
+    for lead in leads:
+        responsavel = PROFILE_NAMES.get(lead.get("assigned_to"), "Carteira geral COVEM") if lead.get("assigned_to") else (lead.get("legacy_assigned_to_label") or "Carteira geral COVEM")
+        criado = lead.get("created_at") or ""
+        try:
+            criado = dt.fromisoformat(criado.replace("Z", "+00:00")).date().isoformat()
+        except Exception:
+            criado = str(criado)[:10]
+        linhas.append({
+            "id": lead.get("legacy_id") if lead.get("legacy_id") is not None else len(linhas) + 1,
+            "_uuid": lead["id"], "_assigned_uuid": lead.get("assigned_to"),
+            "Empresa": lead.get("prospect_company") or "", "Cliente": "BraClean",
+            "Perfil": lead.get("profile") or "Cliente C", "Etapa": etapas.get(lead.get("stage_id"), "Pré: Novo Lead"),
+            "Contato": lead.get("contact_name") or "", "Cargo": lead.get("contact_role") or "",
+            "Telefone": lead.get("phone") or "", "Email": lead.get("email") or "", "Cidade": lead.get("city") or "",
+            "Valor": float(lead.get("estimated_value") or 0), "Prob": float(lead.get("probability") or 0),
+            "Vendedor": responsavel, "Perda": lead.get("loss_reason") or "", "Data_Cadastro": criado,
+            "Followup_Data": _data_iso(lead.get("followup_date")) or "", "Followup_Nota": lead.get("followup_note") or "",
+            "Historico": _historico_do_lead(lead["id"]), "Temperatura": lead.get("temperature") or ""
+        })
+    df_resultado = pd.DataFrame(linhas)
+    colunas = ["id", "_uuid", "_assigned_uuid", "Empresa", "Cliente", "Perfil", "Etapa", "Contato", "Cargo", "Telefone", "Email", "Cidade", "Valor", "Prob", "Vendedor", "Perda", "Data_Cadastro", "Followup_Data", "Followup_Nota", "Historico", "Temperatura"]
+    return df_resultado.reindex(columns=colunas)
 
-        df_loaded = conn.read(worksheet="Página1", ttl=0)
-        df_loaded = df_loaded.dropna(how="all")
-        
-        colunas_esperadas = ["id", "Empresa", "Cliente", "Perfil", "Etapa", "Contato", "Cargo", "Telefone", "Email", "Cidade", "Valor", "Prob", "Vendedor", "Perda", "Data_Cadastro", "Followup_Data", "Followup_Nota", "Historico"]
-        for col in colunas_esperadas:
-            if col not in df_loaded.columns:
-                df_loaded[col] = ""
-                
-        if not df_loaded.empty:
-            df_loaded["id"] = pd.to_numeric(df_loaded["id"], errors="coerce").fillna(0).astype(int)
-            df_loaded["Valor"] = pd.to_numeric(df_loaded["Valor"], errors="coerce").fillna(0.0)
-            df_loaded["Prob"] = pd.to_numeric(df_loaded["Prob"], errors="coerce").fillna(0.2)
-            df_loaded["Perda"] = df_loaded["Perda"].fillna("").astype(str)
-            df_loaded["Perfil"] = df_loaded["Perfil"].fillna("Cliente C").astype(str)
-            
-            df_loaded["Cliente"] = df_loaded["Cliente"].astype(str).str.strip()
-            df_loaded = df_loaded[df_loaded["Cliente"].str.lower() == "braclean"]
-            if df_loaded.empty:
-                df_loaded["Cliente"] = "BraClean"
-            
-            df_loaded["Etapa"] = df_loaded["Etapa"].replace({
-                "1. Contatado": "Prospecção",
-                "2. Conversando": "Qualificação",
-                "1. Prospecção": "Prospecção",
-                "2. Qualificação": "Qualificação",
-                "3. Reunião Agendada": "Reunião Agendada",
-                "4. Proposta Enviada": "Proposta Enviada",
-                "5. Fechado": "Fechado",
-                "6. Perdido": "Pós: Perdido",
-                "Pós: Lixeira": "Pós: Perdido"
-            })
-            
-            df_loaded["Vendedor"] = df_loaded["Vendedor"].apply(lambda x: "Gabriel" if str(x).strip() in ["", "nan", "Não informado"] else x)
-            return df_loaded
-    except Exception as e:
-        st.warning(f"Aviso ao ler do Google Sheets: {e}. Carregando dados padrão iniciais.")
 
-    df_inicial = pd.DataFrame([
-        {
-            "id": 1, "Empresa": "Usina Santa Clara", "Cliente": "BraClean", "Perfil": "Cliente A", "Etapa": "Prospecção", 
-            "Contato": "Roberto Alves", "Cargo": "Diretor Operacional", "Telefone": "(16) 99876-5432", 
-            "Email": "roberto@usinasantaclara.com.br", "Cidade": "Sertãozinho / SP", "Valor": 120000.0, 
-            "Prob": 0.20, "Vendedor": "Gabriel", "Perda": "",
-            "Data_Cadastro": str(date.today()),
-            "Followup_Data": str(date.today() - timedelta(days=2)), "Followup_Nota": "Enviar apresentação institucional atualizada.", 
-            "Historico": "[01/09/2026 10:00] Primeiro contato realizado."
-        },
-        {
-            "id": 2, "Empresa": "Rede Postos Aliança", "Cliente": "BraClean", "Perfil": "Cliente B", "Etapa": "Qualificação", 
-            "Contato": "Patricia Lima", "Cargo": "Gerente de Compras", "Telefone": "(16) 99765-4321", 
-            "Email": "patricia@postosalianca.com.br", "Cidade": "Ribeirão Preto / SP", "Valor": 45000.0, 
-            "Prob": 0.40, "Vendedor": "Ariel", "Perda": "",
-            "Data_Cadastro": str(date.today()),
-            "Followup_Data": str(date.today()), "Followup_Nota": "Apresentar condições técnicas do catálogo.", 
-            "Historico": "[02/09/2026 14:30] Lead qualificado para catálogo BraClean."
-        }
-    ])
-    try:
-        conn.update(worksheet="Página1", data=df_inicial)
-    except:
-        pass
-    return df_inicial
+def _payload_lead(row, novo=False):
+    payload = {
+        "company_id": COMPANY_ID,
+        "prospect_company": str(row.get("Empresa", "") or "").strip(),
+        "contact_name": str(row.get("Contato", "") or "").strip() or None,
+        "contact_role": str(row.get("Cargo", "") or "").strip() or None,
+        "phone": str(row.get("Telefone", "") or "").strip() or None,
+        "email": str(row.get("Email", "") or "").strip() or None,
+        "city": str(row.get("Cidade", "") or "").strip() or None,
+        "profile": row.get("Perfil") or "Cliente C",
+        "stage_id": STAGE_IDS.get(row.get("Etapa"), STAGE_IDS["Pré: Novo Lead"]),
+        "estimated_value": float(row.get("Valor") or 0),
+        "probability": float(row.get("Prob") or 0),
+        "loss_reason": str(row.get("Perda", "") or "").strip() or None,
+        "followup_date": _data_iso(row.get("Followup_Data")),
+        "followup_note": str(row.get("Followup_Nota", "") or "").strip() or None,
+        "temperature": str(row.get("Temperatura", "") or "").strip() or None,
+    }
+    return payload
+
+
+def _inserir_novas_atividades(df_novo, df_antigo):
+    antigos = set()
+    if df_antigo is not None and not df_antigo.empty:
+        for _, r in df_antigo.iterrows():
+            antigos.update((str(r.get("_uuid")), x.strip()) for x in str(r.get("Historico", "") or "").splitlines() if x.strip())
+    for _, r in df_novo.iterrows():
+        lead_id = r.get("_uuid")
+        if not lead_id:
+            continue
+        for linha in [x.strip() for x in str(r.get("Historico", "") or "").splitlines() if x.strip()]:
+            if (str(lead_id), linha) in antigos:
+                continue
+            descricao = linha.split("]", 1)[-1].strip() if "]" in linha else linha
+            try:
+                sb.table("activities").insert({"company_id": COMPANY_ID, "lead_id": lead_id, "user_id": USER_ID, "activity_type": "nota", "description": descricao}).execute()
+                antigos.add((str(lead_id), linha))
+            except Exception as exc:
+                st.error(f"Não foi possível registrar uma nova atividade: {exc}")
+
 
 def salvar_dados_crm(df):
     try:
-        df["Cliente"] = "BraClean"
-        conn.update(worksheet="Página1", data=df)
-    except Exception as e:
-        st.error(f"Erro ao salvar dados no Google Sheets: {e}")
+        anterior = st.session_state.get("_df_crm_original", pd.DataFrame()).copy()
+        anterior_por_uuid = {str(r.get("_uuid")): r for _, r in anterior.iterrows() if pd.notna(r.get("_uuid"))}
+        for _, row in df.iterrows():
+            uid = row.get("_uuid")
+            if not uid or pd.isna(uid):
+                payload = _payload_lead(row, novo=True)
+                if not IS_MANAGER:
+                    payload["assigned_to"] = USER_ID
+                else:
+                    nome_resp = str(row.get("Vendedor", "Carteira geral COVEM"))
+                    payload["assigned_to"] = SELLER_OPTIONS.get(nome_resp)
+                inserido = sb.table("leads").insert(payload).execute().data
+                if inserido:
+                    df.loc[row.name, "_uuid"] = inserido[0]["id"]
+                    df.loc[row.name, "_assigned_uuid"] = inserido[0].get("assigned_to")
+                continue
+            base = anterior_por_uuid.get(str(uid))
+            if base is None:
+                continue
+            payload = _payload_lead(row)
+            campos_ui = {"Empresa":"prospect_company", "Contato":"contact_name", "Cargo":"contact_role", "Telefone":"phone", "Email":"email", "Cidade":"city", "Perfil":"profile", "Etapa":"stage_id", "Valor":"estimated_value", "Prob":"probability", "Perda":"loss_reason", "Followup_Data":"followup_date", "Followup_Nota":"followup_note", "Temperatura":"temperature"}
+            alteracoes = {}
+            for campo_ui, campo_db in campos_ui.items():
+                valor_novo = payload[campo_db]
+                valor_antigo = _payload_lead(base)[campo_db]
+                if valor_novo != valor_antigo:
+                    alteracoes[campo_db] = valor_novo
+            if alteracoes:
+                sb.table("leads").update(alteracoes).eq("id", uid).eq("company_id", COMPANY_ID).execute()
+            responsavel_novo = str(row.get("Vendedor", ""))
+            novo_uid = SELLER_OPTIONS.get(responsavel_novo)
+            uid_responsavel_antigo = base.get("_assigned_uuid")
+            if str(novo_uid or "") != str(uid_responsavel_antigo or ""):
+                if not IS_MANAGER:
+                    raise PermissionError("Somente gerente pode transferir oportunidades.")
+                sb.rpc("assign_lead", {"p_lead_id": uid, "p_new_assigned_to": novo_uid, "p_reason": "Transferência realizada pelo CRM"}).execute()
+                df.loc[row.name, "_assigned_uuid"] = novo_uid
+        _inserir_novas_atividades(df, anterior)
+        st.session_state._df_crm_original = df.copy(deep=True)
+        st.session_state.df_crm = df.copy(deep=True)
+    except Exception as exc:
+        st.error(f"Erro ao salvar no Supabase: {exc}")
+        raise
+
 
 def carregar_dados_tarefas():
-    if ARQUIVO_TAREFAS.exists():
-        try:
-            df_loaded = pd.read_excel(ARQUIVO_TAREFAS)
-            for col in ["Titulo", "Descricao", "Cliente", "Data_Vencimento", "Prioridade", "Status", "Data_Criacao"]:
-                if col not in df_loaded.columns:
-                    df_loaded[col] = ""
-            return df_loaded
-        except Exception:
-            pass
-            
-    df_inicial_vazio = pd.DataFrame(columns=["Titulo", "Descricao", "Cliente", "Data_Vencimento", "Prioridade", "Status", "Data_Criacao"])
-    df_inicial_vazio.to_excel(ARQUIVO_TAREFAS, index=False)
-    return df_inicial_vazio
+    tarefas = sb.table("tasks").select("*").eq("company_id", COMPANY_ID).order("created_at", desc=False).execute().data or []
+    linhas = []
+    leads_por_id = {str(r.get("_uuid")): r.get("Empresa", "") for _, r in st.session_state.get("df_crm", pd.DataFrame()).iterrows()} if "df_crm" in st.session_state else {}
+    for t in tarefas:
+        linhas.append({"_uuid": t["id"], "_lead_uuid": t.get("lead_id"), "_assigned_uuid": t.get("assigned_to"), "_created_by": t.get("created_by"), "Titulo": t.get("title", ""), "Descricao": t.get("description") or "", "Cliente": leads_por_id.get(str(t.get("lead_id")), "BraClean"), "Data_Vencimento": _data_iso(t.get("due_date")) or "", "Prioridade": t.get("priority") or "Média", "Status": t.get("status") or "Pendente", "Data_Criacao": _data_iso(t.get("created_at")) or ""})
+    return pd.DataFrame(linhas, columns=["_uuid", "_lead_uuid", "_assigned_uuid", "_created_by", "Titulo", "Descricao", "Cliente", "Data_Vencimento", "Prioridade", "Status", "Data_Criacao"])
+
 
 def salvar_dados_tarefas(df):
-    df.to_excel(ARQUIVO_TAREFAS, index=False)
+    try:
+        orig = st.session_state.get("_df_tarefas_original", pd.DataFrame()).copy()
+        orig_map = {str(r.get("_uuid")): r for _, r in orig.iterrows() if pd.notna(r.get("_uuid"))}
+        atuais = set()
+        for _, r in df.iterrows():
+            uid = r.get("_uuid")
+            lead_id = r.get("_lead_uuid")
+            if not lead_id and str(r.get("Cliente", "")) not in ("", "BraClean", "Nenhum / Tarefa Geral"):
+                achou = st.session_state.df_crm[st.session_state.df_crm["Empresa"] == r.get("Cliente")]
+                if not achou.empty:
+                    lead_id = achou.iloc[0].get("_uuid")
+            if not uid or pd.isna(uid):
+                sb.table("tasks").insert({"company_id": COMPANY_ID, "lead_id": lead_id, "title": str(r.get("Titulo", "")), "description": str(r.get("Descricao", "")), "due_date": _data_iso(r.get("Data_Vencimento")), "priority": r.get("Prioridade") or "Média", "status": r.get("Status") or "Pendente", "assigned_to": USER_ID, "created_by": USER_ID}).execute()
+            else:
+                atuais.add(str(uid))
+                old = orig_map.get(str(uid))
+                if old is not None:
+                    fields = {"title":"Titulo", "description":"Descricao", "due_date":"Data_Vencimento", "priority":"Prioridade", "status":"Status"}
+                    upd = {}
+                    for db, ui in fields.items():
+                        nv = _data_iso(r.get(ui)) if db == "due_date" else r.get(ui)
+                        ov = _data_iso(old.get(ui)) if db == "due_date" else old.get(ui)
+                        if nv != ov:
+                            upd[db] = nv
+                    if upd:
+                        sb.table("tasks").update(upd).eq("id", uid).eq("company_id", COMPANY_ID).execute()
+        # Remoções antigas da interface viram cancelamento, nunca DELETE físico.
+        for uid, old in orig_map.items():
+            if uid not in atuais:
+                sb.table("tasks").update({"status":"Cancelada"}).eq("id", uid).eq("company_id", COMPANY_ID).execute()
+        st.session_state._df_tarefas_original = df.copy(deep=True)
+        st.session_state.df_tarefas = df.copy(deep=True)
+    except Exception as exc:
+        st.error(f"Erro ao salvar tarefas no Supabase: {exc}")
+        raise
 
-# ---------------------------------------------------------
-# FUNÇÕES DE AUTOMAÇÃO ATUALIZADAS (APENAS ATUALIZAR O CRM, SEM CRIAR NOVOS CLIENTES)
-# ---------------------------------------------------------
+
 def obter_lotes_diarios_followup(df_crm):
     hoje = date.today()
-    df_pendentes = df_crm[
-        (df_crm["Followup_Data"].notna()) & 
-        (df_crm["Followup_Data"] != "") & 
-        (df_crm["Followup_Data"].astype(str).str.strip() != "nan") & 
-        (df_crm["Followup_Data"].astype(str).str.strip() != "NaT")
-    ].copy()
-    
-    df_pendentes["Data_Alvo"] = pd.to_datetime(df_pendentes["Followup_Data"], errors="coerce").dt.date
-    # Filtra atrasados ou para hoje
-    df_pendentes = df_pendentes[df_pendentes["Data_Alvo"] <= hoje]
-    df_pendentes = df_pendentes.sort_values(by="Data_Alvo", ascending=True).reset_index(drop=True)
-    
-    # Divisão balanceada para Gabriel e Ariel (fatiando a lista)
-    meio = len(df_pendentes) // 2 if len(df_pendentes) > 0 else 0
-    if len(df_pendentes) > 0 and len(df_pendentes) % 2 != 0:
-        meio = (len(df_pendentes) // 2) + 1
-        
-    lista_gabriel = df_pendentes.iloc[0:meio] if not df_pendentes.empty else df_pendentes.iloc[0:0]
-    lista_ariel = df_pendentes.iloc[meio:] if not df_pendentes.empty else df_pendentes.iloc[0:0]
-    
-    return lista_gabriel, lista_ariel
+    pendentes = df_crm.copy()
+    pendentes["Data_Alvo"] = pd.to_datetime(pendentes["Followup_Data"], errors="coerce").dt.date
+    pendentes = pendentes[pendentes["Data_Alvo"].notna() & (pendentes["Data_Alvo"] <= hoje)].sort_values("Data_Alvo")
+    # Não redistribui carteira: cada lead permanece com o responsável real.
+    nome_atual = PROFILE_NAMES.get(USER_ID, "")
+    meus = pendentes[pendentes["_assigned_uuid"].astype(str) == str(USER_ID)] if "_assigned_uuid" in pendentes else pendentes.iloc[0:0]
+    gerais = pendentes[pendentes["_assigned_uuid"].isna()] if "_assigned_uuid" in pendentes else pendentes.iloc[0:0]
+    if IS_MANAGER:
+        meus = pd.concat([meus, gerais]).drop_duplicates()
+    return meus, pendentes.iloc[0:0]
+
 
 def processar_relatorio_vendedor(relatorio_texto, vendedor_nome, df_crm):
-    linhas = relatorio_texto.split("\n")
+    linhas = [x.strip() for x in relatorio_texto.split("\n") if x.strip()]
     atualizados = 0
-    timestamp_atual = dt.now().strftime("%d/%m/%Y %H:%M")
-    
     df_atualizado = df_crm.copy()
-    
+    timestamp = dt.now().strftime("%d/%m/%Y %H:%M")
     for linha in linhas:
-        linha = linha.strip()
-        if not linha:
-            continue
-            
-        empresa_encontrada_idx = None
         for idx, row in df_atualizado.iterrows():
-            nome_empresa = str(row["Empresa"]).strip().lower()
-            if nome_empresa in linha.lower():
-                empresa_encontrada_idx = idx
+            empresa = str(row.get("Empresa", "")).strip().lower()
+            if empresa and empresa in linha.lower():
+                hist = str(row.get("Historico", "") or "")
+                df_atualizado.loc[idx, "Historico"] = f"[{timestamp} - Relatório {vendedor_nome}] {linha}" + ("\n" + hist if hist else "")
+                df_atualizado.loc[idx, "Followup_Nota"] = linha
+                atualizados += 1
                 break
-                
-        # Atualiza APENAS se encontrar a empresa cadastrada (não cria novos clientes)
-        if empresa_encontrada_idx is not None:
-            idx_real = empresa_encontrada_idx
-            hist_atual = str(df_atualizado.loc[idx_real, "Historico"]) if pd.notna(df_atualizado.loc[idx_real, "Historico"]) else ""
-            
-            novo_historico = f"[{timestamp_atual} - Relatório {vendedor_nome}] {linha}"
-            df_atualizado.loc[idx_real, "Historico"] = novo_historico + ("\n" + hist_atual if hist_atual else "")
-            df_atualizado.loc[idx_real, "Followup_Nota"] = linha
-            atualizados += 1
-            
     return df_atualizado, atualizados
 
-if 'df_crm' not in st.session_state:
+
+if "df_crm" not in st.session_state:
     st.session_state.df_crm = carregar_dados_crm()
-
-if 'df_tarefas' not in st.session_state:
+    st.session_state._df_crm_original = st.session_state.df_crm.copy(deep=True)
+if "df_tarefas" not in st.session_state:
     st.session_state.df_tarefas = carregar_dados_tarefas()
-
-if 'cliente_editando_id' not in st.session_state:
+    st.session_state._df_tarefas_original = st.session_state.df_tarefas.copy(deep=True)
+if "cliente_editando_id" not in st.session_state:
     st.session_state.cliente_editando_id = None
 
 df = st.session_state.df_crm
@@ -393,6 +559,15 @@ if ARQUIVO_LOGO.exists():
     st.sidebar.image(str(ARQUIVO_LOGO), use_container_width=True)
 
 st.sidebar.markdown("### BraClean")
+st.sidebar.caption(f"Usuário: {PROFILE_NAMES.get(USER_ID, usuario_auth.email or 'Conta ativa')}")
+st.sidebar.caption(f"Perfil: {'Gerente' if IS_MANAGER else 'Vendedor'}")
+if st.sidebar.button("Sair da plataforma", use_container_width=True):
+    try:
+        sb.auth.sign_out()
+    finally:
+        for chave in ("sb_access_token", "sb_refresh_token", "df_crm", "df_tarefas", "_df_crm_original", "_df_tarefas_original"):
+            st.session_state.pop(chave, None)
+        st.rerun()
 st.sidebar.divider()
 
 with st.sidebar.expander("Personalizar Cores das Etapas", expanded=False):
@@ -506,11 +681,11 @@ if aba_selecionada == "Gerenciamento de Tarefas":
     if sub_selecionado == "Tarefas Diárias":
         st.markdown("### Tarefas Diárias (Follow-ups Atrasados e de Hoje)")
         
-        tab_g, tab_a = st.tabs(["Gabriel", "Ariel"])
+        tab_g, tab_a = st.tabs([PROFILE_NAMES.get(USER_ID, "Minha carteira"), "Carteira geral"])
         lista_g_df, lista_a_df = obter_lotes_diarios_followup(st.session_state.df_crm)
         
         with tab_g:
-            st.markdown("#### Lista Diária Numerada: Gabriel")
+            st.markdown(f"#### Lista Diária Numerada: {PROFILE_NAMES.get(USER_ID, 'Minha carteira')}")
             if not lista_g_df.empty:
                 for idx_l, row_l in lista_g_df.reset_index(drop=True).iterrows():
                     empresa_val = str(row_l['Empresa']).upper()
@@ -527,10 +702,10 @@ if aba_selecionada == "Gerenciamento de Tarefas":
                         </div>
                     """, unsafe_allow_html=True)
             else:
-                st.info("Nenhum follow-up pendente/atrasado para Gabriel hoje.")
+                st.info("Nenhum follow-up atribuído a você está pendente ou atrasado.")
                 
         with tab_a:
-            st.markdown("#### Lista Diária Numerada: Ariel")
+            st.markdown("#### Leads sem responsável individual")
             if not lista_a_df.empty:
                 for idx_l, row_l in lista_a_df.reset_index(drop=True).iterrows():
                     empresa_val = str(row_l['Empresa']).upper()
@@ -547,7 +722,7 @@ if aba_selecionada == "Gerenciamento de Tarefas":
                         </div>
                     """, unsafe_allow_html=True)
             else:
-                st.info("Nenhum follow-up pendente/atrasado para Ariel hoje.")
+                st.info("Nenhum follow-up está na carteira geral.")
 
         st.divider()
 
@@ -555,7 +730,7 @@ if aba_selecionada == "Gerenciamento de Tarefas":
         
         col_rel1, col_rel2 = st.columns([1, 2])
         with col_rel1:
-            vendedor_relatorio = st.selectbox("Vendedor Responsável", ["Gabriel", "Ariel"], key="sel_vend_rel")
+            vendedor_relatorio = st.selectbox("Responsável pelo relatório", [PROFILE_NAMES.get(USER_ID, "Usuário")], key="sel_vend_rel")
         
         texto_relatorio_input = st.text_area("Cole o relatório aqui:", placeholder="Ex: Usina Santa Clara: Orçamento aprovado e fechado.\nPosto Aliança: Pediu para retornar na sexta.", key="txt_rel_input")
         
@@ -679,7 +854,7 @@ if aba_selecionada == "Gerenciamento de Tarefas":
 
             col_btn1, col_btn2 = st.columns([2, 2])
             with col_btn1:
-                if st.button("Excluir Itens Selecionados", use_container_width=True, type="primary"):
+                if st.button("Cancelar / concluir itens selecionados", use_container_width=True, type="primary"):
                     indices_selecionados = df_editavel[df_editavel["Selecionar"] == True].index.tolist()
                     
                     if indices_selecionados:
@@ -706,7 +881,7 @@ if aba_selecionada == "Gerenciamento de Tarefas":
                             st.session_state.df_crm.loc[crm_para_limpar, "Followup_Nota"] = ""
                             salvar_dados_crm(st.session_state.df_crm)
                             
-                        st.success(f"{len(indices_selecionados)} item(ns) excluído(s) com sucesso!")
+                        st.success(f"{len(indices_selecionados)} item(ns) atualizado(s). Tarefas são canceladas sem apagar o histórico.")
                         st.rerun()
                     else:
                         st.warning("Nenhum item foi selecionado na tabela para exclusão.")
@@ -846,7 +1021,13 @@ elif aba_selecionada == "Funil de Vendas":
                 with hc3:
                     edit_cidade = st.text_input("Cidade", value=row_edit["Cidade"])
                     edit_valor = st.number_input("Valor Estimado Mensal (R$)", value=float(row_edit["Valor"]), step=1000.0)
-                    edit_vendedor = st.text_input("Vendedor", value=row_edit["Vendedor"])
+                    if IS_MANAGER:
+                        opcoes_resp = ["Carteira geral COVEM"] + list(SELLER_OPTIONS.keys())
+                        responsavel_atual = row_edit["Vendedor"] if row_edit["Vendedor"] in opcoes_resp else "Carteira geral COVEM"
+                        edit_vendedor = st.selectbox("Vendedor / Responsável", options=opcoes_resp, index=opcoes_resp.index(responsavel_atual))
+                    else:
+                        edit_vendedor = row_edit["Vendedor"]
+                        st.text_input("Vendedor / Responsável", value=edit_vendedor, disabled=True)
                     
                     try:
                         dt_parse = dt.strptime(str(row_edit["Followup_Data"]).strip()[:10], "%Y-%m-%d").date() if row_edit["Followup_Data"] and str(row_edit["Followup_Data"]).strip() not in ["nan", "NaT", ""] else date.today()
@@ -890,7 +1071,7 @@ elif aba_selecionada == "Funil de Vendas":
                 with bcol2:
                     btn_fechar_modal = st.form_submit_button("Fechar Ficha", use_container_width=True)
                 with bcol3:
-                    btn_excluir = st.form_submit_button("Excluir Cliente", use_container_width=True)
+                    btn_excluir = st.form_submit_button("Exclusão desativada (preservar histórico)", use_container_width=True, disabled=True)
                     
                 idx_df = st.session_state.df_crm.index[st.session_state.df_crm["id"] == cliente_edit_id]
                 
@@ -1371,7 +1552,7 @@ elif aba_selecionada == "Relatório Executivo":
     st.markdown("### Atividades Individuais & Metas de Vendedores")
     st.caption("Dados configurados para iniciar a contagem a partir de terça-feira (03/11/2026).")
 
-    vendedores_covem = ["Gabriel", "Ariel"]
+    vendedores_covem = list(SELLER_OPTIONS.keys()) or [PROFILE_NAMES.get(USER_ID, "Você")]
     
     data_inicio_utilizacao = pd.to_datetime("2026-11-03").date()
     df_exec["Data_Cadastro_Parsed"] = pd.to_datetime(df_exec["Data_Cadastro"], errors="coerce").dt.date
@@ -1607,7 +1788,7 @@ elif aba_selecionada == "+ Novo Cadastro":
                     "Cidade": "Não informado",
                     "Valor": val_sugestao,
                     "Prob": PROB_MAP[rapido_etapa],
-                    "Vendedor": "Gabriel",
+                    "Vendedor": (PROFILE_NAMES.get(USER_ID, "Você") if not IS_MANAGER else (next(iter(SELLER_OPTIONS.keys()), "Carteira geral COVEM"))),
                     "Perda": "",
                     "Data_Cadastro": str(date.today()),
                     "Followup_Data": str(date.today()),
@@ -1638,7 +1819,12 @@ elif aba_selecionada == "+ Novo Cadastro":
             
         with col_f2:
             nova_cidade = st.text_input("Cidade / Estado")
-            novo_vendedor = st.selectbox("Vendedor / Responsável", options=["Gabriel", "Ariel"])
+            if IS_MANAGER:
+                opcoes_novo_resp = ["Carteira geral COVEM"] + list(SELLER_OPTIONS.keys())
+                novo_vendedor = st.selectbox("Vendedor / Responsável", options=opcoes_novo_resp)
+            else:
+                novo_vendedor = PROFILE_NAMES.get(USER_ID, "Você")
+                st.text_input("Vendedor / Responsável", value=novo_vendedor, disabled=True)
             nova_valor = st.number_input("Valor Estimado Mensal (R$)", min_value=0.0, step=1000.0, format="%.2f")
             nova_etapa = st.selectbox(
                 "Etapa Inicial *", 
@@ -1660,7 +1846,7 @@ elif aba_selecionada == "+ Novo Cadastro":
             else:
                 novo_id = int(df["id"].max() + 1) if not df.empty and pd.notna(df["id"].max()) else 1
                 
-                email_valido = nova_email if 'nova_email' in locals() else "Não informado"
+                email_valido = novo_email if novo_email else "Não informado"
                 contato_valido = novo_contato if 'novo_contato' in locals() else "Não informado"
                 cargo_valido = novo_cargo if 'novo_cargo' in locals() else "Não informado"
                 telefone_valido = novo_telefone if 'novo_telefone' in locals() else "Não informado"
